@@ -3,159 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AppEgg | Loja de Ovos</title>
+    <title>AppEgg | Compras</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;700;800&display=swap');
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f8fafc; }
-        .egg-card { background: white; border-radius: 24px; overflow: hidden; border: 1px solid #f1f5f9; transition: all 0.3s; }
-        .egg-card:hover { transform: translateY(-5px); shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1); }
-        .btn-disabled { background: #e2e8f0; color: #94a3b8; cursor: not-allowed; }
-        .btn-active { background: #4f46e5; color: white; }
-        .cart-badge { position: absolute; top: -5px; right: -5px; background: #ef4444; color: white; font-size: 10px; padding: 2px 6px; border-radius: 50%; border: 2px solid white; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&display=swap');
+        body { font-family: 'Inter', sans-serif; background: #f3f4f6; }
+        .product-card { background: white; border-radius: 4px; border: 1px solid #e5e7eb; position: relative; }
+        .price-main { color: #e11d48; font-weight: 800; font-size: 1.25rem; }
+        .btn-buy { background: #e11d48; color: white; border-radius: 4px; font-weight: 700; }
+        .unit-badge { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.05); padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: 800; color: #6b7280; }
     </style>
 </head>
 <body class="pb-20">
     <div id="app-root"></div>
-
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-        import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
-
-        const firebaseConfig = {
-            apiKey: "AIzaSyD3Otz9-zdZH-E5Feg9IOGWPzVycoe8gro",
-            authDomain: "distribuidora-de-ovos-aline.firebaseapp.com",
-            projectId: "distribuidora-de-ovos-aline",
-            storageBucket: "distribuidora-de-ovos-aline.firebasestorage.app",
-            messagingSenderId: "92187548716",
-            appId: "1:92187548716:web:d61d18a29aa76aead7c589"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-
-        // Catálogo Padrão da Distribuidora (Imagens via Unsplash)
-        const CATALOGO_PADRAO = [
-            { id: 'jumbo', nome: 'Ovo Branco Jumbo', img: 'https://images.unsplash.com/photo-1587486914762-8f055609cc43?auto=format&fit=crop&w=300&q=80', desc: 'O maior da categoria' },
-            { id: 'extra', nome: 'Ovo Branco Extra', img: 'https://images.unsplash.com/photo-1516448398574-8d246a7a083d?auto=format&fit=crop&w=300&q=80', desc: 'Qualidade superior' },
-            { id: 'grande', nome: 'Ovo Branco Grande', img: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=300&q=80', desc: 'Ideal para o dia a dia' },
-            { id: 'vermelho', nome: 'Ovo Vermelho Extra', img: 'https://images.unsplash.com/photo-1598965402089-897ce52e8355?auto=format&fit=crop&w=300&q=80', desc: 'Rico em nutrientes' },
-            { id: 'codorna', nome: 'Ovo de Codorna', img: 'https://images.unsplash.com/photo-1612144431180-2d672779556c?auto=format&fit=crop&w=300&q=80', desc: 'Pacote com 30 unidades' },
-            { id: 'caipira', nome: 'Ovo Caipira', img: 'https://images.unsplash.com/photo-1569254994521-ddbb54af5ae8?auto=format&fit=crop&w=300&q=80', desc: 'Sabor da fazenda' }
-        ];
-
-        window.state = { 
-            view: 'login', 
-            estoqueReal: [], 
-            carrinho: [],
-            clienteData: JSON.parse(localStorage.getItem('appegg_user')) || null 
-        };
-
-        window.actions = {
-            login: (e) => {
-                e.preventDefault();
-                const email = e.target.email.value;
-                if (email === 'thon@lojista.com.br') {
-                    window.state.clienteData = { nome: "Admin Thon", email };
-                }
-                if (!window.state.clienteData) return alert("Cadastre-se primeiro!");
-                window.state.view = 'loja';
-                window.render();
-            },
-            salvarCadastro: (e) => {
-                e.preventDefault();
-                const f = new FormData(e.target);
-                const data = Object.fromEntries(f);
-                localStorage.setItem('appegg_user', JSON.stringify(data));
-                window.state.clienteData = data;
-                window.state.view = 'loja';
-                window.render();
-            }
-        };
-
-        window.render = () => {
-            const root = document.getElementById('app-root');
-
-            if (window.state.view === 'login') {
-                root.innerHTML = `
-                <div class="p-8 h-screen flex flex-col justify-center max-w-md mx-auto">
-                    <h1 class="text-4xl font-black text-indigo-600 mb-2 italic text-center">AppEgg</h1>
-                    <form onsubmit="window.actions.login(event)" class="space-y-4 mt-8">
-                        <input name="email" type="email" placeholder="E-mail" required class="w-full p-4 rounded-2xl border font-bold">
-                        <input name="senha" type="password" placeholder="Senha" required class="w-full p-4 rounded-2xl border font-bold">
-                        <button class="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase">Entrar</button>
-                        <button type="button" onclick="window.state.view='cadastro';window.render()" class="w-full text-[10px] font-bold text-slate-400 uppercase">Ainda não sou cliente</button>
-                    </form>
-                </div>`;
-            } else if (window.state.view === 'cadastro') {
-                root.innerHTML = `
-                <div class="p-8 max-w-md mx-auto">
-                    <h2 class="text-2xl font-black mb-6">Cadastro</h2>
-                    <form onsubmit="window.actions.salvarCadastro(event)" class="space-y-4">
-                        <input name="nome" placeholder="Nome" required class="w-full p-4 rounded-xl border">
-                        <input name="doc" placeholder="CPF ou CNPJ" required class="w-full p-4 rounded-xl border">
-                        <input name="whatsapp" placeholder="WhatsApp" required class="w-full p-4 rounded-xl border">
-                        <input name="email" type="email" placeholder="E-mail" required class="w-full p-4 rounded-xl border">
-                        <div class="grid grid-cols-2 gap-4">
-                            <input name="cidade" placeholder="Cidade" required class="p-4 rounded-xl border">
-                            <input name="estado" placeholder="UF" maxlength="2" required class="p-4 rounded-xl border">
-                        </div>
-                        <button class="w-full py-4 bg-indigo-600 text-white rounded-xl font-black">CADASTRAR</button>
-                        <button type="button" onclick="window.state.view='login';window.render()" class="w-full text-xs font-bold text-indigo-600 underline uppercase">Já tenho cadastro</button>
-                    </form>
-                </div>`;
-            } else {
-                root.innerHTML = `
-                <header class="p-6 bg-white border-b sticky top-0 z-50 flex justify-between items-center">
-                    <h1 class="font-black text-indigo-600 italic text-xl">AppEgg</h1>
-                    <div class="relative">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                        </svg>
-
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AppEgg | Distribuidora de Ovos</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; color: #1f2937; }
-        .product-card { background: white; border-radius: 8px; border: 1px solid #e5e7eb; transition: box-shadow 0.2s; }
-        .product-card:hover { box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
-        .price-tag { color: #e11d48; font-weight: 800; }
-        .btn-add { background-color: #e11d48; color: white; border-radius: 4px; font-weight: 700; transition: background 0.2s; }
-        .btn-add:hover { background-color: #be123c; }
-        .cart-count { background: #e11d48; color: white; font-size: 11px; padding: 2px 6px; border-radius: 99px; }
-    </style>
-</head>
-<body class="pb-10">
-    <div id="app-root"></div>
-
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-        const firebaseConfig = {
-            apiKey: "AIzaSyD3Otz9-zdZH-E5Feg9IOGWPzVycoe8gro",
-            authDomain: "distribuidora-de-ovos-aline.firebaseapp.com",
-            projectId: "distribuidora-de-ovos-aline",
-            storageBucket: "distribuidora-de-ovos-aline.firebasestorage.app",
-            messagingSenderId: "92187548716",
-            appId: "1:92187548716:web:d61d18a29aa76aead7c589"
-        };
-        initializeApp(firebaseConfig);
         const API_BASE = "https://painel-distribuidora-backend.onrender.com/api";
-
         window.state = { 
-            view: 'loja', 
             produtos: [], 
             carrinho: [],
-            clienteData: JSON.parse(localStorage.getItem('appegg_user')) || null 
+            cliente: JSON.parse(localStorage.getItem('appegg_user')) || {nome: "Thon"}
         };
 
         window.actions = {
-            loadProdutos: async () => {
+            addAoCarrinho: (p, unit) => {
+                window.state.carrinho.push({ ...p, unit_comprada: unit });
+                window.render();
+            },
+            load: async () => {
                 const res = await fetch(`${API_BASE}/produtos`);
                 window.state.produtos = await res.json();
                 window.render();
@@ -164,43 +38,29 @@
 
         window.render = () => {
             const root = document.getElementById('app-root');
-            if (!window.state.clienteData && window.state.view !== 'cadastro') {
-                root.innerHTML = `<div class="p-8 h-screen flex flex-col justify-center max-w-sm mx-auto">
-                    <div class="text-center mb-8"><h1 class="text-3xl font-black text-rose-600 italic">AppEgg</h1><p class="text-gray-500 text-sm">Distribuição de Ovos Atacadista</p></div>
-                    <form onsubmit="event.preventDefault(); localStorage.setItem('appegg_user', JSON.stringify({nome:'Thon'})); location.reload()" class="space-y-4">
-                        <input type="email" placeholder="E-mail" class="w-full p-3 border rounded-md outline-none focus:border-rose-500">
-                        <button class="w-full py-3 btn-add uppercase">Entrar</button>
-                        <button type="button" onclick="window.state.view='cadastro'; window.render()" class="w-full text-xs font-bold text-gray-400 uppercase">Novo Cadastro</button>
-                    </form>
-                </div>`;
-                return;
-            }
-
             root.innerHTML = `
-                <header class="bg-white border-b sticky top-0 z-50 p-4 flex justify-between items-center shadow-sm">
-                    <h1 class="font-black text-rose-600 text-2xl italic tracking-tighter">AppEgg</h1>
-                    <div class="flex items-center gap-4">
-                        <div class="relative flex items-center gap-1 font-bold text-gray-700">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
-                            <span class="cart-count">${window.state.carrinho.length}</span>
+                <header class="bg-white border-b p-4 sticky top-0 z-50 flex justify-between items-center shadow-sm">
+                    <h1 class="font-black text-rose-600 italic text-2xl tracking-tighter">AppEgg</h1>
+                    <div class="flex items-center gap-2">
+                        <div class="bg-rose-600 text-white p-2 rounded-md flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>
+                            <span class="font-bold text-xs">${window.state.carrinho.length}</span>
                         </div>
-                        <button onclick="localStorage.clear(); location.reload()" class="text-[10px] uppercase font-bold text-gray-400">Sair</button>
                     </div>
                 </header>
 
-                <main class="p-4 max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-4">
+                <main class="p-4 grid grid-cols-2 md:grid-cols-4 gap-3">
                     ${window.state.produtos.map(p => `
-                        <div class="product-card flex flex-col h-full">
-                            <div class="p-2 flex-shrink-0">
-                                <img src="${p.foto_url}" class="w-full h-32 object-contain rounded-md">
-                            </div>
-                            <div class="p-3 flex flex-col flex-grow border-t">
-                                <h3 class="text-[11px] font-bold text-gray-800 line-clamp-2 uppercase h-8 mb-1 leading-tight">${p.nome}</h3>
-                                <p class="text-[9px] text-gray-400 font-bold mb-2 uppercase tracking-tighter">Ref: ${p.tipo_estoque}</p>
-                                <div class="mt-auto">
-                                    <p class="text-[10px] text-gray-500">Por ${p.tipo_estoque}:</p>
-                                    <p class="text-xl price-tag leading-none mb-3">R$ ${parseFloat(p.preco).toFixed(2)}</p>
-                                    <button class="w-full py-2 btn-add text-[10px] uppercase tracking-widest">Adicionar</button>
+                        <div class="product-card p-3 flex flex-col">
+                            <span class="unit-badge uppercase">${p.tipo_estoque}</span>
+                            <img src="${p.foto_url}" class="w-full h-32 object-contain mb-2">
+                            <h3 class="text-[11px] font-bold text-gray-800 uppercase h-8 line-clamp-2 leading-tight">${p.nome}</h3>
+                            <div class="mt-4">
+                                <p class="text-[9px] text-gray-400 font-bold">POR ${p.tipo_estoque.toUpperCase()}:</p>
+                                <p class="price-main mb-3">R$ ${p.preco.toFixed(2)}</p>
+                                
+                                <div class="flex flex-col gap-1">
+                                    <button onclick="window.actions.addAoCarrinho(${JSON.stringify(p)}, '${p.tipo_estoque}')" class="w-full py-2 btn-buy text-[10px] uppercase">Comprar ${p.tipo_estoque}</button>
                                 </div>
                             </div>
                         </div>
@@ -208,7 +68,7 @@
                 </main>
             `;
         };
-        window.actions.loadProdutos();
+        window.actions.load();
     </script>
 </body>
 </html>
