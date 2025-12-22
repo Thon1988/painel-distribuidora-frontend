@@ -1,43 +1,47 @@
-// [frontend/api.js] - Versão Inteligente de Conexão
-const API_URL = "https://painel-distribuidora-backend.onrender.com";
+// [frontend/api.js] - Versão Final com saveToken e createProduto
+const API_URL = "https://painel-distribuidora-backend.onrender.com/api";
 
 export const api = {
-    async getProdutos() {
+    // 1. Buscar produtos
+    getProdutos: async () => {
         try {
-            // Tenta primeiro SEM o /api
-            let res = await fetch(`${API_URL}/produtos`);
-            if (!res.ok) {
-                // Se der erro, tenta COM o /api
-                res = await fetch(`${API_URL}/api/produtos`);
-            }
-            return await res.json();
+            const response = await fetch(`${API_URL}/produtos`);
+            if (!response.ok) throw new Error('Erro ao buscar produtos');
+            return await response.json();
         } catch (error) {
-            console.error("Erro ao buscar produtos:", error);
+            console.error("❌ Erro ao buscar produtos:", error);
             return [];
         }
     },
 
-    async createProduto(produto) {
+    // 2. Criar produto (O que o seu index.html usa)
+    createProduto: async (produto) => {
         try {
-            // Tenta salvar primeiro no caminho direto
-            let res = await fetch(`${API_URL}/produtos`, {
+            const response = await fetch(`${API_URL}/produtos`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(produto)
             });
-
-            if (!res.ok) {
-                // Se der erro, tenta no caminho /api/produtos
-                res = await fetch(`${API_URL}/api/produtos`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(produto)
-                });
-            }
-            return await res.json();
+            if (!response.ok) throw new Error('Erro ao salvar produto');
+            return await response.json();
         } catch (error) {
-            console.error("Erro ao salvar produto:", error);
+            console.error("❌ Erro ao salvar produto:", error);
             throw error;
         }
+    },
+
+    // 3. Salvar Token FCM (O que está dando erro no seu console agora)
+    saveToken: async (userId, fcmToken) => {
+        try {
+            const response = await fetch(`${API_URL}/save-fcm-token`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId, fcmToken })
+            });
+            return await response.json();
+        } catch (error) {
+            console.error("❌ Erro ao salvar token:", error);
+        }
     }
+};
 };
