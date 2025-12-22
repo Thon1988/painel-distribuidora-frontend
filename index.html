@@ -3,13 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AppEgg Admin | Gestão Completa</title>
+    <title>AppEgg Admin | Gestão de Estoque</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
         body { font-family: 'Inter', sans-serif; background: #f3f4f6; }
         .nav-active { border-bottom: 3px solid #e11d48; color: #e11d48; }
-        .card { background: white; border-radius: 8px; border: 1px solid #e5e7eb; }
+        .card { background: white; border-radius: 12px; border: 1px solid #e5e7eb; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+        .input-field { width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; outline: none; font-weight: 600; font-size: 14px; }
+        .input-field:focus { border-color: #e11d48; ring: 2px ring-rose-200; }
     </style>
 </head>
 <body class="pb-10">
@@ -34,13 +36,14 @@
         const db = getFirestore(app);
         const API_BASE = "https://painel-distribuidora-backend.onrender.com/api";
 
-        window.state = { user: null, view: 'pedidos', produtos: [], pedidos: [] };
+        window.state = { user: null, view: 'estoque', produtos: [], pedidos: [] };
 
-        const FOTOS_PADRAO = {
-            "Ovo Branco Extra": "https://static.paodeacucar.com/img/uploads/1/582/24016582.jpg",
-            "Ovo Branco Grande": "https://despensa.com.br/media/catalog/product/o/v/ovo-branco-grande-cartela-com-20-unidades.jpg",
-            "Ovo Vermelho Extra": "https://static.paodeacucar.com/img/uploads/1/653/24021653.jpg",
-            "Ovo de Codorna": "https://static.paodeacucar.com/img/uploads/1/962/24016962.jpg"
+        // LINKS DE FOTOS PÚBLICAS (UNSPLASH/WIKIMEDIA - NÃO QUEBRAM)
+        const FOTOS_ESTOQUE = {
+            "Ovo Branco Extra": "https://images.unsplash.com/photo-1587486914762-8f055609cc43?w=400",
+            "Ovo Branco Grande": "https://images.unsplash.com/photo-1516448398574-8d246a7a083d?w=400",
+            "Ovo Vermelho Extra": "https://images.unsplash.com/photo-1598965402089-897ce52e8355?w=400",
+            "Ovo de Codorna": "https://images.unsplash.com/photo-1612144431180-2d672779556c?w=400"
         };
 
         window.actions = {
@@ -58,20 +61,19 @@
                     preco: parseFloat(f.get('preco')),
                     quantidade: parseInt(f.get('quantidade')),
                     tipo_estoque: f.get('tipo_estoque'),
-                    foto_url: f.get('foto_url') || FOTOS_PADRAO[nome] || "https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=300"
+                    foto_url: f.get('foto_url') || FOTOS_ESTOQUE[nome] || "https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=400"
                 };
                 await fetch(`${API_BASE}/produtos`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(dados) });
                 window.actions.loadData();
                 e.target.reset();
             },
-            updateStatus: async (id, status) => { await updateDoc(doc(db, "vendas_logs", id), { status }); },
-            excluirPedido: async (id) => { if(confirm("Excluir pedido?")) await deleteDoc(doc(db, "vendas_logs", id)); }
+            excluir: async (id) => {
+                if(confirm("Remover do estoque?")) {
+                    await fetch(`${API_BASE}/produtos/${id}`, { method: 'DELETE' });
+                    window.actions.loadData();
+                }
+            }
         };
-
-        onSnapshot(query(collection(db, "vendas_logs"), orderBy("criadoEm", "desc")), (snap) => {
-            window.state.pedidos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-            window.render();
-        });
 
         onAuthStateChanged(auth, (user) => {
             window.state.user = user;
@@ -82,97 +84,78 @@
         window.render = () => {
             const root = document.getElementById('app-root');
             if (!window.state.user) {
-                root.innerHTML = `<div class="h-screen flex items-center justify-center bg-gray-100 p-6">
-                    <form onsubmit="event.preventDefault(); signInWithEmailAndPassword(auth, this.email.value, this.senha.value)" class="card p-8 w-full max-w-sm shadow-xl">
-                        <h1 class="text-3xl font-black text-rose-600 mb-6 italic text-center">AppEgg Admin</h1>
-                        <input name="email" type="email" value="thon@lojista.com.br" class="w-full p-3 border mb-3 rounded-md outline-none">
-                        <input name="senha" type="password" placeholder="Senha" class="w-full p-3 border mb-6 rounded-md outline-none">
-                        <button class="w-full py-3 bg-rose-600 text-white font-bold rounded-md uppercase">Entrar</button>
-                    </form>
-                </div>`;
+                root.innerHTML = `<div class="h-screen flex items-center justify-center p-6"><form onsubmit="event.preventDefault(); signInWithEmailAndPassword(auth, this.email.value, this.senha.value)" class="card p-8 w-full max-w-sm"><h1 class="text-2xl font-black text-rose-600 mb-6 italic text-center uppercase">AppEgg Admin</h1><input name="email" type="email" value="thon@lojista.com.br" class="input-field mb-3"><input name="senha" type="password" placeholder="Senha" class="input-field mb-6"><button class="w-full py-4 bg-rose-600 text-white font-black rounded-lg uppercase">Acessar Painel</button></form></div>`;
                 return;
             }
 
             root.innerHTML = `
-                <nav class="bg-white border-b sticky top-0 z-50 px-4">
+                <nav class="bg-white border-b sticky top-0 z-50 px-4 mb-6">
                     <div class="max-w-5xl mx-auto flex justify-between items-center h-16">
                         <h1 class="font-black text-rose-600 italic text-xl">AppEgg</h1>
-                        <div class="flex gap-6 h-full">
-                            ${['pedidos', 'estoque', 'clientes'].map(v => `
-                                <button onclick="window.state.view='${v}';window.render()" class="h-full px-2 text-[11px] font-bold uppercase tracking-wider transition-all ${window.state.view === v ? 'nav-active' : 'text-gray-400'}">${v}</button>
-                            `).join('')}
+                        <div class="flex gap-4">
+                            <button onclick="window.state.view='pedidos';window.render()" class="text-[10px] font-bold uppercase ${window.state.view === 'pedidos' ? 'text-rose-600 border-b-2 border-rose-600' : 'text-gray-400'}">Pedidos</button>
+                            <button onclick="window.state.view='estoque';window.render()" class="text-[10px] font-bold uppercase ${window.state.view === 'estoque' ? 'text-rose-600 border-b-2 border-rose-600' : 'text-gray-400'}">Estoque</button>
                         </div>
-                        <button onclick="signOut(auth)" class="text-[10px] font-bold text-gray-300">SAIR</button>
+                        <button onclick="signOut(auth)" class="text-[9px] font-bold text-gray-300">SAIR</button>
                     </div>
                 </nav>
 
-                <main class="max-w-5xl mx-auto p-6">
-                    ${window.state.view === 'pedidos' ? `
-                        <div class="grid gap-4">
-                            ${window.state.pedidos.length === 0 ? '<p class="text-center py-10 text-gray-400">Nenhum pedido recebido.</p>' : ''}
-                            ${window.state.pedidos.map(o => `
-                                <div class="card p-5 flex justify-between items-center">
+                <main class="max-w-5xl mx-auto px-4">
+                    <div class="card p-6 mb-8">
+                        <h2 class="font-black text-gray-700 mb-6 uppercase text-sm italic tracking-tighter">Adicionar Ovo ao Catálogo</h2>
+                        <form onsubmit="window.actions.salvarProduto(event)" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <div>
+                                <label class="text-[10px] font-bold text-gray-400 uppercase ml-1">Tipo do Ovo</label>
+                                <select name="nome" class="input-field">
+                                    <option>Ovo Branco Extra</option>
+                                    <option>Ovo Branco Grande</option>
+                                    <option>Ovo Vermelho Extra</option>
+                                    <option>Ovo de Codorna</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-bold text-gray-400 uppercase ml-1">Preço R$</label>
+                                <input name="preco" type="number" step="0.01" placeholder="0,00" required class="input-field">
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-bold text-gray-400 uppercase ml-1">Unidade de Venda</label>
+                                <select name="tipo_estoque" class="input-field">
+                                    <option>Caixa</option>
+                                    <option>Cartela</option>
+                                    <option>Dúzia</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-bold text-gray-400 uppercase ml-1">Qtd em Estoque</label>
+                                <input name="quantidade" type="number" placeholder="Ex: 100" required class="input-field">
+                            </div>
+                            <div class="md:col-span-2">
+                                <label class="text-[10px] font-bold text-gray-400 uppercase ml-1">URL da Foto (Opcional)</label>
+                                <input name="foto_url" placeholder="https://link-da-imagem.com/foto.jpg" class="input-field text-xs">
+                            </div>
+                            <div class="lg:col-span-3">
+                                <button class="w-full bg-rose-600 text-white font-black py-4 rounded-lg uppercase shadow-md hover:bg-rose-700 transition-colors">Atualizar Estoque do Cliente</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        ${window.state.produtos.map(p => `
+                            <div class="card p-4 flex items-center justify-between border-l-4 border-l-rose-500">
+                                <div class="flex items-center gap-4">
+                                    <img src="${p.foto_url}" class="w-16 h-16 object-cover rounded-lg bg-gray-50">
                                     <div>
-                                        <div class="flex items-center gap-2 mb-1">
-                                            <span class="bg-rose-100 text-rose-600 px-2 py-0.5 rounded text-[9px] font-black uppercase">#${o.id.slice(-4)}</span>
-                                            <span class="text-gray-400 text-[9px] font-bold">${o.criadoEm?.toDate().toLocaleString('pt-BR')}</span>
-                                        </div>
-                                        <h3 class="font-bold text-gray-800">${o.clienteNome}</h3>
-                                        <p class="text-xs text-gray-500">${o.quantidade}x ${o.produtoNome} (${o.tipoEstoque})</p>
-                                    </div>
-                                    <div class="text-right flex flex-col items-end gap-2">
-                                        <p class="font-black text-gray-800 text-lg">R$ ${(o.precoNoMomento * o.quantidade).toFixed(2)}</p>
-                                        <div class="flex gap-2">
-                                            <button onclick="window.actions.updateStatus('${o.id}', 'ENTREGUE')" class="text-[9px] font-black bg-green-50 text-green-600 px-3 py-1 rounded uppercase">Concluir</button>
-                                            <button onclick="window.actions.excluirPedido('${o.id}')" class="text-[9px] font-black bg-gray-50 text-gray-400 px-3 py-1 rounded uppercase">Excluir</button>
-                                        </div>
+                                        <p class="font-bold text-gray-800 uppercase text-sm">${p.nome}</p>
+                                        <p class="text-[10px] text-gray-400 font-bold uppercase">${p.quantidade} x ${p.tipo_estoque}</p>
+                                        <p class="text-rose-600 font-black text-md">R$ ${parseFloat(p.preco).toFixed(2)}</p>
                                     </div>
                                 </div>
-                            `).join('')}
-                        </div>
-                    ` : window.state.view === 'estoque' ? `
-                        <div class="card p-6 mb-8">
-                            <h2 class="font-bold text-gray-800 mb-4 text-sm uppercase">Novo Produto / Atualizar Estoque</h2>
-                            <form onsubmit="window.actions.salvarProduto(event)" class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <select name="nome" class="p-3 border rounded font-bold text-sm">
-                                    <option>Ovo Branco Extra</option><option>Ovo Branco Grande</option>
-                                    <option>Ovo Vermelho Extra</option><option>Ovo de Codorna</option>
-                                </select>
-                                <input name="foto_url" placeholder="URL da Foto (opcional)" class="p-3 border rounded text-xs">
-                                <select name="tipo_estoque" class="p-3 border rounded font-bold text-sm">
-                                    <option>Caixa</option><option>Cartela</option><option>Dúzia</option>
-                                </select>
-                                <input name="preco" type="number" step="0.01" placeholder="Preço R$" required class="p-3 border rounded font-bold">
-                                <input name="quantidade" type="number" placeholder="Estoque Atual" required class="p-3 border rounded font-bold">
-                                <button class="bg-rose-600 text-white font-black py-3 rounded uppercase text-xs">Salvar</button>
-                            </form>
-                        </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            ${window.state.produtos.map(p => `
-                                <div class="card p-4 flex items-center justify-between">
-                                    <div class="flex items-center gap-4">
-                                        <img src="${p.foto_url}" class="w-12 h-12 object-contain">
-                                        <div><p class="font-bold text-sm">${p.nome}</p><p class="text-[10px] text-gray-400 uppercase font-bold">${p.quantidade} em estoque</p></div>
-                                    </div>
-                                    <p class="font-black text-rose-600">R$ ${p.preco.toFixed(2)}</p>
-                                </div>
-                            `).join('')}
-                        </div>
-                    ` : `
-                        <div class="grid gap-3">
-                            ${Array.from(new Set(window.state.pedidos.map(p => p.clienteEmail))).map(email => {
-                                const c = window.state.pedidos.find(p => p.clienteEmail === email);
-                                return `
-                                <div class="card p-5 flex justify-between items-center">
-                                    <div>
-                                        <h3 class="font-bold text-gray-800">${c.clienteNome}</h3>
-                                        <p class="text-[10px] text-gray-400 font-bold uppercase">${c.clienteDoc} | ${c.clienteCidade || 'Cidade não informada'}</p>
-                                    </div>
-                                    <a href="https://wa.me/55${c.clienteWhatsapp?.replace(/\D/g,'')}" target="_blank" class="bg-green-500 text-white px-4 py-2 rounded text-[10px] font-black uppercase">WhatsApp</a>
-                                </div>`;
-                            })}
-                        </div>
-                    `}
+                                <button onclick="window.actions.excluir('${p.id}')" class="p-2 text-gray-300 hover:text-red-500">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                </button>
+                            </div>
+                        `).join('')}
+                    </div>
                 </main>
             `;
         };
