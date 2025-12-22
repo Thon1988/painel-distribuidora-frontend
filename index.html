@@ -3,45 +3,41 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AppEgg Admin | Gestão Total</title>
+    <title>AppEgg Admin | Painel Completo</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&display=swap');
-        body { font-family: 'Inter', sans-serif; background: #f9fafb; }
-        .card { background: white; border: 1px solid #e5e7eb; border-radius: 12px; }
+        body { font-family: 'Inter', sans-serif; background: #f3f4f6; }
+        .nav-active { border-bottom: 3px solid #e11d48; color: #e11d48; }
+        .card { background: white; border-radius: 12px; border: 1px solid #e5e7eb; }
         .input-field { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-weight: 600; }
     </style>
 </head>
 <body class="pb-10">
     <div id="app-root"></div>
     <script type="module">
-        const API_BASE = "https://painel-distribuidora-backend.onrender.com/api";
-        
-        window.state = { view: 'estoque', produtos: [], editingId: null };
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+        import { getFirestore, collection, onSnapshot, query, orderBy, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 
-        // LINKS QUE VOCÊ PEDIU
-        const OVOS_PADRAO = [
-            { nome: "Ovo Branco Extra", foto: "https://static.paodeacucar.com/img/uploads/1/582/24016582.jpg", tipo: "Caixa" },
-            { nome: "Ovo Branco Grande", foto: "https://despensa.com.br/media/catalog/product/o/v/ovo-branco-grande-cartela-com-20-unidades.jpg", tipo: "Cartela" },
-            { nome: "Ovo Vermelho Extra", foto: "https://static.paodeacucar.com/img/uploads/1/653/24021653.jpg", tipo: "Caixa" },
-            { nome: "Ovo de Codorna", foto: "https://static.paodeacucar.com/img/uploads/1/962/24016962.jpg", tipo: "Cartela" }
-        ];
+        const firebaseConfig = {
+            apiKey: "AIzaSyD3Otz9-zdZH-E5Feg9IOGWPzVycoe8gro",
+            authDomain: "distribuidora-de-ovos-aline.firebaseapp.com",
+            projectId: "distribuidora-de-ovos-aline",
+            storageBucket: "distribuidora-de-ovos-aline.firebasestorage.app",
+            messagingSenderId: "92187548716",
+            appId: "1:92187548716:web:d61d18a29aa76aead7c589"
+        };
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const API_BASE = "https://painel-distribuidora-backend.onrender.com/api";
+
+        window.state = { view: 'estoque', produtos: [], pedidos: [], editingId: null };
 
         window.actions = {
             load: async () => {
                 const res = await fetch(`${API_BASE}/produtos`);
                 window.state.produtos = await res.json();
                 window.render();
-            },
-            prepararEdicao: (p) => {
-                window.state.editingId = p.id;
-                const f = document.getElementById('produto-form');
-                f.nome.value = p.nome;
-                f.preco.value = p.preco;
-                f.quantidade.value = p.quantidade;
-                f.tipo_estoque.value = p.tipo_estoque;
-                f.foto_url.value = p.foto_url;
-                window.scrollTo(0,0);
             },
             salvar: async (e) => {
                 e.preventDefault();
@@ -53,77 +49,90 @@
                     tipo_estoque: f.get('tipo_estoque'),
                     foto_url: f.get('foto_url')
                 };
-
-                const url = window.state.editingId ? `${API_BASE}/produtos/${window.state.editingId}` : `${API_BASE}/produtos`;
                 const method = window.state.editingId ? 'PUT' : 'POST';
-
+                const url = window.state.editingId ? `${API_BASE}/produtos/${window.state.editingId}` : `${API_BASE}/produtos`;
                 await fetch(url, { method, headers: {'Content-Type': 'application/json'}, body: JSON.stringify(dados) });
                 window.state.editingId = null;
                 e.target.reset();
                 window.actions.load();
             },
-            excluir: async (id) => {
-                if(confirm("Excluir este ovo?")) {
-                    await fetch(`${API_BASE}/produtos/${id}`, { method: 'DELETE' });
-                    window.actions.load();
-                }
+            prepararEdicao: (p) => {
+                window.state.editingId = p.id;
+                const f = document.getElementById('form-p');
+                f.nome.value = p.nome; f.preco.value = p.preco; f.quantidade.value = p.quantidade;
+                f.tipo_estoque.value = p.tipo_estoque; f.foto_url.value = p.foto_url;
+                window.scrollTo(0,0);
             },
-            resetCatalogo: async () => {
-                if(confirm("Isso vai cadastrar os ovos padrão com estoque ZERO. Continuar?")) {
-                    for (const ovo of OVOS_PADRAO) {
-                        await fetch(`${API_BASE}/produtos`, {
-                            method: 'POST',
-                            headers: {'Content-Type': 'application/json'},
-                            body: JSON.stringify({ nome: ovo.nome, preco: 0, quantidade: 0, tipo_estoque: ovo.tipo, foto_url: ovo.foto })
-                        });
-                    }
-                    window.actions.load();
-                }
-            }
+            excluir: async (id) => { if(confirm("Excluir?")) { await fetch(`${API_BASE}/produtos/${id}`, {method:'DELETE'}); window.actions.load(); } },
+            limparPedido: async (id) => { if(confirm("Remover pedido?")) await deleteDoc(doc(db, "vendas_logs", id)); }
         };
+
+        onSnapshot(query(collection(db, "vendas_logs"), orderBy("criadoEm", "desc")), (snap) => {
+            window.state.pedidos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            window.render();
+        });
 
         window.render = () => {
             const root = document.getElementById('app-root');
             root.innerHTML = `
-                <nav class="bg-white border-b p-4 mb-6 flex justify-between items-center">
-                    <h1 class="font-black text-rose-600 italic text-xl">AppEgg Admin</h1>
-                    <button onclick="window.actions.resetCatalogo()" class="bg-gray-800 text-white text-[9px] px-3 py-2 rounded font-bold uppercase">Resetar Catálogo (Ovos Padrão)</button>
+                <nav class="bg-white border-b p-4 mb-6 flex justify-between items-center sticky top-0 z-50">
+                    <h1 class="font-black text-rose-600 italic text-xl uppercase tracking-tighter">AppEgg Admin</h1>
+                    <div class="flex gap-4">
+                        <button onclick="window.state.view='estoque';window.render()" class="text-[10px] font-bold uppercase ${window.state.view==='estoque'?'nav-active':''}">Estoque</button>
+                        <button onclick="window.state.view='clientes';window.render()" class="text-[10px] font-bold uppercase ${window.state.view==='clientes'?'nav-active':''}">Clientes e Pedidos</button>
+                    </div>
                 </nav>
 
-                <main class="max-w-4xl mx-auto px-4">
-                    <div class="card p-6 mb-8 border-t-4 border-t-rose-600">
-                        <h2 class="font-bold mb-4 uppercase text-xs text-gray-400">${window.state.editingId ? '📝 Editando Produto' : '➕ Novo Produto'}</h2>
-                        <form id="produto-form" onsubmit="window.actions.salvar(event)" class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <input name="nome" placeholder="Nome do Ovo" class="input-field" required>
-                            <input name="preco" type="number" step="0.01" placeholder="Preço R$" class="input-field" required>
-                            <select name="tipo_estoque" class="input-field">
-                                <option>Caixa</option><option>Cartela</option><option>Dúzia</option>
-                            </select>
-                            <input name="quantidade" type="number" placeholder="Qtd Estoque" class="input-field" required>
-                            <input name="foto_url" placeholder="URL da Foto" class="input-field md:col-span-2">
-                            <button class="bg-rose-600 text-white font-black py-3 rounded uppercase text-sm md:col-span-3">
-                                ${window.state.editingId ? 'Salvar Alterações' : 'Cadastrar Ovo'}
-                            </button>
-                        </form>
-                    </div>
-
-                    <div class="grid gap-3">
-                        ${window.state.produtos.map(p => `
-                            <div class="card p-4 flex justify-between items-center shadow-sm">
-                                <div class="flex items-center gap-4">
-                                    <img src="${p.foto_url}" class="w-14 h-14 object-contain rounded border">
-                                    <div>
-                                        <p class="font-bold text-gray-800">${p.nome}</p>
-                                        <p class="text-[10px] font-bold text-gray-400 uppercase">Estoque: ${p.quantidade} | R$ ${p.preco.toFixed(2)}</p>
+                <main class="max-w-5xl mx-auto px-4">
+                    ${window.state.view === 'estoque' ? `
+                        <div class="card p-6 mb-8 border-t-4 border-t-rose-600 shadow-lg">
+                            <form id="form-p" onsubmit="window.actions.salvar(event)" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <input name="nome" placeholder="Nome do Ovo" class="input-field" required>
+                                <input name="preco" type="number" step="0.01" placeholder="Preço R$" class="input-field" required>
+                                <select name="tipo_estoque" class="input-field">
+                                    <option>Caixa</option><option>Cartela</option><option>Dúzia</option>
+                                </select>
+                                <input name="quantidade" type="number" placeholder="Estoque" class="input-field" required>
+                                <input name="foto_url" placeholder="Link da Foto" class="input-field md:col-span-2">
+                                <button class="bg-rose-600 text-white font-black py-3 rounded uppercase text-sm md:col-span-3">Salvar Ovo</button>
+                            </form>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            ${window.state.produtos.map(p => `
+                                <div class="card p-4 flex justify-between items-center">
+                                    <div class="flex items-center gap-4">
+                                        <img src="${p.foto_url}" class="w-14 h-14 object-cover rounded border">
+                                        <div><p class="font-bold text-sm">${p.nome}</p><p class="text-[10px] text-gray-400 font-bold">Estoque: ${p.quantidade}</p></div>
+                                    </div>
+                                    <div class="flex gap-1">
+                                        <button onclick='window.actions.prepararEdicao(${JSON.stringify(p)})' class="bg-blue-50 text-blue-600 p-2 rounded text-[9px] font-bold uppercase">Editar</button>
+                                        <button onclick="window.actions.excluir('${p.id}')" class="bg-red-50 text-red-600 p-2 rounded text-[9px] font-bold uppercase">Excluir</button>
                                     </div>
                                 </div>
-                                <div class="flex gap-2">
-                                    <button onclick='window.actions.prepararEdicao(${JSON.stringify(p)})' class="bg-blue-50 text-blue-600 p-2 rounded text-[10px] font-black uppercase">Editar</button>
-                                    <button onclick="window.actions.excluir('${p.id}')" class="bg-red-50 text-red-600 p-2 rounded text-[10px] font-black uppercase">Excluir</button>
+                            `).join('')}
+                        </div>
+                    ` : `
+                        <div class="grid gap-4">
+                            ${window.state.pedidos.map(o => `
+                                <div class="card p-5 border-l-4 border-rose-600">
+                                    <div class="flex justify-between items-start mb-2">
+                                        <div>
+                                            <h3 class="font-black text-gray-800 uppercase text-sm">${o.clienteNome}</h3>
+                                            <p class="text-[10px] text-gray-400">${o.clienteEmail} | ${o.clienteDoc || 'Sem Doc'}</p>
+                                        </div>
+                                        <span class="bg-green-100 text-green-700 px-2 py-1 rounded text-[10px] font-bold uppercase">${o.metodoPagamento || 'PIX'}</span>
+                                    </div>
+                                    <div class="bg-gray-50 p-3 rounded-lg flex justify-between items-center">
+                                        <p class="text-xs font-bold text-gray-600">${o.quantidade}x ${o.produtoNome}</p>
+                                        <p class="font-black text-rose-600">R$ ${(o.precoNoMomento * o.quantidade).toFixed(2)}</p>
+                                    </div>
+                                    <div class="flex justify-end gap-2 mt-3">
+                                        <button onclick="window.actions.limparPedido('${o.id}')" class="text-[9px] font-bold text-gray-300 uppercase">Limpar Pedido</button>
+                                    </div>
                                 </div>
-                            </div>
-                        `).join('')}
-                    </div>
+                            `).join('')}
+                        </div>
+                    `}
                 </main>
             `;
         };
