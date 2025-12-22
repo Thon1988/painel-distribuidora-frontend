@@ -3,22 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AppEgg Control Center</title>
+    <title>AppEgg Admin | Gestão Profissional</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&family=Plus+Jakarta+Sans:wght@400;800&display=swap');
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background: #0f172a; color: #f8fafc; }
-        .futuristic-card { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(16px); border: 1px solid rgba(79, 70, 229, 0.3); box-shadow: 0 0 20px rgba(79, 70, 229, 0.1); }
-        .neon-text { font-family: 'Orbitron', sans-serif; text-shadow: 0 0 10px rgba(99, 102, 241, 0.8); }
-        .nav-active { background: linear-gradient(90deg, #4f46e5, #818cf8); color: white; box-shadow: 0 0 15px rgba(79, 70, 229, 0.5); }
-        @media print {
-            body * { visibility: hidden; }
-            #printable-area, #printable-area * { visibility: visible; }
-            #printable-area { position: absolute; left: 0; top: 0; width: 100%; color: #000; }
-        }
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f4f7fa; color: #334155; }
+        .glass-card { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); border: 1px solid #e2e8f0; border-radius: 24px; }
+        .nav-active { background: #4f46e5; color: white; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3); }
+        input, select { border: 1px solid #e2e8f0 !important; outline: none !important; transition: all 0.2s; }
+        input:focus, select:focus { border-color: #4f46e5 !important; ring: 2px rgba(79, 70, 229, 0.1); }
+        @media print { body * { visibility: hidden; } #printable-area, #printable-area * { visibility: visible; } #printable-area { position: absolute; left: 0; top: 0; width: 100%; } }
     </style>
 </head>
-<body class="min-h-screen">
+<body class="min-h-screen pb-10">
     <div id="app-root"></div>
     <div id="printable-area" class="hidden"></div>
 
@@ -41,7 +38,7 @@
         const db = getFirestore(app);
         const API_BASE = "https://painel-distribuidora-backend.onrender.com/api";
 
-        window.state = { user: null, view: 'pedidos', produtos: [], pedidos: [] };
+        window.state = { user: null, view: 'pedidos', produtos: [], pedidos: [], showManualType: false };
 
         window.actions = {
             login: async (e) => {
@@ -66,9 +63,17 @@
             salvarProduto: async (e) => {
                 e.preventDefault();
                 const f = new FormData(e.target);
-                const dados = { nome: f.get('nome'), preco: parseFloat(f.get('preco')), quantidade: parseInt(f.get('quantidade')), tipo_estoque: f.get('tipo_estoque') };
+                const nome = f.get('nome_manual') || f.get('nome_select');
+                const dados = { 
+                    nome: nome, 
+                    preco: parseFloat(f.get('preco')), 
+                    quantidade: parseInt(f.get('quantidade')), 
+                    tipo_estoque: f.get('tipo_estoque') 
+                };
                 await fetch(`${API_BASE}/produtos`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dados) });
                 window.actions.loadData();
+                e.target.reset();
+                window.state.showManualType = false;
             }
         };
 
@@ -86,12 +91,12 @@
         window.render = () => {
             const root = document.getElementById('app-root');
             if (!window.state.user) {
-                root.innerHTML = `<div class="h-screen flex items-center justify-center p-6">
-                    <form onsubmit="window.actions.login(event)" class="futuristic-card p-10 rounded-[2rem] w-full max-w-sm shadow-indigo-500/20 shadow-2xl">
-                        <h1 class="neon-text text-3xl mb-8 text-center text-indigo-400">APPEGG ADMIN</h1>
-                        <input name="email" type="email" value="thon@lojista.com.br" class="w-full p-4 rounded-xl mb-4 bg-slate-900/50 border border-slate-700 text-white outline-none focus:border-indigo-500">
-                        <input name="senha" type="password" placeholder="Senha" class="w-full p-4 rounded-xl mb-6 bg-slate-900/50 border border-slate-700 text-white outline-none focus:border-indigo-500">
-                        <button class="w-full py-4 bg-indigo-600 rounded-xl font-bold hover:bg-indigo-500 transition-all">INICIAR SISTEMA</button>
+                root.innerHTML = `<div class="h-screen flex items-center justify-center p-6 bg-slate-100">
+                    <form onsubmit="window.actions.login(event)" class="bg-white p-10 rounded-[2.5rem] w-full max-w-sm shadow-xl border border-slate-200">
+                        <h1 class="text-3xl font-black text-indigo-600 mb-8 text-center italic tracking-tighter">AppEgg Admin</h1>
+                        <input name="email" type="email" value="thon@lojista.com.br" class="w-full p-4 rounded-2xl mb-4 bg-slate-50 border text-slate-800 font-bold outline-none">
+                        <input name="senha" type="password" placeholder="Senha" class="w-full p-4 rounded-2xl mb-6 bg-slate-50 border text-slate-800 font-bold outline-none">
+                        <button class="w-full py-4 bg-indigo-600 text-white rounded-2xl font-bold hover:bg-indigo-700 transition-all shadow-lg">ENTRAR NO SISTEMA</button>
                     </form>
                 </div>`;
                 return;
@@ -102,67 +107,100 @@
             const totalHoje = pedidosHoje.reduce((acc, p) => acc + (p.precoNoMomento * p.quantidade), 0);
 
             root.innerHTML = `
-                <nav class="p-6 flex justify-between items-center futuristic-card m-4 rounded-2xl sticky top-4 z-50">
-                    <h1 class="neon-text text-xl text-indigo-400">APPEGG</h1>
-                    <div class="flex gap-2">
+                <nav class="p-4 flex justify-between items-center bg-white border-b sticky top-0 z-50">
+                    <h1 class="font-black text-xl text-indigo-600 italic">AppEgg</h1>
+                    <div class="flex gap-2 bg-slate-100 p-1 rounded-2xl">
                         ${['pedidos', 'estoque', 'clientes'].map(v => `
-                            <button onclick="window.state.view='${v}';window.render()" class="px-4 py-2 rounded-xl text-[10px] font-bold uppercase transition-all ${window.state.view === v ? 'nav-active' : 'text-slate-400'}">${v}</button>
+                            <button onclick="window.state.view='${v}';window.render()" class="px-4 py-2 rounded-xl text-[10px] font-bold uppercase transition-all ${window.state.view === v ? 'nav-active' : 'text-slate-500'}">${v}</button>
                         `).join('')}
                     </div>
-                    <button onclick="window.actions.logout()" class="text-red-400 font-bold text-[10px] uppercase">OFF</button>
+                    <button onclick="window.actions.logout()" class="text-slate-400 font-bold text-[10px] uppercase">Sair</button>
                 </nav>
 
-                <main class="p-6 pt-0">
+                <main class="max-w-5xl mx-auto p-6">
                     ${window.state.view === 'pedidos' ? `
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                            <div class="futuristic-card p-8 rounded-[2.5rem]">
-                                <p class="text-[10px] text-indigo-300 uppercase font-black mb-2 tracking-widest">Revenue Today</p>
-                                <h2 class="text-4xl neon-text">R$ ${totalHoje.toFixed(2)}</h2>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                            <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+                                <p class="text-[10px] text-slate-400 font-black uppercase mb-1">Vendas Hoje</p>
+                                <h2 class="text-3xl font-black text-slate-800">R$ ${totalHoje.toFixed(2)}</h2>
                             </div>
-                            <div class="futuristic-card p-8 rounded-[2.5rem]">
-                                <p class="text-[10px] text-slate-400 uppercase font-black mb-2 tracking-widest">Active Orders</p>
-                                <h2 class="text-4xl neon-text">${pedidosHoje.length}</h2>
+                            <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+                                <p class="text-[10px] text-slate-400 font-black uppercase mb-1">Total Pedidos</p>
+                                <h2 class="text-3xl font-black text-slate-800">${pedidosHoje.length}</h2>
                             </div>
                         </div>
                         <div class="grid gap-4">
                             ${window.state.pedidos.map(o => `
-                                <div class="futuristic-card p-6 rounded-[2rem]">
-                                    <div class="flex justify-between items-center mb-4">
-                                        <span class="text-indigo-400 font-black text-xs uppercase">#${o.id.slice(-6)}</span>
-                                        <div class="flex gap-4">
-                                            <button onclick="window.actions.excluirPedido('${o.id}')" class="text-[9px] text-red-400 font-bold uppercase">Deletar</button>
+                                <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col md:flex-row justify-between items-center">
+                                    <div class="w-full md:w-auto mb-4 md:mb-0">
+                                        <div class="flex gap-2 mb-2">
+                                            <span class="bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-lg text-[9px] font-black uppercase">#${o.id.slice(-4)}</span>
+                                            <span class="text-slate-400 text-[9px] font-bold uppercase">${o.criadoEm?.toDate().toLocaleTimeString('pt-BR')}</span>
                                         </div>
+                                        <h3 class="font-bold text-slate-800">${o.clienteNome}</h3>
+                                        <p class="text-xs text-slate-400 uppercase font-bold mt-1">${o.quantidade} ${o.tipoEstoque} de ${o.produtoNome}</p>
                                     </div>
-                                    <div class="flex flex-col md:flex-row justify-between gap-4">
-                                        <div>
-                                            <h3 class="font-bold text-lg text-white">${o.clienteNome}</h3>
-                                            <p class="text-xs text-slate-400">${o.enderecoEntrega}</p>
-                                        </div>
-                                        <div class="text-right">
-                                            <p class="text-2xl neon-text">R$ ${(o.precoNoMomento * o.quantidade).toFixed(2)}</p>
+                                    <div class="text-right flex flex-col gap-2">
+                                        <p class="text-2xl font-black text-slate-800">R$ ${(o.precoNoMomento * o.quantidade).toFixed(2)}</p>
+                                        <div class="flex gap-2">
+                                            <button onclick="window.actions.updateStatus('${o.id}', 'ENTREGUE')" class="text-[9px] font-black bg-emerald-50 text-emerald-600 px-3 py-1 rounded-lg uppercase">Finalizar</button>
+                                            <button onclick="window.actions.excluirPedido('${o.id}')" class="text-[9px] font-black bg-red-50 text-red-600 px-3 py-1 rounded-lg uppercase">Remover</button>
                                         </div>
                                     </div>
                                 </div>
                             `).join('')}
                         </div>
                     ` : window.state.view === 'estoque' ? `
-                         <div class="futuristic-card p-8 rounded-[2.5rem] mb-10">
+                        <div class="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm mb-10">
+                            <h2 class="font-black text-lg mb-6 uppercase italic text-indigo-600">Entrada de Estoque</h2>
                             <form onsubmit="window.actions.salvarProduto(event)" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <input name="nome" placeholder="Tipo de Ovo" class="p-4 rounded-xl bg-slate-900/50 border border-slate-700 text-white outline-none">
-                                <input name="preco" type="number" step="0.01" placeholder="Preço" class="p-4 rounded-xl bg-slate-900/50 border border-slate-700 text-white outline-none">
-                                <input name="quantidade" type="number" placeholder="Qtd" class="p-4 rounded-xl bg-slate-900/50 border border-slate-700 text-white outline-none">
-                                <input name="tipo_estoque" placeholder="Unidade (Caixas/Unid)" class="p-4 rounded-xl bg-slate-900/50 border border-slate-700 text-white outline-none">
-                                <button class="md:col-span-2 py-4 nav-active rounded-xl font-bold uppercase tracking-widest">Atualizar Nexus</button>
+                                <div class="flex flex-col gap-1">
+                                    <label class="text-[9px] font-black text-slate-400 ml-2 uppercase">Tipo de Ovo</label>
+                                    ${window.state.showManualType ? 
+                                        `<input name="nome_manual" placeholder="Digite o tipo de ovo..." required class="p-4 rounded-2xl bg-slate-50 font-bold text-sm">
+                                         <button type="button" onclick="window.state.showManualType=false;window.render()" class="text-[9px] text-indigo-500 font-bold uppercase mt-1 text-left ml-2 underline">Voltar para lista</button>` :
+                                        `<select name="nome_select" class="p-4 rounded-2xl bg-slate-50 font-bold text-sm">
+                                            <option>Ovo Branco Grande</option>
+                                            <option>Ovo Branco Extra</option>
+                                            <option>Ovo Branco Jumbo</option>
+                                            <option>Ovo Vermelho Grande</option>
+                                            <option>Ovo Vermelho Extra</option>
+                                            <option>Ovo de Codorna</option>
+                                            <option>Ovo Caipira</option>
+                                        </select>
+                                        <button type="button" onclick="window.state.showManualType=true;window.render()" class="text-[9px] text-indigo-500 font-bold uppercase mt-1 text-left ml-2 underline">Não está na lista? Digite manualmente</button>`
+                                    }
+                                </div>
+                                <div class="flex flex-col gap-1">
+                                    <label class="text-[9px] font-black text-slate-400 ml-2 uppercase">Unidade Comercial</label>
+                                    <select name="tipo_estoque" class="p-4 rounded-2xl bg-slate-50 font-bold text-sm">
+                                        <option value="Caixa">Caixa (30 Dúzias)</option>
+                                        <option value="Cartela">Cartela (30 Ovos)</option>
+                                        <option value="Dúzia">Dúzia (12 Ovos)</option>
+                                        <option value="Unidade">Unidade Avulsa</option>
+                                    </select>
+                                </div>
+                                <div class="flex flex-col gap-1">
+                                    <label class="text-[9px] font-black text-slate-400 ml-2 uppercase">Preço Unitário (R$)</label>
+                                    <input name="preco" type="number" step="0.01" placeholder="0.00" required class="p-4 rounded-2xl bg-slate-50 font-bold text-sm">
+                                </div>
+                                <div class="flex flex-col gap-1">
+                                    <label class="text-[9px] font-black text-slate-400 ml-2 uppercase">Quantidade em Estoque</label>
+                                    <input name="quantidade" type="number" placeholder="Ex: 50" required class="p-4 rounded-2xl bg-slate-50 font-bold text-sm">
+                                </div>
+                                <button class="md:col-span-2 py-5 bg-indigo-600 text-white rounded-2xl font-black uppercase shadow-lg hover:bg-indigo-700 transition-all">SALVAR NO ESTOQUE</button>
                             </form>
                         </div>
                     ` : `
                         <div class="grid gap-4">
-                            ${clientesUnicos.map(c => `
-                                <div class="futuristic-card p-6 rounded-[2rem] flex justify-between items-center">
-                                    <div><h3 class="font-bold text-white">${c.clienteNome}</h3><p class="text-xs text-slate-400 uppercase tracking-widest mt-1">${c.clienteDoc}</p></div>
-                                    <a href="https://wa.me/55${c.clienteWhatsapp?.replace(/\D/g,'')}" class="bg-indigo-600 px-4 py-2 rounded-xl text-[10px] font-black">WHATSAPP</a>
-                                </div>
-                            `).join('')}
+                            ${Array.from(new Set(window.state.pedidos.map(p => p.clienteEmail))).map(email => {
+                                const c = window.state.pedidos.find(p => p.clienteEmail === email);
+                                return `
+                                <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex justify-between items-center">
+                                    <div><h3 class="font-bold text-slate-800">${c.clienteNome}</h3><p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">${c.clienteDoc}</p></div>
+                                    <a href="https://wa.me/55${c.clienteWhatsapp?.replace(/\D/g,'')}" target="_blank" class="bg-emerald-500 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase">WHATSAPP</a>
+                                </div>`;
+                            })}
                         </div>
                     `}
                 </main>

@@ -3,17 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AppEgg | Ovos Nexos</title>
+    <title>AppEgg | Ovos Direto da Granja</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Plus+Jakarta+Sans:wght@400;700&display=swap');
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background: #f8fafc; color: #1e293b; }
-        .glass-dark { background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
-        .neon-border { border: 1px solid rgba(79, 70, 229, 0.4); box-shadow: 0 0 15px rgba(79, 70, 229, 0.1); }
-        .btn-futurist { background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%); box-shadow: 0 10px 25px -5px rgba(79, 70, 229, 0.4); }
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;700;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f8fafc; color: #1e293b; }
+        .product-card { background: white; border-radius: 32px; border: 1px solid #f1f5f9; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+        .btn-main { background: #4f46e5; transition: all 0.3s ease; }
+        .btn-main:active { transform: scale(0.95); }
     </style>
 </head>
-<body class="min-h-screen">
+<body class="pb-10">
     <div id="app-root"></div>
 
     <script type="module">
@@ -33,26 +33,17 @@
         const db = getFirestore(app);
         const API_BASE = "https://painel-distribuidora-backend.onrender.com/api";
 
-        window.state = {
-            view: 'login', 
-            produtos: [],
-            clienteData: JSON.parse(localStorage.getItem('appegg_user')) || null
-        };
+        window.state = { view: 'login', produtos: [], clienteData: JSON.parse(localStorage.getItem('appegg_user')) || null };
 
         window.actions = {
             login: (e) => {
                 e.preventDefault();
                 const email = e.target.email.value;
-                // Lógica de Testador: Se for seu e-mail, libera acesso como Admin-Testador
                 if (email === 'thon@lojista.com.br') {
-                    const testador = { nome: "Admin Thon", email: email, doc: "000.000.000-00", whatsapp: "11999999999", rua: "Área de Teste", numero: "1", cidade: "São Paulo", estado: "SP" };
+                    const testador = { nome: "Admin Thon", email, doc: "000.000.000-00", whatsapp: "11999999999", rua: "Área de Teste", numero: "1", cidade: "São Paulo", estado: "SP" };
                     localStorage.setItem('appegg_user', JSON.stringify(testador));
                     window.state.clienteData = testador;
-                } else {
-                    // Aqui você integraria com um login real se tivesse Auth de cliente, 
-                    // por enquanto ele direciona para cadastro se não achar no LocalStorage
-                    if(!window.state.clienteData) return alert("Conta não encontrada. Clique em CADASTRAR.");
-                }
+                } else if (!window.state.clienteData) return alert("Conta não encontrada. Cadastre-se!");
                 window.state.view = 'loja';
                 window.actions.loadProdutos();
             },
@@ -74,50 +65,52 @@
 
         window.render = () => {
             const root = document.getElementById('app-root');
-
             if (window.state.view === 'login' && !window.state.clienteData) {
-                root.innerHTML = `<div class="p-6 h-screen flex flex-col justify-center items-center">
-                    <h1 style="font-family:'Orbitron'" class="text-4xl text-indigo-600 mb-10 italic">APPEGG</h1>
-                    <form onsubmit="window.actions.login(event)" class="w-full max-w-sm space-y-4">
-                        <input name="email" type="email" placeholder="Seu E-mail" required class="w-full p-5 rounded-2xl bg-white neon-border outline-none font-bold">
-                        <input name="senha" type="password" placeholder="Sua Senha" class="w-full p-5 rounded-2xl bg-white neon-border outline-none font-bold">
-                        <button class="w-full py-5 btn-futurist text-white rounded-2xl font-black uppercase tracking-widest">ACESSAR NEXUS</button>
-                        <button type="button" onclick="window.state.view='cadastro';window.render()" class="w-full py-3 text-slate-400 font-bold uppercase text-xs">Ainda não sou cliente? CADASTRAR</button>
+                root.innerHTML = `<div class="p-8 h-screen flex flex-col justify-center max-w-md mx-auto">
+                    <h1 class="text-4xl font-black text-indigo-600 mb-2 italic tracking-tighter text-center">AppEgg</h1>
+                    <p class="text-slate-400 text-center mb-10 font-bold uppercase text-[10px] tracking-widest">Ovos frescos na palma da mão</p>
+                    <form onsubmit="window.actions.login(event)" class="space-y-4">
+                        <input name="email" type="email" placeholder="E-mail" required class="w-full p-5 rounded-3xl bg-white border border-slate-100 outline-none font-bold shadow-sm">
+                        <button class="w-full py-5 btn-main text-white rounded-3xl font-black uppercase tracking-widest shadow-xl shadow-indigo-200">ENTRAR</button>
+                        <button type="button" onclick="window.state.view='cadastro';window.render()" class="w-full py-3 text-slate-400 font-bold uppercase text-[10px] tracking-widest">Ainda não tenho conta</button>
                     </form>
                 </div>`;
             } else if (window.state.view === 'cadastro') {
-                root.innerHTML = `<div class="p-6">
-                    <h2 class="font-black text-2xl text-slate-800 mb-6 uppercase">Novo Cadastro</h2>
+                root.innerHTML = `<div class="p-8 max-w-md mx-auto">
+                    <h2 class="font-black text-2xl text-slate-800 mb-6">Criar Cadastro</h2>
                     <form onsubmit="window.actions.salvarCadastro(event)" class="space-y-4">
-                        <input name="nome" placeholder="Nome Completo" required class="w-full p-4 rounded-xl border outline-none">
-                        <input name="doc" placeholder="CPF ou CNPJ" required class="w-full p-4 rounded-xl border outline-none">
-                        <input name="whatsapp" placeholder="WhatsApp" required class="w-full p-4 rounded-xl border outline-none">
-                        <input name="email" type="email" placeholder="E-mail" required class="w-full p-4 rounded-xl border outline-none">
-                        <input name="cep" placeholder="CEP" class="w-full p-4 rounded-xl border outline-none">
-                        <div class="grid grid-cols-2 gap-4">
-                            <input name="rua" placeholder="Rua" class="p-4 rounded-xl border outline-none">
-                            <input name="numero" placeholder="Nº" class="p-4 rounded-xl border outline-none">
+                        <input name="nome" placeholder="Nome / Razão Social" required class="w-full p-4 rounded-2xl border bg-white outline-none">
+                        <input name="doc" placeholder="CPF ou CNPJ" required class="w-full p-4 rounded-2xl border bg-white outline-none">
+                        <input name="whatsapp" placeholder="WhatsApp" required class="w-full p-4 rounded-2xl border bg-white outline-none">
+                        <input name="email" type="email" placeholder="E-mail" required class="w-full p-4 rounded-2xl border bg-white outline-none">
+                        <div class="grid grid-cols-2 gap-3">
+                            <input name="rua" placeholder="Rua" required class="p-4 rounded-2xl border bg-white outline-none">
+                            <input name="numero" placeholder="Nº" required class="p-4 rounded-2xl border bg-white outline-none">
                         </div>
-                        <button class="w-full py-5 btn-futurist text-white rounded-2xl font-black">CONFIRMAR REGISTRO</button>
-                        <button type="button" onclick="window.state.view='login';window.render()" class="w-full py-2 text-slate-400 font-bold text-xs uppercase">Já tenho conta</button>
+                        <button class="w-full py-5 btn-main text-white rounded-3xl font-black uppercase">CADASTRAR E ENTRAR</button>
                     </form>
                 </div>`;
             } else {
-                root.innerHTML = `<header class="p-6 flex justify-between items-center glass-dark text-white rounded-b-3xl">
-                    <h1 style="font-family:'Orbitron'" class="text-xl">APPEGG</h1>
-                    <button onclick="localStorage.clear(); location.reload()" class="text-xs text-red-400 font-bold uppercase">SAIR</button>
+                root.innerHTML = `<header class="p-6 flex justify-between items-center bg-white border-b sticky top-0 z-50">
+                    <h1 class="font-black text-indigo-600 italic text-xl">AppEgg</h1>
+                    <button onclick="localStorage.clear(); location.reload()" class="text-[10px] text-slate-400 font-bold uppercase">Sair</button>
                 </header>
-                <div class="p-6 grid gap-4">
+                <div class="p-4 grid gap-4 max-w-xl mx-auto">
                     ${window.state.produtos.map(p => `
-                        <div class="bg-white p-6 rounded-3xl neon-border flex justify-between items-center">
-                            <div><h3 class="font-black text-slate-800 uppercase text-xs">${p.nome}</h3><p class="text-2xl font-black text-indigo-600 mt-1">R$ ${p.preco.toFixed(2)}</p></div>
-                            <button class="h-12 w-12 btn-futurist rounded-xl flex items-center justify-center text-white">+</button>
+                        <div class="product-card p-6 flex justify-between items-center">
+                            <div>
+                                <h3 class="font-black text-slate-800 uppercase text-xs tracking-tight">${p.nome}</h3>
+                                <p class="text-3xl font-black text-indigo-600">R$ ${p.preco.toFixed(2)}</p>
+                                <span class="text-[9px] font-bold text-slate-400 uppercase">Preço por ${p.tipo_estoque}</span>
+                            </div>
+                            <button class="h-14 w-14 btn-main rounded-[24px] flex items-center justify-center text-white shadow-lg shadow-indigo-100">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4" /></svg>
+                            </button>
                         </div>
                     `).join('')}
                 </div>`;
             }
         };
-
         window.render();
     </script>
 </body>
