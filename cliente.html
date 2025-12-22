@@ -112,38 +112,103 @@
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
                         </svg>
-                        <span class="cart-badge">${window.state.carrinho.length}</span>
-                    </div>
-                </header>
-                
-                <div class="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                    ${CATALOGO_PADRAO.map(p => `
-                        <div class="egg-card shadow-sm">
-                            <img src="${p.img}" class="w-full h-40 object-cover">
-                            <div class="p-4">
-                                <h3 class="font-black text-slate-800 text-sm uppercase">${p.nome}</h3>
-                                <p class="text-[10px] text-slate-400 mb-3">${p.desc}</p>
-                                
-                                <div class="space-y-2 border-t pt-3">
-                                    <div class="flex justify-between items-center">
-                                        <span class="text-[10px] font-bold text-slate-500 uppercase">Caixa (30 dz)</span>
-                                        <span class="text-[10px] font-black text-red-400 uppercase">Indisponível</span>
-                                    </div>
-                                    <div class="flex justify-between items-center">
-                                        <span class="text-[10px] font-bold text-slate-500 uppercase">Cartela (30 un)</span>
-                                        <span class="text-[10px] font-black text-red-400 uppercase">Indisponível</span>
-                                    </div>
-                                </div>
-                                
-                                <button disabled class="w-full mt-4 py-3 btn-disabled rounded-xl text-[10px] font-black uppercase tracking-tighter">Aguardando Estoque</button>
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>`;
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AppEgg | Distribuidora de Ovos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; color: #1f2937; }
+        .product-card { background: white; border-radius: 8px; border: 1px solid #e5e7eb; transition: box-shadow 0.2s; }
+        .product-card:hover { box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
+        .price-tag { color: #e11d48; font-weight: 800; }
+        .btn-add { background-color: #e11d48; color: white; border-radius: 4px; font-weight: 700; transition: background 0.2s; }
+        .btn-add:hover { background-color: #be123c; }
+        .cart-count { background: #e11d48; color: white; font-size: 11px; padding: 2px 6px; border-radius: 99px; }
+    </style>
+</head>
+<body class="pb-10">
+    <div id="app-root"></div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+        const firebaseConfig = {
+            apiKey: "AIzaSyD3Otz9-zdZH-E5Feg9IOGWPzVycoe8gro",
+            authDomain: "distribuidora-de-ovos-aline.firebaseapp.com",
+            projectId: "distribuidora-de-ovos-aline",
+            storageBucket: "distribuidora-de-ovos-aline.firebasestorage.app",
+            messagingSenderId: "92187548716",
+            appId: "1:92187548716:web:d61d18a29aa76aead7c589"
+        };
+        initializeApp(firebaseConfig);
+        const API_BASE = "https://painel-distribuidora-backend.onrender.com/api";
+
+        window.state = { 
+            view: 'loja', 
+            produtos: [], 
+            carrinho: [],
+            clienteData: JSON.parse(localStorage.getItem('appegg_user')) || null 
+        };
+
+        window.actions = {
+            loadProdutos: async () => {
+                const res = await fetch(`${API_BASE}/produtos`);
+                window.state.produtos = await res.json();
+                window.render();
             }
         };
 
-        window.render();
+        window.render = () => {
+            const root = document.getElementById('app-root');
+            if (!window.state.clienteData && window.state.view !== 'cadastro') {
+                root.innerHTML = `<div class="p-8 h-screen flex flex-col justify-center max-w-sm mx-auto">
+                    <div class="text-center mb-8"><h1 class="text-3xl font-black text-rose-600 italic">AppEgg</h1><p class="text-gray-500 text-sm">Distribuição de Ovos Atacadista</p></div>
+                    <form onsubmit="event.preventDefault(); localStorage.setItem('appegg_user', JSON.stringify({nome:'Thon'})); location.reload()" class="space-y-4">
+                        <input type="email" placeholder="E-mail" class="w-full p-3 border rounded-md outline-none focus:border-rose-500">
+                        <button class="w-full py-3 btn-add uppercase">Entrar</button>
+                        <button type="button" onclick="window.state.view='cadastro'; window.render()" class="w-full text-xs font-bold text-gray-400 uppercase">Novo Cadastro</button>
+                    </form>
+                </div>`;
+                return;
+            }
+
+            root.innerHTML = `
+                <header class="bg-white border-b sticky top-0 z-50 p-4 flex justify-between items-center shadow-sm">
+                    <h1 class="font-black text-rose-600 text-2xl italic tracking-tighter">AppEgg</h1>
+                    <div class="flex items-center gap-4">
+                        <div class="relative flex items-center gap-1 font-bold text-gray-700">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                            <span class="cart-count">${window.state.carrinho.length}</span>
+                        </div>
+                        <button onclick="localStorage.clear(); location.reload()" class="text-[10px] uppercase font-bold text-gray-400">Sair</button>
+                    </div>
+                </header>
+
+                <main class="p-4 max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-4">
+                    ${window.state.produtos.map(p => `
+                        <div class="product-card flex flex-col h-full">
+                            <div class="p-2 flex-shrink-0">
+                                <img src="${p.foto_url}" class="w-full h-32 object-contain rounded-md">
+                            </div>
+                            <div class="p-3 flex flex-col flex-grow border-t">
+                                <h3 class="text-[11px] font-bold text-gray-800 line-clamp-2 uppercase h-8 mb-1 leading-tight">${p.nome}</h3>
+                                <p class="text-[9px] text-gray-400 font-bold mb-2 uppercase tracking-tighter">Ref: ${p.tipo_estoque}</p>
+                                <div class="mt-auto">
+                                    <p class="text-[10px] text-gray-500">Por ${p.tipo_estoque}:</p>
+                                    <p class="text-xl price-tag leading-none mb-3">R$ ${parseFloat(p.preco).toFixed(2)}</p>
+                                    <button class="w-full py-2 btn-add text-[10px] uppercase tracking-widest">Adicionar</button>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </main>
+            `;
+        };
+        window.actions.loadProdutos();
     </script>
 </body>
 </html>
