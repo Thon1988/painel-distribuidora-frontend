@@ -3,17 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AppEgg - Cliente</title>
+    <title>AppEgg - Cadastro e Loja</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
         body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
-        .cart-badge { position: absolute; top: -5px; right: -5px; background: #ef4444; color: white; border-radius: 50%; width: 20px; height: 20px; font-size: 11px; display: flex; align-items: center; justify-content: center; font-weight: 900; }
+        input, textarea, select { outline: none !important; }
     </style>
 </head>
-<body class="pb-10">
+<body class="pb-24">
 
-    <div id="app-client"></div>
+    <div id="app-root"></div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
@@ -33,166 +33,163 @@
         const API_BASE = "https://painel-distribuidora-backend.onrender.com/api";
 
         window.state = {
+            view: 'loja', 
             produtos: [],
-            carrinho: [],
-            loading: true,
-            view: 'loja', // loja, carrinho, checkout, sucesso
-            endereco: { rua: '', numero: '', cep: '' },
-            pagamento: 'Pix'
+            carrinho: null,
+            clienteData: JSON.parse(localStorage.getItem('appegg_user')) || null
         };
 
         window.actions = {
             loadProdutos: async () => {
                 const res = await fetch(`${API_BASE}/produtos`);
                 window.state.produtos = await res.json();
-                window.state.loading = false;
                 window.render();
             },
-            adicionar: (p) => {
-                const item = window.state.carrinho.find(c => c.id === p.id);
-                if (item) { 
-                    if(item.qtd < p.quantidade) item.qtd++;
-                    else alert("Limite de estoque atingido!");
+            salvarCadastro: (e) => {
+                e.preventDefault();
+                const f = new FormData(e.target);
+                
+                if(f.get('senha') !== f.get('repete_senha')) {
+                    alert("As senhas não conferem!");
+                    return;
                 }
-                else window.state.carrinho.push({ ...p, qtd: 1 });
-                window.render();
-            },
-            remover: (id) => {
-                const idx = window.state.carrinho.findIndex(c => c.id === id);
-                if (window.state.carrinho[idx].qtd > 1) window.state.carrinho[idx].qtd--;
-                else window.state.carrinho.splice(idx, 1);
-                window.render();
-            },
-            finalizarPedido: async () => {
-                if(!window.state.endereco.rua) return alert("Preencha o endereço!");
-                
-                window.state.loading = true; window.render();
 
-                try {
-                    for (const item of window.state.carrinho) {
-                        await addDoc(collection(dbFirestore, "vendas_logs"), {
-                            produtoNome: item.nome,
-                            postgresId: item.id,
-                            quantidade: item.qtd,
-                            precoNoMomento: parseFloat(item.preco),
-                            cliente: window.state.endereco.rua + ", " + window.state.endereco.numero,
-                            metodoPagamento: window.state.pagamento,
-                            status: 'PENDENTE',
-                            criadoEm: serverTimestamp()
-                        });
-                    }
-                    window.state.carrinho = [];
-                    window.state.view = 'sucesso';
-                } catch (e) { alert("Erro ao processar"); }
-                
-                window.state.loading = false; window.render();
+                const data = {
+                    nome: f.get('nome'),
+                    email: f.get('email'),
+                    whatsapp: f.get('whatsapp'),
+                    doc: f.get('doc'),
+                    cep: f.get('cep'),
+                    rua: f.get('rua'),
+                    numero: f.get('numero'),
+                    cidade: f.get('cidade'),
+                    estado: f.get('estado'),
+                    senha: f.get('senha') // Salvo localmente para simular sessão
+                };
+
+                localStorage.setItem('appegg_user', JSON.stringify(data));
+                window.state.clienteData = data;
+                window.render();
+            },
+            finalizarPedido: async (e) => {
+                e.preventDefault();
+                const form = e.target;
+                const c = window.state.clienteData;
+
+                const pedido = {
+                    produtoNome: window.state.carrinho.nome,
+                    quantidade: parseInt(form.quantidade.value),
+                    precoNoMomento: window.state.carrinho.preco,
+                    tipoEstoque: window.state.carrinho.tipo_estoque,
+                    // Dados do Cliente (Cadastro Completo)
+                    clienteNome: c.nome,
+                    clienteDoc: c.doc,
+                    clienteWhatsapp: c.whatsapp,
+                    clienteEmail: c.email,
+                    enderecoEntrega: `${c.rua}, ${c.numero} - ${c.cidade}/${c.estado} (CEP: ${c.cep})`,
+                    status: 'PENDENTE',
+                    criadoEm: serverTimestamp()
+                };
+
+                await addDoc(collection(dbFirestore, "vendas_logs"), pedido);
+                alert("Pedido confirmado! Prepare o omelete!");
+                window.state.view = 'loja';
+                window.state.carrinho = null;
+                window.render();
             }
         };
 
         window.render = () => {
-            const root = document.getElementById('app-client');
-            const cartCount = window.state.carrinho.reduce((a, b) => a + b.qtd, 0);
-            const total = window.state.carrinho.reduce((a, b) => a + (b.preco * b.qtd), 0);
+            const root = document.getElementById('app-root');
 
-            if (window.state.loading) {
-                root.innerHTML = `<div class="flex h-screen items-center justify-center font-black text-indigo-600 animate-pulse">CARREGANDO APPEGG...</div>`;
+            if (!window.state.clienteData) {
+                root.innerHTML = `
+                    <div class="min-h-screen p-6 bg-indigo-600 flex flex-col items-center">
+                        <div class="bg-white p-8 rounded-[2.5rem] shadow-2xl w-full max-w-md my-10">
+                            <h1 class="text-3xl font-black text-indigo-600 mb-2 italic text-center">AppEgg</h1>
+                            <p class="text-slate-400 text-[10px] font-black mb-8 uppercase text-center tracking-widest">Cadastro de Novo Cliente</p>
+                            
+                            <form onsubmit="window.actions.salvarCadastro(event)" class="space-y-3">
+                                <input name="nome" placeholder="Nome ou Razão Social" required class="w-full p-4 bg-slate-50 border rounded-2xl font-bold text-sm">
+                                <div class="grid grid-cols-2 gap-2">
+                                    <input name="doc" placeholder="CPF ou CNPJ" required class="p-4 bg-slate-50 border rounded-2xl font-bold text-sm">
+                                    <input name="whatsapp" type="tel" placeholder="WhatsApp" required class="p-4 bg-slate-50 border rounded-2xl font-bold text-sm">
+                                </div>
+                                <input name="email" type="email" placeholder="E-mail" required class="w-full p-4 bg-slate-50 border rounded-2xl font-bold text-sm">
+                                
+                                <div class="pt-4 border-t">
+                                    <p class="text-[9px] font-black text-slate-400 uppercase mb-2">Endereço</p>
+                                    <input name="cep" placeholder="CEP" required class="w-full p-4 bg-slate-50 border rounded-2xl font-bold text-sm mb-2">
+                                    <div class="grid grid-cols-3 gap-2 mb-2">
+                                        <input name="rua" placeholder="Rua/Av" required class="col-span-2 p-4 bg-slate-50 border rounded-2xl font-bold text-sm">
+                                        <input name="numero" placeholder="Nº" required class="p-4 bg-slate-50 border rounded-2xl font-bold text-sm">
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <input name="cidade" placeholder="Cidade" required class="p-4 bg-slate-50 border rounded-2xl font-bold text-sm">
+                                        <input name="estado" placeholder="UF" maxlength="2" required class="p-4 bg-slate-50 border rounded-2xl font-bold text-sm">
+                                    </div>
+                                </div>
+
+                                <div class="pt-4 border-t">
+                                    <p class="text-[9px] font-black text-slate-400 uppercase mb-2">Segurança</p>
+                                    <input name="senha" type="password" placeholder="Crie uma Senha" required class="w-full p-4 bg-slate-50 border rounded-2xl font-bold text-sm mb-2">
+                                    <input name="repete_senha" type="password" placeholder="Repita a Senha" required class="w-full p-4 bg-slate-50 border rounded-2xl font-bold text-sm">
+                                </div>
+
+                                <button class="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black shadow-lg mt-4">FINALIZAR CADASTRO</button>
+                            </form>
+                        </div>
+                    </div>`;
                 return;
             }
 
-            // TELA: LOJA
             if (window.state.view === 'loja') {
                 root.innerHTML = `
-                    <header class="bg-white p-6 sticky top-0 z-10 shadow-sm flex justify-between items-center">
-                        <h1 class="text-3xl font-black italic text-indigo-600">AppEgg</h1>
-                        <button onclick="window.state.view = 'carrinho'; window.render()" class="relative p-3 bg-slate-100 rounded-2xl">
-                            🛒 ${cartCount > 0 ? `<span class="cart-badge">${cartCount}</span>` : ''}
-                        </button>
+                    <header class="p-6 flex justify-between items-center">
+                        <div>
+                            <h1 class="text-2xl font-black text-indigo-600 italic leading-none">AppEgg</h1>
+                            <p class="text-[10px] font-bold text-slate-400 uppercase">Olá, ${window.state.clienteData.nome}</p>
+                        </div>
+                        <button onclick="localStorage.clear(); location.reload()" class="text-[9px] font-black text-slate-300">SAIR</button>
                     </header>
-                    <div class="p-6 grid gap-4 max-w-lg mx-auto">
-                        <h2 class="text-lg font-black text-slate-800 uppercase tracking-tighter">Ovos Fresquinhos</h2>
+                    <main class="px-6 grid gap-4">
                         ${window.state.produtos.map(p => `
-                            <div class="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm flex justify-between items-center">
+                            <div class="bg-white p-6 rounded-[2.5rem] border shadow-sm flex justify-between items-center">
                                 <div>
-                                    <p class="font-bold text-slate-700">${p.nome}</p>
-                                    <p class="text-xl font-black text-indigo-600">R$ ${parseFloat(p.preco).toFixed(2)}</p>
-                                    <p class="text-[10px] font-bold text-slate-300">ESTOQUE: ${p.quantidade} un</p>
+                                    <h3 class="font-black text-slate-800 uppercase text-xs">${p.nome}</h3>
+                                    <p class="text-2xl font-black text-indigo-600">R$ ${parseFloat(p.preco).toFixed(2)}</p>
+                                    <p class="text-[9px] font-bold text-slate-300 uppercase">${p.quantidade} ${p.tipo_estoque || 'un'} em estoque</p>
                                 </div>
-                                <button onclick='window.actions.adicionar(${JSON.stringify(p)})' class="bg-indigo-600 text-white px-5 py-3 rounded-2xl font-black text-xs shadow-lg shadow-indigo-100">ADICIONAR</button>
+                                <button onclick='window.state.carrinho = ${JSON.stringify(p)}; window.state.view = "checkout"; window.render()' class="bg-indigo-600 text-white px-6 py-4 rounded-2xl font-black text-xs">PEDIR</button>
                             </div>
                         `).join('')}
-                    </div>
-                `;
+                    </main>`;
             } 
-
-            // TELA: CARRINHO
-            else if (window.state.view === 'carrinho') {
-                root.innerHTML = `
-                    <div class="p-6 max-w-lg mx-auto">
-                        <button onclick="window.state.view = 'loja'; window.render()" class="text-indigo-600 font-black mb-6">← VOLTAR</button>
-                        <h2 class="text-2xl font-black mb-6">Meu Carrinho</h2>
-                        <div class="space-y-4">
-                            ${window.state.carrinho.map(item => `
-                                <div class="flex justify-between items-center bg-white p-4 rounded-2xl border">
-                                    <div>
-                                        <p class="font-bold">${item.nome}</p>
-                                        <p class="text-indigo-600 font-black text-sm">R$ ${(item.preco * item.qtd).toFixed(2)}</p>
-                                    </div>
-                                    <div class="flex items-center gap-3">
-                                        <button onclick="window.actions.remover(${item.id})" class="w-8 h-8 bg-slate-100 rounded-lg font-black">-</button>
-                                        <span class="font-black">${item.qtd}</span>
-                                        <button onclick='window.actions.adicionar(${JSON.stringify(item)})' class="w-8 h-8 bg-slate-100 rounded-lg font-black">+</button>
-                                    </div>
-                                </div>
-                            `).join('')}
-                        </div>
-                        <div class="mt-10 p-6 bg-indigo-600 rounded-[2.5rem] text-white">
-                            <div class="flex justify-between items-center mb-6">
-                                <span class="font-bold opacity-80 uppercase text-xs">Total do Pedido</span>
-                                <span class="text-3xl font-black">R$ ${total.toFixed(2)}</span>
-                            </div>
-                            <button onclick="window.state.view = 'checkout'; window.render()" class="w-full py-4 bg-white text-indigo-600 rounded-2xl font-black">AVANÇAR PARA ENTREGA</button>
-                        </div>
-                    </div>
-                `;
-            }
-
-            // TELA: CHECKOUT (ENDEREÇO E PAGAMENTO)
             else if (window.state.view === 'checkout') {
                 root.innerHTML = `
-                    <div class="p-6 max-w-lg mx-auto">
-                        <button onclick="window.state.view = 'carrinho'; window.render()" class="text-indigo-600 font-black mb-6">← VOLTAR</button>
-                        <h2 class="text-2xl font-black mb-8">Onde entregamos?</h2>
-                        
-                        <div class="space-y-4 mb-10">
-                            <input oninput="window.state.endereco.rua = this.value" placeholder="Nome da Rua / Bairro" class="w-full p-4 rounded-2xl border outline-none focus:border-indigo-500">
-                            <div class="flex gap-4">
-                                <input oninput="window.state.endereco.numero = this.value" placeholder="Nº" class="w-24 p-4 rounded-2xl border outline-none focus:border-indigo-500">
-                                <input oninput="window.state.endereco.cep = this.value" placeholder="CEP" class="flex-1 p-4 rounded-2xl border outline-none focus:border-indigo-500">
+                    <div class="p-6">
+                        <button onclick="window.state.view='loja'; window.render()" class="text-indigo-600 font-black mb-6 flex items-center gap-2">← VOLTAR</button>
+                        <div class="bg-white p-8 rounded-[2.5rem] border shadow-sm">
+                            <h2 class="font-black text-slate-800 uppercase text-sm mb-4">Confirmar Pedido</h2>
+                            <div class="bg-slate-50 p-4 rounded-2xl mb-6 border border-dashed">
+                                <p class="text-[10px] font-black text-slate-400 uppercase">Item Selecionado</p>
+                                <p class="font-black text-slate-700 uppercase">${window.state.carrinho.nome}</p>
+                                <p class="text-indigo-600 font-bold">R$ ${window.state.carrinho.preco.toFixed(2)} / ${window.state.carrinho.tipo_estoque}</p>
                             </div>
+                            <form onsubmit="window.actions.finalizarPedido(event)" class="space-y-4">
+                                <div>
+                                    <label class="text-[10px] font-black text-slate-400 uppercase ml-2">Quantidade (${window.state.carrinho.tipo_estoque})</label>
+                                    <input name="quantidade" type="number" value="1" min="1" required class="w-full p-4 bg-slate-50 border rounded-2xl font-black outline-none">
+                                </div>
+                                <div class="p-4 bg-indigo-50 rounded-2xl border border-indigo-100">
+                                    <p class="text-[10px] font-black text-indigo-400 uppercase">Entregar em:</p>
+                                    <p class="text-xs font-bold text-indigo-900">${window.state.clienteData.rua}, ${window.state.clienteData.numero}</p>
+                                    <p class="text-[10px] text-indigo-800">${window.state.clienteData.cidade} - ${window.state.clienteData.estado}</p>
+                                </div>
+                                <button class="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black shadow-lg">ENVIAR PEDIDO AGORA</button>
+                            </form>
                         </div>
-
-                        <h2 class="text-2xl font-black mb-6">Pagamento</h2>
-                        <div class="grid grid-cols-1 gap-2">
-                            ${['Pix', 'Dinheiro', 'Cartão (Entregar)'].map(m => `
-                                <button onclick="window.state.pagamento = '${m}'; window.render()" class="p-4 border rounded-2xl text-left font-bold ${window.state.pagamento === m ? 'border-indigo-600 bg-indigo-50' : 'border-slate-100'}">${m}</button>
-                            `).join('')}
-                        </div>
-
-                        <button onclick="window.actions.finalizarPedido()" class="w-full mt-10 py-5 bg-emerald-500 text-white rounded-[2rem] font-black shadow-xl shadow-emerald-100">CONFIRMAR PEDIDO 🎉</button>
-                    </div>
-                `;
-            }
-
-            // TELA: SUCESSO
-            else if (window.state.view === 'sucesso') {
-                root.innerHTML = `
-                    <div class="h-screen flex flex-col items-center justify-center p-10 text-center">
-                        <div class="text-7xl mb-6">🚀</div>
-                        <h2 class="text-3xl font-black text-slate-800 mb-2">Pedido Enviado!</h2>
-                        <p class="text-slate-400 font-medium mb-10">Agora é só aguardar. O estoque já foi reservado para você.</p>
-                        <button onclick="location.reload()" class="bg-indigo-600 text-white px-10 py-4 rounded-2xl font-black">VOLTAR À LOJA</button>
-                    </div>
-                `;
+                    </div>`;
             }
         };
 

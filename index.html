@@ -11,8 +11,6 @@
         .status-btn { transition: all 0.2s; border: 2px solid transparent; }
         .status-active { border-color: #4f46e5; background-color: #eef2ff; color: #4f46e5; }
         .stat-card { background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%); }
-        
-        /* ESTILO PARA IMPRESSÃO DO RECIBO */
         @media print {
             body * { visibility: hidden; }
             #printable-area, #printable-area * { visibility: visible; }
@@ -24,10 +22,12 @@
 <body class="min-h-screen">
 
     <div id="app-root"></div>
-    <div id="printable-area" class="hidden"></div> <script type="module">
+    <div id="printable-area" class="hidden"></div>
+
+    <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-        import { getAuth, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
-        import { getFirestore, collection, onSnapshot, query, orderBy, doc, updateDoc } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+        import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+        import { getFirestore, collection, onSnapshot, query, orderBy, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyD3Otz9-zdZH-E5Feg9IOGWPzVycoe8gro",
@@ -44,7 +44,7 @@
         const API_BASE = "https://painel-distribuidora-backend.onrender.com/api";
 
         window.state = { 
-            authenticated: false,
+            user: null,
             view: 'pedidos',
             produtos: [],
             pedidos: [],
@@ -52,12 +52,12 @@
         };
 
         window.actions = {
-            verificarAcesso: (codigo) => {
-                if(codigo === "1234") {
-                    window.state.authenticated = true;
-                    window.actions.loadData();
-                } else { alert("Código incorreto!"); }
+            login: async (email, senha) => {
+                try {
+                    await signInWithEmailAndPassword(auth, email, senha);
+                } catch (e) { alert("Erro ao entrar: Verifique e-mail e senha."); }
             },
+            logout: () => signOut(auth),
             loadData: async () => {
                 const res = await fetch(`${API_BASE}/produtos`);
                 window.state.produtos = await res.json();
@@ -66,26 +66,25 @@
             updateStatus: async (orderId, novoStatus) => {
                 await updateDoc(doc(dbFirestore, "vendas_logs", orderId), { status: novoStatus });
             },
+            excluirPedido: async (orderId) => {
+                const senha = prompt("Digite a senha de administrador para excluir:");
+                if(senha === "admin123") { // Senha de exclusão
+                    await deleteDoc(doc(dbFirestore, "vendas_logs", orderId));
+                } else {
+                    alert("Senha incorreta!");
+                }
+            },
             imprimirRecibo: (pedido) => {
                 const printArea = document.getElementById('printable-area');
-                const data = pedido.criadoEm.toDate ? pedido.criadoEm.toDate().toLocaleString() : new Date(pedido.criadoEm).toLocaleString();
-                
                 printArea.innerHTML = `
                     <div style="padding: 20px; font-family: sans-serif; border: 1px dashed #000; width: 300px;">
-                        <center>
-                            <h2 style="margin-bottom: 5px;">AppEgg</h2>
-                            <p style="font-size: 12px;">Distribuidora de Ovos</p>
-                        </center>
+                        <center><h2>AppEgg</h2><p>Recibo de Entrega</p></center>
                         <hr>
                         <p><b>PEDIDO:</b> #${pedido.id.slice(-6).toUpperCase()}</p>
-                        <p><b>DATA:</b> ${data}</p>
-                        <p><b>CLIENTE/END:</b><br>${pedido.cliente || 'Não informado'}</p>
+                        <p><b>CLIENTE:</b><br>${pedido.cliente || 'Consumidor'}</p>
                         <hr>
-                        <p><b>ITEM:</b> ${pedido.quantidade}x ${pedido.produtoNome}</p>
-                        <p><b>PAGAMENTO:</b> ${pedido.metodoPagamento || 'A combinar'}</p>
-                        <hr>
-                        <h3 style="text-align: right;">TOTAL: R$ ${(pedido.precoNoMomento * pedido.quantidade).toFixed(2)}</h3>
-                        <center><p style="font-size: 10px; margin-top: 20px;">Obrigado pela preferência!</p></center>
+                        <p><b>ITEM:</b> ${pedido.quantidade} ${pedido.tipoEstoque || 'un'} de ${pedido.produtoNome}</p>
+                        <p><b>TOTAL:</b> R$ ${(pedido.precoNoMomento * pedido.quantidade).toFixed(2)}</p>
                     </div>
                 `;
                 window.print();
@@ -93,7 +92,12 @@
             salvarProduto: async (e) => {
                 e.preventDefault();
                 const form = e.target;
-                const dados = { nome: form.nome.value, preco: parseFloat(form.preco.value), quantidade: parseInt(form.quantidade.value) };
+                const dados = { 
+                    nome: form.nome.value, 
+                    preco: parseFloat(form.preco.value), 
+                    quantidade: parseInt(form.quantidade.value),
+                    tipo_estoque: form.tipo_estoque.value // 'unidade' ou 'caixa'
+                };
                 const method = window.state.editingProduct ? 'PUT' : 'POST';
                 const url = window.state.editingProduct ? `${API_BASE}/produtos/${window.state.editingProduct.id}` : `${API_BASE}/produtos`;
                 await fetch(url, { method: method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dados) });
@@ -107,15 +111,22 @@
             window.render();
         });
 
+        onAuthStateChanged(auth, (user) => {
+            window.state.user = user;
+            if (user) window.actions.loadData();
+            window.render();
+        });
+
         window.render = () => {
             const root = document.getElementById('app-root');
-            if (!window.state.authenticated) {
+            if (!window.state.user) {
                 root.innerHTML = `<div class="h-screen flex items-center justify-center bg-slate-900 p-6">
-                    <div class="bg-white p-10 rounded-[3rem] shadow-2xl max-w-sm w-full text-center">
-                        <h1 class="text-4xl font-black text-indigo-600 italic mb-8">AppEgg</h1>
-                        <input id="ac-code" type="password" placeholder="CÓDIGO" class="w-full p-5 bg-slate-50 border rounded-2xl text-center text-2xl font-black mb-4 outline-none focus:border-indigo-500">
-                        <button onclick="window.actions.verificarAcesso(document.getElementById('ac-code').value)" class="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black">ENTRAR</button>
-                    </div>
+                    <form onsubmit="event.preventDefault(); window.actions.login(this.email.value, this.senha.value)" class="bg-white p-10 rounded-[3rem] shadow-2xl max-w-sm w-full">
+                        <h1 class="text-3xl font-black text-indigo-600 mb-8 text-center italic">AppEgg Login</h1>
+                        <input name="email" type="email" placeholder="E-mail" class="w-full p-4 bg-slate-50 border rounded-2xl mb-4 outline-none">
+                        <input name="senha" type="password" placeholder="Senha" class="w-full p-4 bg-slate-50 border rounded-2xl mb-6 outline-none">
+                        <button type="submit" class="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black shadow-lg">ENTRAR</button>
+                    </form>
                 </div>`;
                 return;
             }
@@ -132,40 +143,37 @@
                 <header class="bg-white border-b p-6 sticky top-0 z-20 flex justify-between items-center no-print">
                     <h1 class="text-2xl font-black italic text-indigo-600">AppEgg ADMIN</h1>
                     <nav class="flex gap-2">
-                        <button onclick="window.state.view='pedidos';window.render()" class="px-6 py-2 rounded-xl font-bold ${window.state.view === 'pedidos' ? 'bg-indigo-600 text-white' : 'bg-slate-50 text-slate-400'}">PEDIDOS</button>
-                        <button onclick="window.state.view='estoque';window.render()" class="px-6 py-2 rounded-xl font-bold ${window.state.view === 'estoque' ? 'bg-indigo-600 text-white' : 'bg-slate-50 text-slate-400'}">ESTOQUE</button>
+                        <button onclick="window.state.view='pedidos';window.render()" class="px-4 py-2 rounded-xl font-bold ${window.state.view === 'pedidos' ? 'bg-indigo-600 text-white' : 'bg-slate-50 text-slate-400'}">PEDIDOS</button>
+                        <button onclick="window.state.view='estoque';window.render()" class="px-4 py-2 rounded-xl font-bold ${window.state.view === 'estoque' ? 'bg-indigo-600 text-white' : 'bg-slate-50 text-slate-400'}">ESTOQUE</button>
+                        <button onclick="window.actions.logout()" class="px-4 py-2 text-slate-400 font-bold">SAIR</button>
                     </nav>
                 </header>
 
                 <main class="p-6 max-w-5xl mx-auto no-print">
                     ${window.state.view === 'pedidos' ? `
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10">
-                            <div class="stat-card p-8 rounded-[2.5rem] text-white shadow-xl shadow-indigo-100">
-                                <p class="text-xs font-bold opacity-70 uppercase tracking-widest mb-2">Vendas de Hoje (${hoje})</p>
-                                <h2 class="text-4xl font-black">R$ ${faturamentoHoje.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</h2>
+                            <div class="stat-card p-8 rounded-[2.5rem] text-white shadow-xl">
+                                <p class="text-xs font-bold opacity-70 mb-2">FATURAMENTO HOJE</p>
+                                <h2 class="text-4xl font-black">R$ ${faturamentoHoje.toFixed(2)}</h2>
                             </div>
-                            <div class="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
-                                <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Total de Pedidos</p>
-                                <h2 class="text-4xl font-black text-slate-800">${pedidosHoje.length} <span class="text-lg text-slate-300 italic">hoje</span></h2>
+                            <div class="bg-white p-8 rounded-[2.5rem] border shadow-sm">
+                                <p class="text-xs font-bold text-slate-400 mb-2">PEDIDOS HOJE</p>
+                                <h2 class="text-4xl font-black text-slate-800">${pedidosHoje.length}</h2>
                             </div>
                         </div>
 
                         <div class="grid gap-6">
-                            <h2 class="text-xl font-black text-slate-800 uppercase italic">Fluxo de Pedidos</h2>
                             ${window.state.pedidos.map(o => `
                                 <div class="bg-white p-6 rounded-[2.5rem] border shadow-sm space-y-4">
                                     <div class="flex justify-between items-center">
-                                        <span class="px-4 py-1 bg-slate-100 rounded-full text-[10px] font-black text-slate-500">ID: #${o.id.slice(-4).toUpperCase()}</span>
-                                        <div class="flex gap-2">
-                                            <button onclick='window.actions.imprimirRecibo(${JSON.stringify(o)})' class="px-4 py-1 bg-emerald-100 text-emerald-600 rounded-full text-[10px] font-black hover:bg-emerald-200">🖨️ IMPRIMIR</button>
-                                            <span class="text-sm font-black text-indigo-600">R$ ${(o.precoNoMomento * o.quantidade).toFixed(2)}</span>
+                                        <span class="text-[10px] font-black text-slate-300 italic">ID: #${o.id.slice(-4).toUpperCase()}</span>
+                                        <div class="flex gap-3">
+                                            <button onclick='window.actions.imprimirRecibo(${JSON.stringify(o)})' class="text-xs font-black text-emerald-500">IMPRIMIR</button>
+                                            <button onclick="window.actions.excluirPedido('${o.id}')" class="text-xs font-black text-red-400">EXCLUIR</button>
                                         </div>
                                     </div>
-                                    <div>
-                                        <p class="text-xs font-black text-slate-300 uppercase">Destino</p>
-                                        <p class="font-bold text-slate-700">${o.cliente || 'Consumidor Final'}</p>
-                                        <p class="font-bold text-indigo-500 mt-2">📦 ${o.quantidade}x ${o.produtoNome}</p>
-                                    </div>
+                                    <p class="font-bold text-slate-700">${o.cliente || 'Balcão'}</p>
+                                    <p class="text-indigo-600 font-black">📦 ${o.quantidade} ${o.tipoEstoque || 'un'} - ${o.produtoNome}</p>
                                     <div class="flex gap-2 pt-2">
                                         ${['PENDENTE', 'EM ROTA', 'ENTREGUE'].map(status => `
                                             <button onclick="window.actions.updateStatus('${o.id}', '${status}')" class="flex-1 py-3 rounded-xl text-[10px] font-black status-btn ${o.status === status ? 'status-active' : 'bg-slate-50 text-slate-400'}">${status}</button>
@@ -176,21 +184,24 @@
                         </div>
                     ` : `
                         <form onsubmit="window.actions.salvarProduto(event)" class="bg-white p-8 rounded-[3rem] border shadow-sm space-y-4 mb-10">
-                             <h3 class="font-black text-slate-800 uppercase">${window.state.editingProduct ? 'Editar' : 'Novo'} Produto</h3>
-                             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <input name="nome" placeholder="Nome do Ovo" value="${window.state.editingProduct?.nome || ''}" required class="p-4 bg-slate-50 border rounded-2xl font-bold">
                                 <input name="preco" type="number" step="0.01" placeholder="Preço" value="${window.state.editingProduct?.preco || ''}" required class="p-4 bg-slate-50 border rounded-2xl font-bold">
                                 <input name="quantidade" type="number" placeholder="Estoque" value="${window.state.editingProduct?.quantidade || ''}" required class="p-4 bg-slate-50 border rounded-2xl font-bold">
+                                <select name="tipo_estoque" class="p-4 bg-slate-50 border rounded-2xl font-bold">
+                                    <option value="unidades" ${window.state.editingProduct?.tipo_estoque === 'unidades' ? 'selected' : ''}>Unidades</option>
+                                    <option value="caixas" ${window.state.editingProduct?.tipo_estoque === 'caixas' ? 'selected' : ''}>Caixas</option>
+                                </select>
                              </div>
-                             <button class="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black shadow-lg">SALVAR NO ESTOQUE</button>
+                             <button class="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black shadow-lg uppercase">${window.state.editingProduct ? 'Atualizar' : 'Adicionar ao Estoque'}</button>
                         </form>
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                             ${window.state.produtos.map(p => `
                                 <div class="bg-white p-6 rounded-[2.5rem] border shadow-sm relative">
-                                    <button onclick='window.state.editingProduct = ${JSON.stringify(p)}; window.render()' class="absolute top-4 right-4 text-xl">✏️</button>
-                                    <h3 class="font-black text-slate-800 uppercase text-sm">${p.nome}</h3>
+                                    <button onclick='window.state.editingProduct = ${JSON.stringify(p)}; window.render()' class="absolute top-4 right-4">✏️</button>
+                                    <h3 class="font-black text-slate-800 uppercase text-xs">${p.nome}</h3>
                                     <p class="text-2xl font-black text-indigo-600">R$ ${parseFloat(p.preco).toFixed(2)}</p>
-                                    <p class="text-xs font-bold text-slate-400 mt-2 uppercase tracking-widest">Qtd: ${p.quantidade}</p>
+                                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Estoque: ${p.quantidade} ${p.tipo_estoque || 'unidades'}</p>
                                 </div>
                             `).join('')}
                         </div>
@@ -198,8 +209,6 @@
                 </main>
             `;
         };
-        onAuthStateChanged(auth, (user) => { if (user) window.render(); });
-        signInAnonymously(auth);
     </script>
 </body>
 </html>
