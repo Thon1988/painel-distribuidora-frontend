@@ -3,24 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AppEgg Admin | Gestão de Estoque</title>
+    <title>AppEgg Admin | Gestão Atacadista</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
-        body { font-family: 'Inter', sans-serif; background: #f3f4f6; }
-        .nav-active { border-bottom: 3px solid #e11d48; color: #e11d48; }
-        .card { background: white; border-radius: 12px; border: 1px solid #e5e7eb; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
-        .input-field { width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; outline: none; font-weight: 600; font-size: 14px; }
-        .input-field:focus { border-color: #e11d48; ring: 2px ring-rose-200; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&display=swap');
+        body { font-family: 'Inter', sans-serif; background: #f9fafb; }
+        .nav-active { color: #e11d48; border-bottom: 2px solid #e11d48; }
+        .card { background: white; border: 1px solid #e5e7eb; border-radius: 8px; }
+        .btn-rose { background-color: #e11d48; color: white; }
     </style>
 </head>
-<body class="pb-10">
+<body>
     <div id="app-root"></div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
         import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
-        import { getFirestore, collection, onSnapshot, query, orderBy, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyD3Otz9-zdZH-E5Feg9IOGWPzVycoe8gro",
@@ -38,8 +37,7 @@
 
         window.state = { user: null, view: 'estoque', produtos: [], pedidos: [] };
 
-        // LINKS DE FOTOS PÚBLICAS (UNSPLASH/WIKIMEDIA - NÃO QUEBRAM)
-        const FOTOS_ESTOQUE = {
+        const FOTOS_PADRAO = {
             "Ovo Branco Extra": "https://images.unsplash.com/photo-1587486914762-8f055609cc43?w=400",
             "Ovo Branco Grande": "https://images.unsplash.com/photo-1516448398574-8d246a7a083d?w=400",
             "Ovo Vermelho Extra": "https://images.unsplash.com/photo-1598965402089-897ce52e8355?w=400",
@@ -47,12 +45,18 @@
         };
 
         window.actions = {
-            loadData: async () => {
-                const res = await fetch(`${API_BASE}/produtos`);
-                window.state.produtos = await res.json();
+            changeView: (view) => {
+                window.state.view = view;
                 window.render();
             },
-            salvarProduto: async (e) => {
+            loadData: async () => {
+                try {
+                    const res = await fetch(`${API_BASE}/produtos`);
+                    window.state.produtos = await res.json();
+                    window.render();
+                } catch(e) { console.error(e); }
+            },
+            salvar: async (e) => {
                 e.preventDefault();
                 const f = new FormData(e.target);
                 const nome = f.get('nome');
@@ -61,101 +65,98 @@
                     preco: parseFloat(f.get('preco')),
                     quantidade: parseInt(f.get('quantidade')),
                     tipo_estoque: f.get('tipo_estoque'),
-                    foto_url: f.get('foto_url') || FOTOS_ESTOQUE[nome] || "https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=400"
+                    foto_url: f.get('foto_url') || FOTOS_PADRAO[nome] || "https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=400"
                 };
-                await fetch(`${API_BASE}/produtos`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(dados) });
+                await fetch(`${API_BASE}/produtos`, { 
+                    method: 'POST', 
+                    headers: {'Content-Type': 'application/json'}, 
+                    body: JSON.stringify(dados) 
+                });
                 window.actions.loadData();
                 e.target.reset();
-            },
-            excluir: async (id) => {
-                if(confirm("Remover do estoque?")) {
-                    await fetch(`${API_BASE}/produtos/${id}`, { method: 'DELETE' });
-                    window.actions.loadData();
-                }
             }
         };
 
         onAuthStateChanged(auth, (user) => {
             window.state.user = user;
-            if (user) window.actions.loadData();
+            if (user) {
+                window.actions.loadData();
+                onSnapshot(query(collection(db, "vendas_logs"), orderBy("criadoEm", "desc")), (snap) => {
+                    window.state.pedidos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                    window.render();
+                });
+            }
             window.render();
         });
 
         window.render = () => {
             const root = document.getElementById('app-root');
             if (!window.state.user) {
-                root.innerHTML = `<div class="h-screen flex items-center justify-center p-6"><form onsubmit="event.preventDefault(); signInWithEmailAndPassword(auth, this.email.value, this.senha.value)" class="card p-8 w-full max-w-sm"><h1 class="text-2xl font-black text-rose-600 mb-6 italic text-center uppercase">AppEgg Admin</h1><input name="email" type="email" value="thon@lojista.com.br" class="input-field mb-3"><input name="senha" type="password" placeholder="Senha" class="input-field mb-6"><button class="w-full py-4 bg-rose-600 text-white font-black rounded-lg uppercase">Acessar Painel</button></form></div>`;
+                root.innerHTML = `<div class="h-screen flex items-center justify-center p-6"><form onsubmit="event.preventDefault(); signInWithEmailAndPassword(auth, this.email.value, this.senha.value)" class="card p-8 w-full max-w-sm"><h1 class="text-2xl font-black text-rose-600 mb-6 italic text-center uppercase">AppEgg Admin</h1><input name="email" type="email" value="thon@lojista.com.br" class="w-full p-3 border mb-3 rounded-md outline-none font-bold"><input name="senha" type="password" placeholder="Senha" class="w-full p-3 border mb-6 rounded-md outline-none font-bold"><button class="w-full py-4 bg-rose-600 text-white font-black rounded-lg uppercase">Acessar</button></form></div>`;
                 return;
             }
 
             root.innerHTML = `
-                <nav class="bg-white border-b sticky top-0 z-50 px-4 mb-6">
+                <nav class="bg-white border-b sticky top-0 z-50 px-4">
                     <div class="max-w-5xl mx-auto flex justify-between items-center h-16">
                         <h1 class="font-black text-rose-600 italic text-xl">AppEgg</h1>
-                        <div class="flex gap-4">
-                            <button onclick="window.state.view='pedidos';window.render()" class="text-[10px] font-bold uppercase ${window.state.view === 'pedidos' ? 'text-rose-600 border-b-2 border-rose-600' : 'text-gray-400'}">Pedidos</button>
-                            <button onclick="window.state.view='estoque';window.render()" class="text-[10px] font-bold uppercase ${window.state.view === 'estoque' ? 'text-rose-600 border-b-2 border-rose-600' : 'text-gray-400'}">Estoque</button>
+                        <div class="flex gap-6 h-full">
+                            <button onclick="window.actions.changeView('pedidos')" class="h-full px-2 text-[10px] font-bold uppercase tracking-wider ${window.state.view === 'pedidos' ? 'nav-active' : 'text-gray-400'}">Pedidos</button>
+                            <button onclick="window.actions.changeView('estoque')" class="h-full px-2 text-[10px] font-bold uppercase tracking-wider ${window.state.view === 'estoque' ? 'nav-active' : 'text-gray-400'}">Estoque</button>
                         </div>
-                        <button onclick="signOut(auth)" class="text-[9px] font-bold text-gray-300">SAIR</button>
+                        <button onclick="signOut(auth)" class="text-[10px] font-bold text-gray-300">SAIR</button>
                     </div>
                 </nav>
 
-                <main class="max-w-5xl mx-auto px-4">
-                    <div class="card p-6 mb-8">
-                        <h2 class="font-black text-gray-700 mb-6 uppercase text-sm italic tracking-tighter">Adicionar Ovo ao Catálogo</h2>
-                        <form onsubmit="window.actions.salvarProduto(event)" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            <div>
-                                <label class="text-[10px] font-bold text-gray-400 uppercase ml-1">Tipo do Ovo</label>
-                                <select name="nome" class="input-field">
+                <main class="max-w-5xl mx-auto p-6">
+                    ${window.state.view === 'estoque' ? `
+                        <div class="card p-6 mb-8">
+                            <h2 class="font-bold text-gray-700 mb-4 uppercase text-xs">Adicionar ao Catálogo</h2>
+                            <form onsubmit="window.actions.salvar(event)" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                <select name="nome" class="p-3 border rounded font-bold text-sm">
                                     <option>Ovo Branco Extra</option>
                                     <option>Ovo Branco Grande</option>
                                     <option>Ovo Vermelho Extra</option>
                                     <option>Ovo de Codorna</option>
                                 </select>
-                            </div>
-                            <div>
-                                <label class="text-[10px] font-bold text-gray-400 uppercase ml-1">Preço R$</label>
-                                <input name="preco" type="number" step="0.01" placeholder="0,00" required class="input-field">
-                            </div>
-                            <div>
-                                <label class="text-[10px] font-bold text-gray-400 uppercase ml-1">Unidade de Venda</label>
-                                <select name="tipo_estoque" class="input-field">
-                                    <option>Caixa</option>
-                                    <option>Cartela</option>
-                                    <option>Dúzia</option>
+                                <input name="preco" type="number" step="0.01" placeholder="Preço R$" required class="p-3 border rounded font-bold">
+                                <select name="tipo_estoque" class="p-3 border rounded font-bold text-sm">
+                                    <option>Caixa</option><option>Cartela</option><option>Dúzia</option>
                                 </select>
-                            </div>
-                            <div>
-                                <label class="text-[10px] font-bold text-gray-400 uppercase ml-1">Qtd em Estoque</label>
-                                <input name="quantidade" type="number" placeholder="Ex: 100" required class="input-field">
-                            </div>
-                            <div class="md:col-span-2">
-                                <label class="text-[10px] font-bold text-gray-400 uppercase ml-1">URL da Foto (Opcional)</label>
-                                <input name="foto_url" placeholder="https://link-da-imagem.com/foto.jpg" class="input-field text-xs">
-                            </div>
-                            <div class="lg:col-span-3">
-                                <button class="w-full bg-rose-600 text-white font-black py-4 rounded-lg uppercase shadow-md hover:bg-rose-700 transition-colors">Atualizar Estoque do Cliente</button>
-                            </div>
-                        </form>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        ${window.state.produtos.map(p => `
-                            <div class="card p-4 flex items-center justify-between border-l-4 border-l-rose-500">
-                                <div class="flex items-center gap-4">
-                                    <img src="${p.foto_url}" class="w-16 h-16 object-cover rounded-lg bg-gray-50">
-                                    <div>
-                                        <p class="font-bold text-gray-800 uppercase text-sm">${p.nome}</p>
-                                        <p class="text-[10px] text-gray-400 font-bold uppercase">${p.quantidade} x ${p.tipo_estoque}</p>
-                                        <p class="text-rose-600 font-black text-md">R$ ${parseFloat(p.preco).toFixed(2)}</p>
+                                <input name="quantidade" type="number" placeholder="Estoque" required class="p-3 border rounded font-bold">
+                                <input name="foto_url" placeholder="URL da Foto (opcional)" class="p-3 border rounded text-xs col-span-1 md:col-span-2">
+                                <button class="bg-rose-600 text-white font-black py-3 rounded uppercase text-xs lg:col-span-3">Salvar Produto</button>
+                            </form>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            ${window.state.produtos.map(p => `
+                                <div class="card p-4 flex items-center justify-between border-l-4 border-rose-500">
+                                    <div class="flex items-center gap-4">
+                                        <img src="${p.foto_url}" class="w-12 h-12 object-contain bg-gray-50 rounded">
+                                        <div>
+                                            <p class="font-bold text-sm">${p.nome}</p>
+                                            <p class="text-[10px] text-gray-400 uppercase font-bold">${p.quantidade} x ${p.tipo_estoque}</p>
+                                        </div>
                                     </div>
+                                    <p class="font-black text-rose-600">R$ ${parseFloat(p.preco).toFixed(2)}</p>
                                 </div>
-                                <button onclick="window.actions.excluir('${p.id}')" class="p-2 text-gray-300 hover:text-red-500">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                                </button>
-                            </div>
-                        `).join('')}
-                    </div>
+                            `).join('')}
+                        </div>
+                    ` : `
+                        <div class="grid gap-4">
+                            ${window.state.pedidos.length === 0 ? '<p class="text-center py-10 text-gray-400">Nenhum pedido recebido.</p>' : ''}
+                            ${window.state.pedidos.map(o => `
+                                <div class="card p-4 flex justify-between items-center">
+                                    <div>
+                                        <p class="text-[10px] font-bold text-rose-500 uppercase">#${o.id.slice(-4)}</p>
+                                        <h3 class="font-bold text-gray-800">${o.clienteNome}</h3>
+                                        <p class="text-xs text-gray-500">${o.quantidade}x ${o.produtoNome}</p>
+                                    </div>
+                                    <p class="font-black text-gray-800 italic text-lg">R$ ${(o.precoNoMomento * o.quantidade).toFixed(2)}</p>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `}
                 </main>
             `;
         };
