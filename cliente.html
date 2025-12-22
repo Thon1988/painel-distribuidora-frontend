@@ -8,11 +8,11 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&display=swap');
         body { font-family: 'Inter', sans-serif; background: #f3f4f6; }
-        .product-card { background: white; border-radius: 8px; border: 1px solid #e5e7eb; transition: box-shadow 0.2s; }
+        .product-card { background: white; border-radius: 8px; border: 1px solid #e5e7eb; transition: all 0.2s; }
         .price-main { color: #e11d48; font-weight: 800; font-size: 1.25rem; }
-        .btn-buy { background: #e11d48; color: white; border-radius: 4px; font-weight: 700; transition: opacity 0.2s; }
-        .btn-buy:active { opacity: 0.8; }
-        .cart-badge { background: #e11d48; color: white; font-size: 10px; padding: 2px 6px; border-radius: 99px; position: absolute; -top: 8px; -right: 8px; border: 2px solid white; }
+        .btn-buy { background: #e11d48; color: white; border-radius: 4px; font-weight: 700; }
+        .btn-off { background: #d1d5db; color: #9ca3af; cursor: not-allowed; }
+        .cart-badge { background: #e11d48; color: white; font-size: 10px; padding: 2px 6px; border-radius: 99px; position: absolute; top: -5px; right: -5px; border: 2px solid white; }
     </style>
 </head>
 <body class="pb-20">
@@ -44,123 +44,97 @@
 
         window.actions = {
             loadProdutos: async () => {
-                try {
-                    const res = await fetch(`${API_BASE}/produtos`);
-                    window.state.produtos = await res.json();
-                    window.render();
-                } catch (e) {
-                    console.error("Erro ao carregar produtos", e);
-                }
+                const res = await fetch(`${API_BASE}/produtos`);
+                window.state.produtos = await res.json();
+                window.render();
             },
             login: (e) => {
                 e.preventDefault();
-                const email = e.target.email.value;
-                if (email === 'thon@lojista.com.br') {
-                    const user = { nome: "Thon Admin", email: email, cidade: "São Paulo", estado: "SP" };
-                    localStorage.setItem('appegg_user', JSON.stringify(user));
-                    window.state.clienteData = user;
+                const user = { 
+                    email: e.target.email.value, 
+                    nome: "Cliente AppEgg", 
+                    cidade: "Não Informada" 
+                };
+                localStorage.setItem('appegg_user', JSON.stringify(user));
+                window.state.clienteData = user;
+                window.actions.loadProdutos();
+            },
+            comprar: async (p) => {
+                if (p.quantidade <= 0) {
+                    alert("⚠️ Desculpe! Este produto está indisponível no momento.");
+                    return;
                 }
-                if (!window.state.clienteData) return alert("E-mail não cadastrado!");
-                window.state.view = 'loja';
-                window.actions.loadProdutos();
-            },
-            salvarCadastro: (e) => {
-                e.preventDefault();
-                const f = new FormData(e.target);
-                const data = Object.fromEntries(f);
-                localStorage.setItem('appegg_user', JSON.stringify(data));
-                window.state.clienteData = data;
-                window.state.view = 'loja';
-                window.actions.loadProdutos();
-            },
-            adicionar: (p) => {
-                window.state.carrinho.push(p);
-                window.render();
+
+                try {
+                    await addDoc(collection(db, "vendas_logs"), {
+                        clienteNome: window.state.clienteData.nome || "Cliente Novo",
+                        clienteEmail: window.state.clienteData.email,
+                        produtoNome: p.nome,
+                        tipoEstoque: p.tipo_estoque,
+                        precoNoMomento: p.preco,
+                        quantidade: 1,
+                        status: "PENDENTE",
+                        criadoEm: serverTimestamp()
+                    });
+                    alert("✅ Pedido enviado com sucesso!");
+                    window.state.carrinho.push(p);
+                    window.render();
+                } catch (err) {
+                    alert("Erro ao processar pedido.");
+                }
             }
         };
 
         window.render = () => {
             const root = document.getElementById('app-root');
 
-            // Se não tem cliente logado, mostra Login
-            if (!window.state.clienteData && window.state.view !== 'cadastro') {
+            if (!window.state.clienteData) {
                 root.innerHTML = `
                 <div class="p-8 h-screen flex flex-col justify-center max-w-sm mx-auto">
-                    <div class="text-center mb-8">
-                        <h1 class="text-4xl font-black text-rose-600 italic">AppEgg</h1>
-                        <p class="text-gray-500 text-sm font-bold uppercase tracking-widest mt-2">Área do Cliente</p>
-                    </div>
+                    <h1 class="text-4xl font-black text-rose-600 italic text-center mb-8">AppEgg</h1>
                     <form onsubmit="window.actions.login(event)" class="space-y-4">
-                        <input name="email" type="email" placeholder="Seu E-mail" required class="w-full p-4 border rounded-lg outline-none focus:border-rose-500 font-bold">
-                        <button class="w-full py-4 bg-rose-600 text-white rounded-lg font-black uppercase shadow-lg">Entrar na Loja</button>
-                        <button type="button" onclick="window.state.view='cadastro'; window.render()" class="w-full text-xs font-bold text-gray-400 uppercase tracking-tighter">Criar nova conta</button>
+                        <input name="email" type="email" placeholder="Seu E-mail" required class="w-full p-4 border rounded-lg font-bold outline-none">
+                        <input name="senha" type="password" placeholder="Sua Senha" required class="w-full p-4 border rounded-lg font-bold outline-none">
+                        <button class="w-full py-4 bg-rose-600 text-white rounded-lg font-black uppercase">Entrar na Loja</button>
                     </form>
                 </div>`;
                 return;
             }
 
-            // Tela de Cadastro
-            if (window.state.view === 'cadastro') {
-                root.innerHTML = `
-                <div class="p-8 max-w-md mx-auto">
-                    <h2 class="text-2xl font-black text-gray-800 mb-6 uppercase italic">Cadastro AppEgg</h2>
-                    <form onsubmit="window.actions.salvarCadastro(event)" class="space-y-3">
-                        <input name="nome" placeholder="Nome Completo" required class="w-full p-3 border rounded-md">
-                        <input name="email" type="email" placeholder="E-mail" required class="w-full p-3 border rounded-md">
-                        <input name="whatsapp" placeholder="WhatsApp" required class="w-full p-3 border rounded-md">
-                        <input name="doc" placeholder="CPF ou CNPJ" required class="w-full p-3 border rounded-md">
-                        <div class="grid grid-cols-2 gap-2">
-                            <input name="cidade" placeholder="Cidade" required class="p-3 border rounded-md">
-                            <input name="estado" placeholder="UF" maxlength="2" required class="p-3 border rounded-md">
-                        </div>
-                        <button class="w-full py-4 bg-rose-600 text-white rounded-md font-black uppercase mt-4">Concluir Cadastro</button>
-                        <button type="button" onclick="window.state.view='login'; window.render()" class="w-full text-xs font-bold text-rose-600 uppercase mt-2">Já tenho conta (Login)</button>
-                    </form>
-                </div>`;
-                return;
-            }
-
-            // Tela da Loja (Catálogo)
             root.innerHTML = `
                 <header class="bg-white border-b sticky top-0 z-50 p-4 flex justify-between items-center shadow-sm">
-                    <h1 class="font-black text-rose-600 text-2xl italic tracking-tighter">AppEgg</h1>
-                    <div class="flex items-center gap-4">
-                        <div class="relative">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                            </svg>
-                            <span class="cart-badge">${window.state.carrinho.length}</span>
-                        </div>
-                        <button onclick="localStorage.clear(); location.reload()" class="text-[10px] uppercase font-bold text-gray-400">Sair</button>
+                    <h1 class="font-black text-rose-600 text-2xl italic">AppEgg</h1>
+                    <div class="relative">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>
+                        <span class="cart-badge">${window.state.carrinho.length}</span>
                     </div>
                 </header>
 
-                <main class="p-4 max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-4">
-                    ${window.state.produtos.length === 0 ? '<p class="col-span-full text-center py-20 text-gray-400 font-bold">Carregando estoque...</p>' : ''}
-                    ${window.state.produtos.map(p => `
-                        <div class="product-card flex flex-col p-3">
-                            <div class="relative mb-2">
-                                <span class="absolute top-0 left-0 bg-gray-100 px-2 py-1 rounded text-[8px] font-black text-gray-500 uppercase">${p.tipo_estoque}</span>
-                                <img src="${p.foto_url}" class="w-full h-32 object-contain">
-                            </div>
-                            <h3 class="text-[11px] font-bold text-gray-800 uppercase line-clamp-2 h-8 mb-2 leading-tight">${p.nome}</h3>
-                            <div class="mt-auto">
-                                <p class="text-[9px] text-gray-400 font-bold uppercase tracking-tighter">Por ${p.tipo_estoque}:</p>
-                                <p class="price-main mb-3 leading-none">R$ ${parseFloat(p.preco).toFixed(2)}</p>
-                                <button onclick="window.actions.adicionar(${JSON.stringify(p)})" class="w-full py-2 btn-buy text-[10px] uppercase tracking-widest">Adicionar</button>
+                <main class="p-4 grid grid-cols-2 md:grid-cols-4 gap-4">
+                    ${window.state.produtos.map(p => {
+                        const esgotado = p.quantidade <= 0;
+                        return `
+                        <div class="product-card p-3 flex flex-col ${esgotado ? 'opacity-60' : ''}">
+                            <img src="${p.foto_url}" class="w-full h-32 object-contain mb-2">
+                            <h3 class="text-[11px] font-bold text-gray-800 uppercase h-8 line-clamp-2">${p.nome}</h3>
+                            <div class="mt-4">
+                                <p class="text-[9px] text-gray-400 font-bold uppercase">Por ${p.tipo_estoque}:</p>
+                                <p class="price-main mb-3">R$ ${parseFloat(p.preco).toFixed(2)}</p>
+                                
+                                <button onclick='window.actions.comprar(${JSON.stringify(p)})' 
+                                    class="w-full py-2 text-[10px] uppercase tracking-widest ${esgotado ? 'btn-off' : 'btn-buy'}">
+                                    ${esgotado ? 'Indisponível' : 'Comprar'}
+                                </button>
+                                ${esgotado ? '<p class="text-[8px] text-red-500 font-bold text-center mt-1 uppercase">Sem estoque</p>' : ''}
                             </div>
                         </div>
-                    `).join('')}
+                    `}).join('')}
                 </main>
             `;
         };
 
-        // Inicia a aplicação
-        if (window.state.clienteData) {
-            window.actions.loadProdutos();
-        } else {
-            window.render();
-        }
+        if (window.state.clienteData) window.actions.loadProdutos();
+        else window.render();
     </script>
 </body>
 </html>
