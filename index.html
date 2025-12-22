@@ -3,26 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AppEgg Admin</title>
+    <title>Painel Distribuidora - Aline</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
         .loader { border: 3px solid #f3f3f3; border-top: 3px solid #3b82f6; border-radius: 50%; width: 18px; height: 18px; animation: spin 1s linear infinite; display: inline-block; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+<body class="min-h-screen p-4 md:p-10">
 
-    <div id="app-root" class="w-full max-w-2xl bg-white p-10 rounded-2xl shadow-xl">
-        <div class="text-center">
-            <div class="loader mb-4"></div>
-            <p class="text-gray-500">Sincronizando com AppEgg...</p>
-        </div>
+    <div id="app-root" class="max-w-4xl mx-auto bg-white p-6 rounded-2xl shadow-xl">
+        <div class="text-center py-10"><div class="loader"></div><p>Carregando sistema...</p></div>
     </div>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, onAuthStateChanged, signInAnonymously, signOut, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { api } from "./api.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, doc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyD3Otz9-zdZH-E5Feg9IOGWPzVycoe8gro",
@@ -35,73 +34,134 @@
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
+        const dbFirestore = getFirestore(app);
+        const API_BASE = "https://painel-distribuidora-backend.onrender.com/api";
 
-        window.api = api;
-        window.state = { user: null, loading: true, produtos: [] };
+        window.state = { user: null, produtos: [], logs: [] };
 
-        window.logout = () => signOut(auth);
-        
-        window.cadastrarNovoProduto = async () => {
-            const nome = prompt("Nome:");
-            const preco = prompt("Preço:");
-            const qtd = prompt("Qtd:");
-            if(!nome || !preco) return;
-            try {
-                await api.createProduto({ nome, preco: parseFloat(preco), quantidade: parseInt(qtd) });
-                alert("Salvo!");
-                window.state.produtos = await api.getProdutos();
-                render();
-            } catch (e) { alert("Erro ao salvar"); }
+        const startWorker = () => {
+            setInterval(async () => {
+                const pendentes = window.state.logs.filter(l => l.status === 'PENDENTE');
+                if (pendentes.length > 0) {
+                    const item = pendentes[0];
+                    try {
+                        const res = await fetch(`${API_BASE}/produtos/${item.postgresId}/venda`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ quantidadeVendida: item.quantidade })
+                        });
+                        if (res.ok) {
+                            await updateDoc(doc(dbFirestore, "vendas_logs", item.id), {
+                                status: 'PROCESSADO',
+                                processadoEm: serverTimestamp()
+                            });
+                            window.actions.loadProdutos();
+                        }
+                    } catch (err) { console.error(err); }
+                }
+            }, 5000);
         };
 
-        window.handleLogin = async (e) => {
-            e.preventDefault();
-            const email = document.getElementById('email').value;
-            const pass = document.getElementById('pass').value;
-            try { await signInWithEmailAndPassword(auth, email, pass); } catch (e) { alert("Erro no login"); }
+        window.actions = {
+            login: (e) => {
+                e.preventDefault();
+                signInWithEmailAndPassword(auth, e.target.email.value, e.target.pass.value);
+            },
+            logout: () => signOut(auth),
+            loadProdutos: async () => {
+                const res = await fetch(`${API_BASE}/produtos`);
+                window.state.produtos = await res.json();
+                window.render();
+            },
+            vender: async (p) => {
+                const qtd = prompt(`Quantas caixas de ${p.nome} deseja vender?`, "1");
+                if (!qtd || isNaN(qtd)) return;
+                await addDoc(collection(dbFirestore, "vendas_logs"), {
+                    produtoNome: p.nome, postgresId: p.id, quantidade: parseInt(qtd),
+                    status: 'PENDENTE', criadoEm: serverTimestamp()
+                });
+            },
+            excluir: async (id) => {
+                if (!confirm("Tem certeza que deseja excluir este produto?")) return;
+                try {
+                    const res = await fetch(`${API_BASE}/produtos/${id}`, { method: 'DELETE' });
+                    if (res.ok) window.actions.loadProdutos();
+                } catch (err) { alert("Erro ao excluir"); }
+            },
+            adicionar: async () => {
+                const nome = prompt("Nome do Produto:");
+                const preco = prompt("Preço (ex: 25.00):");
+                const qtd = prompt("Quantidade em Estoque:");
+                if (!nome || !preco || !qtd) return;
+                try {
+                    await fetch(`${API_BASE}/produtos`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ nome, preco: parseFloat(preco), quantidade: parseInt(qtd) })
+                    });
+                    window.actions.loadProdutos();
+                } catch (err) { alert("Erro ao adicionar"); }
+            }
         };
 
-        function render() {
+        onSnapshot(query(collection(dbFirestore, "vendas_logs"), orderBy("criadoEm", "desc")), (snap) => {
+            window.state.logs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            window.render();
+        });
+
+        onAuthStateChanged(auth, (user) => {
+            window.state.user = user;
+            if (user) { window.actions.loadProdutos(); startWorker(); }
+            window.render();
+        });
+
+        window.render = () => {
             const root = document.getElementById('app-root');
-            const { loading, user, produtos } = window.state;
-
-            if (loading) {
-                root.innerHTML = `<div class="text-center"><div class="loader mb-4"></div><p>Carregando...</p></div>`;
+            if (!window.state.user) {
+                root.innerHTML = `<div class="max-w-sm mx-auto text-center"><h1 class="text-2xl font-bold mb-6">Login</h1><form onsubmit="window.actions.login(event)" class="space-y-4"><input name="email" type="email" placeholder="Email" class="w-full p-3 border rounded"><input name="pass" type="password" placeholder="Senha" class="w-full p-3 border rounded"><button class="w-full py-3 bg-indigo-600 text-white rounded font-bold">ENTRAR</button></form></div>`;
                 return;
             }
 
-            if (user && !user.isAnonymous) {
-                const itens = produtos.map(p => `<div class="flex justify-between p-3 border-b"><span>${p.nome}</span><b>R$ ${p.preco}</b></div>`).join('');
-                root.innerHTML = `
-                    <div class="flex justify-between mb-6">
-                        <h1 class="text-xl font-bold">Painel Distribuidora</h1>
-                        <button onclick="logout()" class="text-red-500">Sair</button>
+            root.innerHTML = `
+                <div class="flex justify-between items-center mb-8">
+                    <h1 class="text-2xl font-bold text-indigo-900">📦 Gestão Aline</h1>
+                    <div class="flex gap-4">
+                        <button onclick="window.actions.adicionar()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg font-bold">+ Novo</button>
+                        <button onclick="window.actions.logout()" class="text-red-500 font-bold">Sair</button>
                     </div>
-                    <button onclick="cadastrarNovoProduto()" class="w-full bg-indigo-600 text-white p-3 rounded-lg mb-6">+ Novo Produto</button>
-                    <div class="bg-gray-50 rounded-lg">${itens || '<p class="p-4 text-center">Nenhum produto.</p>'}</div>
-                `;
-            } else {
-                root.innerHTML = `
-                    <h1 class="text-2xl font-bold text-center mb-6">Login AppEgg</h1>
-                    <form onsubmit="handleLogin(event)" class="space-y-4">
-                        <input id="email" type="email" placeholder="Email" class="w-full p-3 border rounded-lg">
-                        <input id="pass" type="password" placeholder="Senha" class="w-full p-3 border rounded-lg">
-                        <button class="w-full bg-indigo-600 text-white p-3 rounded-lg">Entrar</button>
-                    </form>
-                `;
-            }
-        }
+                </div>
 
-        onAuthStateChanged(auth, async (user) => {
-            window.state.user = user;
-            if (user && !user.isAnonymous) {
-                window.state.produtos = await api.getProdutos();
-            }
-            window.state.loading = false;
-            render();
-        });
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <h2 class="font-bold mb-4 text-gray-600">Estoque no Postgres</h2>
+                        <div class="space-y-2">
+                            ${window.state.produtos.map(p => `
+                                <div class="bg-white p-4 rounded-xl border flex justify-between items-center shadow-sm">
+                                    <div>
+                                        <p class="font-bold text-lg">${p.nome}</p>
+                                        <p class="text-xs text-gray-500">Estoque: <span class="${p.quantidade < 5 ? 'text-red-600' : 'text-indigo-600'} font-bold">${p.quantidade}</span> | R$ ${p.preco}</p>
+                                    </div>
+                                    <div class="flex gap-2">
+                                        <button onclick='window.actions.vender(${JSON.stringify(p)})' class="bg-green-500 text-white px-3 py-1 rounded font-bold text-xs">VENDER</button>
+                                        <button onclick="window.actions.excluir(${p.id})" class="bg-gray-200 text-gray-600 px-3 py-1 rounded font-bold text-xs">X</button>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
 
-        window.render = render;
+                    <div>
+                        <h2 class="font-bold mb-4 text-gray-600">Fila do Worker (Firestore)</h2>
+                        <div class="space-y-2 max-h-96 overflow-y-auto">
+                            ${window.state.logs.map(l => `
+                                <div class="p-3 rounded-lg text-xs border ${l.status === 'PROCESSADO' ? 'bg-green-50 border-green-200' : 'bg-yellow-50 border-yellow-200'}">
+                                    <span class="font-bold uppercase">${l.status}</span>: ${l.quantidade}x ${l.produtoNome}
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>`;
+        };
     </script>
 </body>
 </html>
