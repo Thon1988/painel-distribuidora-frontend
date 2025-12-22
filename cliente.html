@@ -3,31 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AppEgg | Ovos Frescos</title>
+    <title>AppEgg | Ovos Nexos</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap');
-        body { 
-            font-family: 'Plus Jakarta Sans', sans-serif; 
-            background: linear-gradient(135deg, #f0f2f5 0%, #e2e8f0 100%);
-            min-height: 100vh;
-        }
-        .glass { 
-            background: rgba(255, 255, 255, 0.75); 
-            backdrop-filter: blur(14px); 
-            border: 1px solid rgba(255, 255, 255, 0.4); 
-            box-shadow: 0 10px 40px rgba(0,0,0,0.04);
-        }
-        .btn-premium {
-            background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%);
-            box-shadow: 0 10px 20px -5px rgba(79, 70, 229, 0.4);
-        }
-        .btn-premium:active { transform: scale(0.96); }
-        input, select, textarea { outline: none !important; }
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Plus+Jakarta+Sans:wght@400;700&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: #f8fafc; color: #1e293b; }
+        .glass-dark { background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .neon-border { border: 1px solid rgba(79, 70, 229, 0.4); box-shadow: 0 0 15px rgba(79, 70, 229, 0.1); }
+        .btn-futurist { background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%); box-shadow: 0 10px 25px -5px rgba(79, 70, 229, 0.4); }
     </style>
 </head>
-<body class="pb-10">
-
+<body class="min-h-screen">
     <div id="app-root"></div>
 
     <script type="module">
@@ -48,174 +34,91 @@
         const API_BASE = "https://painel-distribuidora-backend.onrender.com/api";
 
         window.state = {
-            view: 'loja', 
+            view: 'login', 
             produtos: [],
-            carrinho: null,
             clienteData: JSON.parse(localStorage.getItem('appegg_user')) || null
         };
 
         window.actions = {
-            loadProdutos: async () => {
-                const res = await fetch(`${API_BASE}/produtos`);
-                window.state.produtos = await res.json();
-                window.render();
+            login: (e) => {
+                e.preventDefault();
+                const email = e.target.email.value;
+                // Lógica de Testador: Se for seu e-mail, libera acesso como Admin-Testador
+                if (email === 'thon@lojista.com.br') {
+                    const testador = { nome: "Admin Thon", email: email, doc: "000.000.000-00", whatsapp: "11999999999", rua: "Área de Teste", numero: "1", cidade: "São Paulo", estado: "SP" };
+                    localStorage.setItem('appegg_user', JSON.stringify(testador));
+                    window.state.clienteData = testador;
+                } else {
+                    // Aqui você integraria com um login real se tivesse Auth de cliente, 
+                    // por enquanto ele direciona para cadastro se não achar no LocalStorage
+                    if(!window.state.clienteData) return alert("Conta não encontrada. Clique em CADASTRAR.");
+                }
+                window.state.view = 'loja';
+                window.actions.loadProdutos();
             },
             salvarCadastro: (e) => {
                 e.preventDefault();
                 const f = new FormData(e.target);
-                if(f.get('senha') !== f.get('repete_senha')) return alert("As senhas não coincidem!");
-
-                const data = {
-                    nome: f.get('nome'), 
-                    email: f.get('email'), 
-                    whatsapp: f.get('whatsapp'),
-                    doc: f.get('doc'), 
-                    cep: f.get('cep'), 
-                    rua: f.get('rua'),
-                    numero: f.get('numero'), 
-                    cidade: f.get('cidade'), 
-                    estado: f.get('estado')
-                };
+                const data = { nome: f.get('nome'), email: f.get('email'), whatsapp: f.get('whatsapp'), doc: f.get('doc'), cep: f.get('cep'), rua: f.get('rua'), numero: f.get('numero'), cidade: f.get('cidade'), estado: f.get('estado') };
                 localStorage.setItem('appegg_user', JSON.stringify(data));
                 window.state.clienteData = data;
-                window.render();
+                window.state.view = 'loja';
+                window.actions.loadProdutos();
             },
-            finalizarPedido: async (e) => {
-                e.preventDefault();
-                const qtd = e.target.quantidade.value;
-                const c = window.state.clienteData;
-
-                const pedido = {
-                    produtoNome: window.state.carrinho.nome,
-                    quantidade: parseInt(qtd),
-                    precoNoMomento: window.state.carrinho.preco,
-                    tipoEstoque: window.state.carrinho.tipo_estoque,
-                    // Dados do Cliente que vão pro Admin
-                    clienteNome: c.nome,
-                    clienteDoc: c.doc,
-                    clienteWhatsapp: c.whatsapp,
-                    clienteEmail: c.email,
-                    enderecoEntrega: `${c.rua}, ${c.numero} - ${c.cidade}/${c.estado} (CEP: ${c.cep})`,
-                    status: 'PENDENTE',
-                    criadoEm: serverTimestamp()
-                };
-
-                try {
-                    await addDoc(collection(db, "vendas_logs"), pedido);
-                    alert("Pedido Confirmado! Entraremos em contato via WhatsApp.");
-                    window.state.view = 'loja';
-                    window.state.carrinho = null;
-                    window.render();
-                } catch (err) {
-                    alert("Erro ao enviar pedido. Tente novamente.");
-                }
+            loadProdutos: async () => {
+                const res = await fetch(`${API_BASE}/produtos`);
+                window.state.produtos = await res.json();
+                window.render();
             }
         };
 
         window.render = () => {
             const root = document.getElementById('app-root');
 
-            // TELA DE CADASTRO
-            if (!window.state.clienteData) {
-                root.innerHTML = `
-                <div class="p-6 max-w-md mx-auto">
-                    <div class="mt-10 mb-8 text-center">
-                        <h1 class="text-4xl font-extrabold text-indigo-600 italic tracking-tighter">AppEgg</h1>
-                        <p class="text-slate-500 font-bold text-[10px] uppercase tracking-widest mt-2">Bem-vindo à nossa distribuidora</p>
-                    </div>
-                    <form onsubmit="window.actions.salvarCadastro(event)" class="glass p-8 rounded-[3rem] space-y-4">
-                        <input name="nome" placeholder="Seu Nome ou Razão Social" required class="w-full p-4 rounded-2xl bg-white/60 border-none font-semibold text-sm">
-                        <div class="grid grid-cols-2 gap-3">
-                            <input name="doc" placeholder="CPF ou CNPJ" required class="p-4 rounded-2xl bg-white/60 border-none font-semibold text-sm">
-                            <input name="whatsapp" placeholder="Zap (DD) 9..." required class="p-4 rounded-2xl bg-white/60 border-none font-semibold text-sm">
-                        </div>
-                        <input name="email" type="email" placeholder="E-mail" required class="w-full p-4 rounded-2xl bg-white/60 border-none font-semibold text-sm">
-                        
-                        <div class="pt-4 border-t border-white/40">
-                            <p class="text-[9px] font-black text-indigo-400 uppercase mb-3 text-center tracking-widest">Local de Entrega</p>
-                            <input name="cep" placeholder="CEP" required class="w-full p-4 rounded-2xl bg-white/60 border-none font-semibold text-sm mb-3">
-                            <div class="grid grid-cols-3 gap-3 mb-3">
-                                <input name="rua" placeholder="Rua" required class="col-span-2 p-4 rounded-2xl bg-white/60 border-none font-semibold text-sm">
-                                <input name="numero" placeholder="Nº" required class="p-4 rounded-2xl bg-white/60 border-none font-semibold text-sm">
-                            </div>
-                            <div class="grid grid-cols-2 gap-3">
-                                <input name="cidade" placeholder="Cidade" required class="p-4 rounded-2xl bg-white/60 border-none font-semibold text-sm">
-                                <input name="estado" placeholder="UF" maxlength="2" required class="p-4 rounded-2xl bg-white/60 border-none font-semibold text-sm">
-                            </div>
-                        </div>
-
-                        <div class="pt-4 border-t border-white/40">
-                            <input name="senha" type="password" placeholder="Crie uma Senha" required class="w-full p-4 rounded-2xl bg-white/60 border-none font-semibold text-sm mb-3">
-                            <input name="repete_senha" type="password" placeholder="Repita a Senha" required class="w-full p-4 rounded-2xl bg-white/60 border-none font-semibold text-sm">
-                        </div>
-
-                        <button class="w-full py-5 btn-premium text-white rounded-2xl font-extrabold shadow-xl mt-4 uppercase tracking-tighter">Criar minha conta</button>
+            if (window.state.view === 'login' && !window.state.clienteData) {
+                root.innerHTML = `<div class="p-6 h-screen flex flex-col justify-center items-center">
+                    <h1 style="font-family:'Orbitron'" class="text-4xl text-indigo-600 mb-10 italic">APPEGG</h1>
+                    <form onsubmit="window.actions.login(event)" class="w-full max-w-sm space-y-4">
+                        <input name="email" type="email" placeholder="Seu E-mail" required class="w-full p-5 rounded-2xl bg-white neon-border outline-none font-bold">
+                        <input name="senha" type="password" placeholder="Sua Senha" class="w-full p-5 rounded-2xl bg-white neon-border outline-none font-bold">
+                        <button class="w-full py-5 btn-futurist text-white rounded-2xl font-black uppercase tracking-widest">ACESSAR NEXUS</button>
+                        <button type="button" onclick="window.state.view='cadastro';window.render()" class="w-full py-3 text-slate-400 font-bold uppercase text-xs">Ainda não sou cliente? CADASTRAR</button>
                     </form>
                 </div>`;
-                return;
-            }
-
-            // TELA DA LOJA
-            if (window.state.view === 'loja') {
-                root.innerHTML = `
-                <header class="p-8 flex justify-between items-center">
-                    <div>
-                        <p class="text-[10px] font-bold text-indigo-500 uppercase">Olá, ${window.state.clienteData.nome.split(' ')[0]}</p>
-                        <h1 class="text-3xl font-extrabold text-slate-800 italic tracking-tighter">AppEgg</h1>
-                    </div>
-                    <button onclick="localStorage.clear(); location.reload()" class="w-12 h-12 glass rounded-2xl flex items-center justify-center text-red-400">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
-                    </button>
+            } else if (window.state.view === 'cadastro') {
+                root.innerHTML = `<div class="p-6">
+                    <h2 class="font-black text-2xl text-slate-800 mb-6 uppercase">Novo Cadastro</h2>
+                    <form onsubmit="window.actions.salvarCadastro(event)" class="space-y-4">
+                        <input name="nome" placeholder="Nome Completo" required class="w-full p-4 rounded-xl border outline-none">
+                        <input name="doc" placeholder="CPF ou CNPJ" required class="w-full p-4 rounded-xl border outline-none">
+                        <input name="whatsapp" placeholder="WhatsApp" required class="w-full p-4 rounded-xl border outline-none">
+                        <input name="email" type="email" placeholder="E-mail" required class="w-full p-4 rounded-xl border outline-none">
+                        <input name="cep" placeholder="CEP" class="w-full p-4 rounded-xl border outline-none">
+                        <div class="grid grid-cols-2 gap-4">
+                            <input name="rua" placeholder="Rua" class="p-4 rounded-xl border outline-none">
+                            <input name="numero" placeholder="Nº" class="p-4 rounded-xl border outline-none">
+                        </div>
+                        <button class="w-full py-5 btn-futurist text-white rounded-2xl font-black">CONFIRMAR REGISTRO</button>
+                        <button type="button" onclick="window.state.view='login';window.render()" class="w-full py-2 text-slate-400 font-bold text-xs uppercase">Já tenho conta</button>
+                    </form>
+                </div>`;
+            } else {
+                root.innerHTML = `<header class="p-6 flex justify-between items-center glass-dark text-white rounded-b-3xl">
+                    <h1 style="font-family:'Orbitron'" class="text-xl">APPEGG</h1>
+                    <button onclick="localStorage.clear(); location.reload()" class="text-xs text-red-400 font-bold uppercase">SAIR</button>
                 </header>
-
-                <main class="px-6 space-y-4">
+                <div class="p-6 grid gap-4">
                     ${window.state.produtos.map(p => `
-                        <div class="glass p-6 rounded-[2.5rem] flex justify-between items-center shadow-sm">
-                            <div>
-                                <h3 class="font-extrabold text-slate-800 uppercase text-[12px]">${p.nome}</h3>
-                                <p class="text-2xl font-black text-indigo-600 mt-1">R$ ${parseFloat(p.preco).toFixed(2)}</p>
-                                <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">${p.quantidade} em estoque</span>
-                            </div>
-                            <button onclick='window.state.carrinho = ${JSON.stringify(p)}; window.state.view = "checkout"; window.render()' class="btn-premium text-white h-14 w-14 rounded-[1.5rem] flex items-center justify-center shadow-lg">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
-                            </button>
+                        <div class="bg-white p-6 rounded-3xl neon-border flex justify-between items-center">
+                            <div><h3 class="font-black text-slate-800 uppercase text-xs">${p.nome}</h3><p class="text-2xl font-black text-indigo-600 mt-1">R$ ${p.preco.toFixed(2)}</p></div>
+                            <button class="h-12 w-12 btn-futurist rounded-xl flex items-center justify-center text-white">+</button>
                         </div>
                     `).join('')}
-                </main>`;
-            } 
-            
-            // CHECKOUT
-            else if (window.state.view === 'checkout') {
-                root.innerHTML = `
-                <div class="p-6 pt-10">
-                    <button onclick="window.state.view='loja'; window.render()" class="mb-6 font-extrabold text-indigo-600 flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M15 19l-7-7 7-7" /></svg> VOLTAR
-                    </button>
-                    <div class="glass p-8 rounded-[3rem]">
-                        <h2 class="text-xl font-extrabold text-slate-800 mb-6 uppercase italic">Revisar Pedido</h2>
-                        <div class="bg-indigo-600 p-6 rounded-[2rem] text-white mb-6 shadow-xl">
-                            <p class="text-[10px] font-bold opacity-70 uppercase tracking-widest">Produto</p>
-                            <h3 class="text-lg font-extrabold uppercase">${window.state.carrinho.nome}</h3>
-                            <p class="text-2xl font-black mt-2">R$ ${window.state.carrinho.preco.toFixed(2)} <span class="text-xs font-normal opacity-50">/${window.state.carrinho.tipo_estoque}</span></p>
-                        </div>
-                        <form onsubmit="window.actions.finalizarPedido(event)" class="space-y-6">
-                            <div>
-                                <label class="text-[10px] font-black text-slate-400 uppercase ml-2">Quantidade desejada</label>
-                                <input name="quantidade" type="number" value="1" min="1" required class="w-full p-5 rounded-2xl bg-white border-none font-black text-2xl mt-1 shadow-inner">
-                            </div>
-                            <div class="p-5 bg-white/40 rounded-2xl border border-white/50">
-                                <p class="text-[10px] font-black text-slate-400 uppercase">Enviar para:</p>
-                                <p class="text-sm font-bold text-slate-700 mt-1 leading-tight">${window.state.clienteData.rua}, ${window.state.clienteData.numero}</p>
-                                <p class="text-xs text-slate-500">${window.state.clienteData.cidade} - ${window.state.clienteData.estado}</p>
-                            </div>
-                            <button class="w-full py-6 btn-premium text-white rounded-[2rem] font-extrabold shadow-2xl uppercase tracking-tighter text-lg">Confirmar Agora</button>
-                        </form>
-                    </div>
                 </div>`;
             }
         };
 
-        window.actions.loadProdutos();
+        window.render();
     </script>
 </body>
 </html>
