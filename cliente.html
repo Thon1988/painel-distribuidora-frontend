@@ -3,15 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AppEgg - Faça seu Pedido</title>
+    <title>AppEgg - Cliente</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #ffffff; }
-        .cart-badge { position: absolute; top: -5px; right: -5px; background: #ef4444; color: white; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        .cart-badge { position: absolute; top: -5px; right: -5px; background: #ef4444; color: white; border-radius: 50%; width: 20px; height: 20px; font-size: 11px; display: flex; align-items: center; justify-content: center; font-weight: 900; }
     </style>
 </head>
-<body class="pb-24">
+<body class="pb-10">
 
     <div id="app-client"></div>
 
@@ -19,7 +19,6 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
         import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 
-        // CONFIGURAÇÃO FIREBASE (Mesma do seu Painel)
         const firebaseConfig = {
             apiKey: "AIzaSyD3Otz9-zdZH-E5Feg9IOGWPzVycoe8gro",
             authDomain: "distribuidora-de-ovos-aline.firebaseapp.com",
@@ -37,120 +36,162 @@
             produtos: [],
             carrinho: [],
             loading: true,
-            view: 'loja' // 'loja' ou 'carrinho'
+            view: 'loja', // loja, carrinho, checkout, sucesso
+            endereco: { rua: '', numero: '', cep: '' },
+            pagamento: 'Pix'
         };
 
         window.actions = {
             loadProdutos: async () => {
-                try {
-                    const res = await fetch(`${API_BASE}/produtos`);
-                    window.state.produtos = await res.json();
-                    window.state.loading = false;
-                    window.render();
-                } catch (e) { console.error("Erro ao carregar loja"); }
+                const res = await fetch(`${API_BASE}/produtos`);
+                window.state.produtos = await res.json();
+                window.state.loading = false;
+                window.render();
             },
-            adicionarAoCarrinho: (p) => {
+            adicionar: (p) => {
                 const item = window.state.carrinho.find(c => c.id === p.id);
-                if (item) {
-                    item.qtd += 1;
-                } else {
-                    window.state.carrinho.push({ ...p, qtd: 1 });
+                if (item) { 
+                    if(item.qtd < p.quantidade) item.qtd++;
+                    else alert("Limite de estoque atingido!");
                 }
+                else window.state.carrinho.push({ ...p, qtd: 1 });
+                window.render();
+            },
+            remover: (id) => {
+                const idx = window.state.carrinho.findIndex(c => c.id === id);
+                if (window.state.carrinho[idx].qtd > 1) window.state.carrinho[idx].qtd--;
+                else window.state.carrinho.splice(idx, 1);
                 window.render();
             },
             finalizarPedido: async () => {
-                const nomeCliente = prompt("Qual o seu nome?");
-                if (!nomeCliente) return;
-
-                alert("Processando seu pedido...");
+                if(!window.state.endereco.rua) return alert("Preencha o endereço!");
                 
+                window.state.loading = true; window.render();
+
                 try {
-                    // Para cada item no carrinho, cria um log de venda no Firestore
-                    // O seu Worker do painel vai ver isso e dar baixa no estoque real!
                     for (const item of window.state.carrinho) {
                         await addDoc(collection(dbFirestore, "vendas_logs"), {
                             produtoNome: item.nome,
                             postgresId: item.id,
                             quantidade: item.qtd,
                             precoNoMomento: parseFloat(item.preco),
-                            cliente: nomeCliente,
+                            cliente: window.state.endereco.rua + ", " + window.state.endereco.numero,
+                            metodoPagamento: window.state.pagamento,
                             status: 'PENDENTE',
                             criadoEm: serverTimestamp()
                         });
                     }
-
                     window.state.carrinho = [];
-                    window.state.view = 'loja';
-                    alert("Pedido enviado com sucesso! Obrigado pela preferência.");
-                    window.actions.loadProdutos();
-                } catch (e) {
-                    alert("Erro ao enviar pedido.");
-                }
+                    window.state.view = 'sucesso';
+                } catch (e) { alert("Erro ao processar"); }
+                
+                window.state.loading = false; window.render();
             }
         };
 
         window.render = () => {
             const root = document.getElementById('app-client');
-            
+            const cartCount = window.state.carrinho.reduce((a, b) => a + b.qtd, 0);
+            const total = window.state.carrinho.reduce((a, b) => a + (b.preco * b.qtd), 0);
+
             if (window.state.loading) {
-                root.innerHTML = `<div class="flex h-screen items-center justify-center font-bold text-indigo-600">Carregando AppEgg...</div>`;
+                root.innerHTML = `<div class="flex h-screen items-center justify-center font-black text-indigo-600 animate-pulse">CARREGANDO APPEGG...</div>`;
                 return;
             }
 
+            // TELA: LOJA
             if (window.state.view === 'loja') {
                 root.innerHTML = `
-                    <header class="p-6 flex justify-between items-center border-b sticky top-0 bg-white z-10">
-                        <h1 class="text-2xl font-black italic text-slate-800 tracking-tighter">AppEgg</h1>
-                        <button onclick="window.state.view = 'carrinho'; window.render()" class="relative p-2 bg-slate-100 rounded-full">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
-                            ${window.state.carrinho.length > 0 ? `<span class="cart-badge">${window.state.carrinho.reduce((a,b) => a + b.qtd, 0)}</span>` : ''}
+                    <header class="bg-white p-6 sticky top-0 z-10 shadow-sm flex justify-between items-center">
+                        <h1 class="text-3xl font-black italic text-indigo-600">AppEgg</h1>
+                        <button onclick="window.state.view = 'carrinho'; window.render()" class="relative p-3 bg-slate-100 rounded-2xl">
+                            🛒 ${cartCount > 0 ? `<span class="cart-badge">${cartCount}</span>` : ''}
                         </button>
                     </header>
-
-                    <main class="p-4 grid grid-cols-1 gap-4">
-                        ${window.state.produtos.filter(p => p.quantidade > 0).map(p => `
-                            <div class="bg-white border rounded-3xl p-5 flex justify-between items-center shadow-sm">
+                    <div class="p-6 grid gap-4 max-w-lg mx-auto">
+                        <h2 class="text-lg font-black text-slate-800 uppercase tracking-tighter">Ovos Fresquinhos</h2>
+                        ${window.state.produtos.map(p => `
+                            <div class="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm flex justify-between items-center">
                                 <div>
-                                    <h3 class="font-bold text-slate-800">${p.nome}</h3>
-                                    <p class="text-indigo-600 font-black text-lg">R$ ${parseFloat(p.preco).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
-                                    <p class="text-[10px] text-slate-400 uppercase font-bold">Disponível: ${p.quantidade} un</p>
+                                    <p class="font-bold text-slate-700">${p.nome}</p>
+                                    <p class="text-xl font-black text-indigo-600">R$ ${parseFloat(p.preco).toFixed(2)}</p>
+                                    <p class="text-[10px] font-bold text-slate-300">ESTOQUE: ${p.quantidade} un</p>
                                 </div>
-                                <button onclick='window.actions.adicionarAoCarrinho(${JSON.stringify(p)})' class="bg-indigo-600 text-white px-6 py-2 rounded-2xl font-black text-sm active:scale-90 transition-transform shadow-lg shadow-indigo-100">
-                                    + ADICIONAR
-                                </button>
+                                <button onclick='window.actions.adicionar(${JSON.stringify(p)})' class="bg-indigo-600 text-white px-5 py-3 rounded-2xl font-black text-xs shadow-lg shadow-indigo-100">ADICIONAR</button>
                             </div>
                         `).join('')}
-                    </main>
+                    </div>
                 `;
-            } else {
-                const total = window.state.carrinho.reduce((acc, item) => acc + (item.preco * item.qtd), 0);
+            } 
+
+            // TELA: CARRINHO
+            else if (window.state.view === 'carrinho') {
                 root.innerHTML = `
-                    <header class="p-6 flex items-center gap-4 border-b">
-                        <button onclick="window.state.view = 'loja'; window.render()" class="text-slate-400 font-black text-xl">←</button>
-                        <h1 class="text-xl font-black text-slate-800">Meu Carrinho</h1>
-                    </header>
-                    <main class="p-6 space-y-6">
-                        ${window.state.carrinho.length === 0 ? '<p class="text-center text-slate-400 py-20 font-bold">Seu carrinho está vazio.</p>' : ''}
-                        ${window.state.carrinho.map(item => `
-                            <div class="flex justify-between items-center">
-                                <div>
-                                    <p class="font-bold text-slate-800">${item.nome}</p>
-                                    <p class="text-sm text-slate-400">${item.qtd}x R$ ${parseFloat(item.preco).toFixed(2)}</p>
+                    <div class="p-6 max-w-lg mx-auto">
+                        <button onclick="window.state.view = 'loja'; window.render()" class="text-indigo-600 font-black mb-6">← VOLTAR</button>
+                        <h2 class="text-2xl font-black mb-6">Meu Carrinho</h2>
+                        <div class="space-y-4">
+                            ${window.state.carrinho.map(item => `
+                                <div class="flex justify-between items-center bg-white p-4 rounded-2xl border">
+                                    <div>
+                                        <p class="font-bold">${item.nome}</p>
+                                        <p class="text-indigo-600 font-black text-sm">R$ ${(item.preco * item.qtd).toFixed(2)}</p>
+                                    </div>
+                                    <div class="flex items-center gap-3">
+                                        <button onclick="window.actions.remover(${item.id})" class="w-8 h-8 bg-slate-100 rounded-lg font-black">-</button>
+                                        <span class="font-black">${item.qtd}</span>
+                                        <button onclick='window.actions.adicionar(${JSON.stringify(item)})' class="w-8 h-8 bg-slate-100 rounded-lg font-black">+</button>
+                                    </div>
                                 </div>
-                                <p class="font-black text-slate-800">R$ ${(item.qtd * item.preco).toFixed(2)}</p>
-                            </div>
-                        `).join('')}
-                        
-                        <div class="border-t pt-6">
-                            <div class="flex justify-between items-center mb-8">
-                                <span class="text-slate-400 font-bold uppercase tracking-widest text-xs">Total do Pedido</span>
-                                <span class="text-3xl font-black text-indigo-600">R$ ${total.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
-                            </div>
-                            <button onclick="window.actions.finalizarPedido()" class="w-full py-5 bg-emerald-500 text-white rounded-[2rem] font-black text-lg shadow-xl shadow-emerald-100 active:scale-95 transition-transform uppercase tracking-tighter">
-                                ENVIAR PEDIDO AGORA
-                            </button>
+                            `).join('')}
                         </div>
-                    </main>
+                        <div class="mt-10 p-6 bg-indigo-600 rounded-[2.5rem] text-white">
+                            <div class="flex justify-between items-center mb-6">
+                                <span class="font-bold opacity-80 uppercase text-xs">Total do Pedido</span>
+                                <span class="text-3xl font-black">R$ ${total.toFixed(2)}</span>
+                            </div>
+                            <button onclick="window.state.view = 'checkout'; window.render()" class="w-full py-4 bg-white text-indigo-600 rounded-2xl font-black">AVANÇAR PARA ENTREGA</button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // TELA: CHECKOUT (ENDEREÇO E PAGAMENTO)
+            else if (window.state.view === 'checkout') {
+                root.innerHTML = `
+                    <div class="p-6 max-w-lg mx-auto">
+                        <button onclick="window.state.view = 'carrinho'; window.render()" class="text-indigo-600 font-black mb-6">← VOLTAR</button>
+                        <h2 class="text-2xl font-black mb-8">Onde entregamos?</h2>
+                        
+                        <div class="space-y-4 mb-10">
+                            <input oninput="window.state.endereco.rua = this.value" placeholder="Nome da Rua / Bairro" class="w-full p-4 rounded-2xl border outline-none focus:border-indigo-500">
+                            <div class="flex gap-4">
+                                <input oninput="window.state.endereco.numero = this.value" placeholder="Nº" class="w-24 p-4 rounded-2xl border outline-none focus:border-indigo-500">
+                                <input oninput="window.state.endereco.cep = this.value" placeholder="CEP" class="flex-1 p-4 rounded-2xl border outline-none focus:border-indigo-500">
+                            </div>
+                        </div>
+
+                        <h2 class="text-2xl font-black mb-6">Pagamento</h2>
+                        <div class="grid grid-cols-1 gap-2">
+                            ${['Pix', 'Dinheiro', 'Cartão (Entregar)'].map(m => `
+                                <button onclick="window.state.pagamento = '${m}'; window.render()" class="p-4 border rounded-2xl text-left font-bold ${window.state.pagamento === m ? 'border-indigo-600 bg-indigo-50' : 'border-slate-100'}">${m}</button>
+                            `).join('')}
+                        </div>
+
+                        <button onclick="window.actions.finalizarPedido()" class="w-full mt-10 py-5 bg-emerald-500 text-white rounded-[2rem] font-black shadow-xl shadow-emerald-100">CONFIRMAR PEDIDO 🎉</button>
+                    </div>
+                `;
+            }
+
+            // TELA: SUCESSO
+            else if (window.state.view === 'sucesso') {
+                root.innerHTML = `
+                    <div class="h-screen flex flex-col items-center justify-center p-10 text-center">
+                        <div class="text-7xl mb-6">🚀</div>
+                        <h2 class="text-3xl font-black text-slate-800 mb-2">Pedido Enviado!</h2>
+                        <p class="text-slate-400 font-medium mb-10">Agora é só aguardar. O estoque já foi reservado para você.</p>
+                        <button onclick="location.reload()" class="bg-indigo-600 text-white px-10 py-4 rounded-2xl font-black">VOLTAR À LOJA</button>
+                    </div>
                 `;
             }
         };
