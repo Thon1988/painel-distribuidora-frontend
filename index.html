@@ -3,163 +3,131 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AppEgg Admin | Gestão Atacadista</title>
+    <title>AppEgg Admin | Gestão Total</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&display=swap');
         body { font-family: 'Inter', sans-serif; background: #f9fafb; }
-        .nav-active { color: #e11d48; border-bottom: 2px solid #e11d48; }
-        .card { background: white; border: 1px solid #e5e7eb; border-radius: 8px; }
-        .btn-rose { background-color: #e11d48; color: white; }
+        .card { background: white; border: 1px solid #e5e7eb; border-radius: 12px; }
+        .input-field { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-weight: 600; }
     </style>
 </head>
-<body>
+<body class="pb-10">
     <div id="app-root"></div>
-
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-        import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
-        import { getFirestore, collection, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
-
-        const firebaseConfig = {
-            apiKey: "AIzaSyD3Otz9-zdZH-E5Feg9IOGWPzVycoe8gro",
-            authDomain: "distribuidora-de-ovos-aline.firebaseapp.com",
-            projectId: "distribuidora-de-ovos-aline",
-            storageBucket: "distribuidora-de-ovos-aline.firebasestorage.app",
-            messagingSenderId: "92187548716",
-            appId: "1:92187548716:web:d61d18a29aa76aead7c589"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
         const API_BASE = "https://painel-distribuidora-backend.onrender.com/api";
+        
+        window.state = { view: 'estoque', produtos: [], editingId: null };
 
-        window.state = { user: null, view: 'estoque', produtos: [], pedidos: [] };
-
-        const FOTOS_PADRAO = {
-            "Ovo Branco Extra": "https://images.unsplash.com/photo-1587486914762-8f055609cc43?w=400",
-            "Ovo Branco Grande": "https://images.unsplash.com/photo-1516448398574-8d246a7a083d?w=400",
-            "Ovo Vermelho Extra": "https://images.unsplash.com/photo-1598965402089-897ce52e8355?w=400",
-            "Ovo de Codorna": "https://images.unsplash.com/photo-1612144431180-2d672779556c?w=400"
-        };
+        // LINKS QUE VOCÊ PEDIU
+        const OVOS_PADRAO = [
+            { nome: "Ovo Branco Extra", foto: "https://static.paodeacucar.com/img/uploads/1/582/24016582.jpg", tipo: "Caixa" },
+            { nome: "Ovo Branco Grande", foto: "https://despensa.com.br/media/catalog/product/o/v/ovo-branco-grande-cartela-com-20-unidades.jpg", tipo: "Cartela" },
+            { nome: "Ovo Vermelho Extra", foto: "https://static.paodeacucar.com/img/uploads/1/653/24021653.jpg", tipo: "Caixa" },
+            { nome: "Ovo de Codorna", foto: "https://static.paodeacucar.com/img/uploads/1/962/24016962.jpg", tipo: "Cartela" }
+        ];
 
         window.actions = {
-            changeView: (view) => {
-                window.state.view = view;
+            load: async () => {
+                const res = await fetch(`${API_BASE}/produtos`);
+                window.state.produtos = await res.json();
                 window.render();
             },
-            loadData: async () => {
-                try {
-                    const res = await fetch(`${API_BASE}/produtos`);
-                    window.state.produtos = await res.json();
-                    window.render();
-                } catch(e) { console.error(e); }
+            prepararEdicao: (p) => {
+                window.state.editingId = p.id;
+                const f = document.getElementById('produto-form');
+                f.nome.value = p.nome;
+                f.preco.value = p.preco;
+                f.quantidade.value = p.quantidade;
+                f.tipo_estoque.value = p.tipo_estoque;
+                f.foto_url.value = p.foto_url;
+                window.scrollTo(0,0);
             },
             salvar: async (e) => {
                 e.preventDefault();
                 const f = new FormData(e.target);
-                const nome = f.get('nome');
                 const dados = {
-                    nome,
+                    nome: f.get('nome'),
                     preco: parseFloat(f.get('preco')),
                     quantidade: parseInt(f.get('quantidade')),
                     tipo_estoque: f.get('tipo_estoque'),
-                    foto_url: f.get('foto_url') || FOTOS_PADRAO[nome] || "https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=400"
+                    foto_url: f.get('foto_url')
                 };
-                await fetch(`${API_BASE}/produtos`, { 
-                    method: 'POST', 
-                    headers: {'Content-Type': 'application/json'}, 
-                    body: JSON.stringify(dados) 
-                });
-                window.actions.loadData();
+
+                const url = window.state.editingId ? `${API_BASE}/produtos/${window.state.editingId}` : `${API_BASE}/produtos`;
+                const method = window.state.editingId ? 'PUT' : 'POST';
+
+                await fetch(url, { method, headers: {'Content-Type': 'application/json'}, body: JSON.stringify(dados) });
+                window.state.editingId = null;
                 e.target.reset();
+                window.actions.load();
+            },
+            excluir: async (id) => {
+                if(confirm("Excluir este ovo?")) {
+                    await fetch(`${API_BASE}/produtos/${id}`, { method: 'DELETE' });
+                    window.actions.load();
+                }
+            },
+            resetCatalogo: async () => {
+                if(confirm("Isso vai cadastrar os ovos padrão com estoque ZERO. Continuar?")) {
+                    for (const ovo of OVOS_PADRAO) {
+                        await fetch(`${API_BASE}/produtos`, {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({ nome: ovo.nome, preco: 0, quantidade: 0, tipo_estoque: ovo.tipo, foto_url: ovo.foto })
+                        });
+                    }
+                    window.actions.load();
+                }
             }
         };
-
-        onAuthStateChanged(auth, (user) => {
-            window.state.user = user;
-            if (user) {
-                window.actions.loadData();
-                onSnapshot(query(collection(db, "vendas_logs"), orderBy("criadoEm", "desc")), (snap) => {
-                    window.state.pedidos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                    window.render();
-                });
-            }
-            window.render();
-        });
 
         window.render = () => {
             const root = document.getElementById('app-root');
-            if (!window.state.user) {
-                root.innerHTML = `<div class="h-screen flex items-center justify-center p-6"><form onsubmit="event.preventDefault(); signInWithEmailAndPassword(auth, this.email.value, this.senha.value)" class="card p-8 w-full max-w-sm"><h1 class="text-2xl font-black text-rose-600 mb-6 italic text-center uppercase">AppEgg Admin</h1><input name="email" type="email" value="thon@lojista.com.br" class="w-full p-3 border mb-3 rounded-md outline-none font-bold"><input name="senha" type="password" placeholder="Senha" class="w-full p-3 border mb-6 rounded-md outline-none font-bold"><button class="w-full py-4 bg-rose-600 text-white font-black rounded-lg uppercase">Acessar</button></form></div>`;
-                return;
-            }
-
             root.innerHTML = `
-                <nav class="bg-white border-b sticky top-0 z-50 px-4">
-                    <div class="max-w-5xl mx-auto flex justify-between items-center h-16">
-                        <h1 class="font-black text-rose-600 italic text-xl">AppEgg</h1>
-                        <div class="flex gap-6 h-full">
-                            <button onclick="window.actions.changeView('pedidos')" class="h-full px-2 text-[10px] font-bold uppercase tracking-wider ${window.state.view === 'pedidos' ? 'nav-active' : 'text-gray-400'}">Pedidos</button>
-                            <button onclick="window.actions.changeView('estoque')" class="h-full px-2 text-[10px] font-bold uppercase tracking-wider ${window.state.view === 'estoque' ? 'nav-active' : 'text-gray-400'}">Estoque</button>
-                        </div>
-                        <button onclick="signOut(auth)" class="text-[10px] font-bold text-gray-300">SAIR</button>
-                    </div>
+                <nav class="bg-white border-b p-4 mb-6 flex justify-between items-center">
+                    <h1 class="font-black text-rose-600 italic text-xl">AppEgg Admin</h1>
+                    <button onclick="window.actions.resetCatalogo()" class="bg-gray-800 text-white text-[9px] px-3 py-2 rounded font-bold uppercase">Resetar Catálogo (Ovos Padrão)</button>
                 </nav>
 
-                <main class="max-w-5xl mx-auto p-6">
-                    ${window.state.view === 'estoque' ? `
-                        <div class="card p-6 mb-8">
-                            <h2 class="font-bold text-gray-700 mb-4 uppercase text-xs">Adicionar ao Catálogo</h2>
-                            <form onsubmit="window.actions.salvar(event)" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                <select name="nome" class="p-3 border rounded font-bold text-sm">
-                                    <option>Ovo Branco Extra</option>
-                                    <option>Ovo Branco Grande</option>
-                                    <option>Ovo Vermelho Extra</option>
-                                    <option>Ovo de Codorna</option>
-                                </select>
-                                <input name="preco" type="number" step="0.01" placeholder="Preço R$" required class="p-3 border rounded font-bold">
-                                <select name="tipo_estoque" class="p-3 border rounded font-bold text-sm">
-                                    <option>Caixa</option><option>Cartela</option><option>Dúzia</option>
-                                </select>
-                                <input name="quantidade" type="number" placeholder="Estoque" required class="p-3 border rounded font-bold">
-                                <input name="foto_url" placeholder="URL da Foto (opcional)" class="p-3 border rounded text-xs col-span-1 md:col-span-2">
-                                <button class="bg-rose-600 text-white font-black py-3 rounded uppercase text-xs lg:col-span-3">Salvar Produto</button>
-                            </form>
-                        </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            ${window.state.produtos.map(p => `
-                                <div class="card p-4 flex items-center justify-between border-l-4 border-rose-500">
-                                    <div class="flex items-center gap-4">
-                                        <img src="${p.foto_url}" class="w-12 h-12 object-contain bg-gray-50 rounded">
-                                        <div>
-                                            <p class="font-bold text-sm">${p.nome}</p>
-                                            <p class="text-[10px] text-gray-400 uppercase font-bold">${p.quantidade} x ${p.tipo_estoque}</p>
-                                        </div>
-                                    </div>
-                                    <p class="font-black text-rose-600">R$ ${parseFloat(p.preco).toFixed(2)}</p>
-                                </div>
-                            `).join('')}
-                        </div>
-                    ` : `
-                        <div class="grid gap-4">
-                            ${window.state.pedidos.length === 0 ? '<p class="text-center py-10 text-gray-400">Nenhum pedido recebido.</p>' : ''}
-                            ${window.state.pedidos.map(o => `
-                                <div class="card p-4 flex justify-between items-center">
+                <main class="max-w-4xl mx-auto px-4">
+                    <div class="card p-6 mb-8 border-t-4 border-t-rose-600">
+                        <h2 class="font-bold mb-4 uppercase text-xs text-gray-400">${window.state.editingId ? '📝 Editando Produto' : '➕ Novo Produto'}</h2>
+                        <form id="produto-form" onsubmit="window.actions.salvar(event)" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <input name="nome" placeholder="Nome do Ovo" class="input-field" required>
+                            <input name="preco" type="number" step="0.01" placeholder="Preço R$" class="input-field" required>
+                            <select name="tipo_estoque" class="input-field">
+                                <option>Caixa</option><option>Cartela</option><option>Dúzia</option>
+                            </select>
+                            <input name="quantidade" type="number" placeholder="Qtd Estoque" class="input-field" required>
+                            <input name="foto_url" placeholder="URL da Foto" class="input-field md:col-span-2">
+                            <button class="bg-rose-600 text-white font-black py-3 rounded uppercase text-sm md:col-span-3">
+                                ${window.state.editingId ? 'Salvar Alterações' : 'Cadastrar Ovo'}
+                            </button>
+                        </form>
+                    </div>
+
+                    <div class="grid gap-3">
+                        ${window.state.produtos.map(p => `
+                            <div class="card p-4 flex justify-between items-center shadow-sm">
+                                <div class="flex items-center gap-4">
+                                    <img src="${p.foto_url}" class="w-14 h-14 object-contain rounded border">
                                     <div>
-                                        <p class="text-[10px] font-bold text-rose-500 uppercase">#${o.id.slice(-4)}</p>
-                                        <h3 class="font-bold text-gray-800">${o.clienteNome}</h3>
-                                        <p class="text-xs text-gray-500">${o.quantidade}x ${o.produtoNome}</p>
+                                        <p class="font-bold text-gray-800">${p.nome}</p>
+                                        <p class="text-[10px] font-bold text-gray-400 uppercase">Estoque: ${p.quantidade} | R$ ${p.preco.toFixed(2)}</p>
                                     </div>
-                                    <p class="font-black text-gray-800 italic text-lg">R$ ${(o.precoNoMomento * o.quantidade).toFixed(2)}</p>
                                 </div>
-                            `).join('')}
-                        </div>
-                    `}
+                                <div class="flex gap-2">
+                                    <button onclick='window.actions.prepararEdicao(${JSON.stringify(p)})' class="bg-blue-50 text-blue-600 p-2 rounded text-[10px] font-black uppercase">Editar</button>
+                                    <button onclick="window.actions.excluir('${p.id}')" class="bg-red-50 text-red-600 p-2 rounded text-[10px] font-black uppercase">Excluir</button>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
                 </main>
             `;
         };
+        window.actions.load();
     </script>
 </body>
 </html>

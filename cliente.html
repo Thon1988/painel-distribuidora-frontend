@@ -3,138 +3,58 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AppEgg | Compras</title>
+    <title>AppEgg | Loja</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&display=swap');
         body { font-family: 'Inter', sans-serif; background: #f3f4f6; }
-        .product-card { background: white; border-radius: 8px; border: 1px solid #e5e7eb; transition: all 0.2s; }
-        .price-main { color: #e11d48; font-weight: 800; font-size: 1.25rem; }
-        .btn-buy { background: #e11d48; color: white; border-radius: 4px; font-weight: 700; }
+        .product-card { background: white; border-radius: 8px; border: 1px solid #e5e7eb; overflow: hidden; }
+        .btn-buy { background: #e11d48; color: white; width: 100%; padding: 10px; font-weight: 800; text-transform: uppercase; font-size: 10px; border-radius: 4px; }
         .btn-off { background: #d1d5db; color: #9ca3af; cursor: not-allowed; }
-        .cart-badge { background: #e11d48; color: white; font-size: 10px; padding: 2px 6px; border-radius: 99px; position: absolute; top: -5px; right: -5px; border: 2px solid white; }
     </style>
 </head>
-<body class="pb-20">
+<body class="pb-10">
     <div id="app-root"></div>
-
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-        import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
-
-        const firebaseConfig = {
-            apiKey: "AIzaSyD3Otz9-zdZH-E5Feg9IOGWPzVycoe8gro",
-            authDomain: "distribuidora-de-ovos-aline.firebaseapp.com",
-            projectId: "distribuidora-de-ovos-aline",
-            storageBucket: "distribuidora-de-ovos-aline.firebasestorage.app",
-            messagingSenderId: "92187548716",
-            appId: "1:92187548716:web:d61d18a29aa76aead7c589"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
         const API_BASE = "https://painel-distribuidora-backend.onrender.com/api";
-
-        window.state = { 
-            view: 'loja', 
-            produtos: [], 
-            carrinho: [],
-            clienteData: JSON.parse(localStorage.getItem('appegg_user')) || null 
-        };
+        window.state = { produtos: [] };
 
         window.actions = {
-            loadProdutos: async () => {
+            load: async () => {
                 const res = await fetch(`${API_BASE}/produtos`);
                 window.state.produtos = await res.json();
                 window.render();
             },
-            login: (e) => {
-                e.preventDefault();
-                const user = { 
-                    email: e.target.email.value, 
-                    nome: "Cliente AppEgg", 
-                    cidade: "Não Informada" 
-                };
-                localStorage.setItem('appegg_user', JSON.stringify(user));
-                window.state.clienteData = user;
-                window.actions.loadProdutos();
-            },
-            comprar: async (p) => {
-                if (p.quantidade <= 0) {
-                    alert("⚠️ Desculpe! Este produto está indisponível no momento.");
-                    return;
-                }
-
-                try {
-                    await addDoc(collection(db, "vendas_logs"), {
-                        clienteNome: window.state.clienteData.nome || "Cliente Novo",
-                        clienteEmail: window.state.clienteData.email,
-                        produtoNome: p.nome,
-                        tipoEstoque: p.tipo_estoque,
-                        precoNoMomento: p.preco,
-                        quantidade: 1,
-                        status: "PENDENTE",
-                        criadoEm: serverTimestamp()
-                    });
-                    alert("✅ Pedido enviado com sucesso!");
-                    window.state.carrinho.push(p);
-                    window.render();
-                } catch (err) {
-                    alert("Erro ao processar pedido.");
-                }
+            comprar: (p) => {
+                if(p.quantidade <= 0) return alert("Produto Indisponível!");
+                alert("Pedido de " + p.nome + " enviado!");
             }
         };
 
         window.render = () => {
             const root = document.getElementById('app-root');
-
-            if (!window.state.clienteData) {
-                root.innerHTML = `
-                <div class="p-8 h-screen flex flex-col justify-center max-w-sm mx-auto">
-                    <h1 class="text-4xl font-black text-rose-600 italic text-center mb-8">AppEgg</h1>
-                    <form onsubmit="window.actions.login(event)" class="space-y-4">
-                        <input name="email" type="email" placeholder="Seu E-mail" required class="w-full p-4 border rounded-lg font-bold outline-none">
-                        <input name="senha" type="password" placeholder="Sua Senha" required class="w-full p-4 border rounded-lg font-bold outline-none">
-                        <button class="w-full py-4 bg-rose-600 text-white rounded-lg font-black uppercase">Entrar na Loja</button>
-                    </form>
-                </div>`;
-                return;
-            }
-
             root.innerHTML = `
-                <header class="bg-white border-b sticky top-0 z-50 p-4 flex justify-between items-center shadow-sm">
-                    <h1 class="font-black text-rose-600 text-2xl italic">AppEgg</h1>
-                    <div class="relative">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>
-                        <span class="cart-badge">${window.state.carrinho.length}</span>
-                    </div>
+                <header class="bg-white p-4 border-b sticky top-0 z-50 shadow-sm flex justify-between">
+                    <h1 class="font-black text-rose-600 italic text-2xl">AppEgg</h1>
                 </header>
-
-                <main class="p-4 grid grid-cols-2 md:grid-cols-4 gap-4">
-                    ${window.state.produtos.map(p => {
-                        const esgotado = p.quantidade <= 0;
-                        return `
-                        <div class="product-card p-3 flex flex-col ${esgotado ? 'opacity-60' : ''}">
+                <main class="p-4 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-6xl mx-auto">
+                    ${window.state.produtos.map(p => `
+                        <div class="product-card flex flex-col p-3 ${p.quantidade <= 0 ? 'opacity-60' : ''}">
                             <img src="${p.foto_url}" class="w-full h-32 object-contain mb-2">
                             <h3 class="text-[11px] font-bold text-gray-800 uppercase h-8 line-clamp-2">${p.nome}</h3>
-                            <div class="mt-4">
-                                <p class="text-[9px] text-gray-400 font-bold uppercase">Por ${p.tipo_estoque}:</p>
-                                <p class="price-main mb-3">R$ ${parseFloat(p.preco).toFixed(2)}</p>
-                                
-                                <button onclick='window.actions.comprar(${JSON.stringify(p)})' 
-                                    class="w-full py-2 text-[10px] uppercase tracking-widest ${esgotado ? 'btn-off' : 'btn-buy'}">
-                                    ${esgotado ? 'Indisponível' : 'Comprar'}
-                                </button>
-                                ${esgotado ? '<p class="text-[8px] text-red-500 font-bold text-center mt-1 uppercase">Sem estoque</p>' : ''}
-                            </div>
+                            <p class="text-[9px] text-gray-400 font-bold uppercase mt-2">Por ${p.tipo_estoque}:</p>
+                            <p class="text-xl font-black text-rose-600 mb-3">R$ ${p.preco.toFixed(2)}</p>
+                            <button onclick='window.actions.comprar(${JSON.stringify(p)})' 
+                                class="btn-buy ${p.quantidade <= 0 ? 'btn-off' : ''}">
+                                ${p.quantidade <= 0 ? 'Indisponível' : 'Comprar'}
+                            </button>
+                            ${p.quantidade <= 0 ? '<p class="text-[8px] text-red-500 font-bold text-center mt-2 uppercase">Aguardando Estoque</p>' : ''}
                         </div>
-                    `}).join('')}
+                    `).join('')}
                 </main>
             `;
         };
-
-        if (window.state.clienteData) window.actions.loadProdutos();
-        else window.render();
+        window.actions.load();
     </script>
 </body>
 </html>
