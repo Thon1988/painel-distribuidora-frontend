@@ -3,17 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AppEgg | Ovos Direto da Granja</title>
+    <title>AppEgg | Loja de Ovos</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;700;800&display=swap');
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f8fafc; color: #1e293b; }
-        .product-card { background: white; border-radius: 32px; border: 1px solid #f1f5f9; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
-        .btn-main { background: #4f46e5; transition: all 0.3s ease; }
-        .btn-main:active { transform: scale(0.95); }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f8fafc; }
+        .egg-card { background: white; border-radius: 24px; overflow: hidden; border: 1px solid #f1f5f9; transition: all 0.3s; }
+        .egg-card:hover { transform: translateY(-5px); shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1); }
+        .btn-disabled { background: #e2e8f0; color: #94a3b8; cursor: not-allowed; }
+        .btn-active { background: #4f46e5; color: white; }
+        .cart-badge { position: absolute; top: -5px; right: -5px; background: #ef4444; color: white; font-size: 10px; padding: 2px 6px; border-radius: 50%; border: 2px solid white; }
     </style>
 </head>
-<body class="pb-10">
+<body class="pb-20">
     <div id="app-root"></div>
 
     <script type="module">
@@ -31,86 +33,116 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
-        const API_BASE = "https://painel-distribuidora-backend.onrender.com/api";
 
-        window.state = { view: 'login', produtos: [], clienteData: JSON.parse(localStorage.getItem('appegg_user')) || null };
+        // Catálogo Padrão da Distribuidora (Imagens via Unsplash)
+        const CATALOGO_PADRAO = [
+            { id: 'jumbo', nome: 'Ovo Branco Jumbo', img: 'https://images.unsplash.com/photo-1587486914762-8f055609cc43?auto=format&fit=crop&w=300&q=80', desc: 'O maior da categoria' },
+            { id: 'extra', nome: 'Ovo Branco Extra', img: 'https://images.unsplash.com/photo-1516448398574-8d246a7a083d?auto=format&fit=crop&w=300&q=80', desc: 'Qualidade superior' },
+            { id: 'grande', nome: 'Ovo Branco Grande', img: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=300&q=80', desc: 'Ideal para o dia a dia' },
+            { id: 'vermelho', nome: 'Ovo Vermelho Extra', img: 'https://images.unsplash.com/photo-1598965402089-897ce52e8355?auto=format&fit=crop&w=300&q=80', desc: 'Rico em nutrientes' },
+            { id: 'codorna', nome: 'Ovo de Codorna', img: 'https://images.unsplash.com/photo-1612144431180-2d672779556c?auto=format&fit=crop&w=300&q=80', desc: 'Pacote com 30 unidades' },
+            { id: 'caipira', nome: 'Ovo Caipira', img: 'https://images.unsplash.com/photo-1569254994521-ddbb54af5ae8?auto=format&fit=crop&w=300&q=80', desc: 'Sabor da fazenda' }
+        ];
+
+        window.state = { 
+            view: 'login', 
+            estoqueReal: [], 
+            carrinho: [],
+            clienteData: JSON.parse(localStorage.getItem('appegg_user')) || null 
+        };
 
         window.actions = {
             login: (e) => {
                 e.preventDefault();
                 const email = e.target.email.value;
                 if (email === 'thon@lojista.com.br') {
-                    const testador = { nome: "Admin Thon", email, doc: "000.000.000-00", whatsapp: "11999999999", rua: "Área de Teste", numero: "1", cidade: "São Paulo", estado: "SP" };
-                    localStorage.setItem('appegg_user', JSON.stringify(testador));
-                    window.state.clienteData = testador;
-                } else if (!window.state.clienteData) return alert("Conta não encontrada. Cadastre-se!");
+                    window.state.clienteData = { nome: "Admin Thon", email };
+                }
+                if (!window.state.clienteData) return alert("Cadastre-se primeiro!");
                 window.state.view = 'loja';
-                window.actions.loadProdutos();
+                window.render();
             },
             salvarCadastro: (e) => {
                 e.preventDefault();
                 const f = new FormData(e.target);
-                const data = { nome: f.get('nome'), email: f.get('email'), whatsapp: f.get('whatsapp'), doc: f.get('doc'), cep: f.get('cep'), rua: f.get('rua'), numero: f.get('numero'), cidade: f.get('cidade'), estado: f.get('estado') };
+                const data = Object.fromEntries(f);
                 localStorage.setItem('appegg_user', JSON.stringify(data));
                 window.state.clienteData = data;
                 window.state.view = 'loja';
-                window.actions.loadProdutos();
-            },
-            loadProdutos: async () => {
-                const res = await fetch(`${API_BASE}/produtos`);
-                window.state.produtos = await res.json();
                 window.render();
             }
         };
 
         window.render = () => {
             const root = document.getElementById('app-root');
-            if (window.state.view === 'login' && !window.state.clienteData) {
-                root.innerHTML = `<div class="p-8 h-screen flex flex-col justify-center max-w-md mx-auto">
-                    <h1 class="text-4xl font-black text-indigo-600 mb-2 italic tracking-tighter text-center">AppEgg</h1>
-                    <p class="text-slate-400 text-center mb-10 font-bold uppercase text-[10px] tracking-widest">Ovos frescos na palma da mão</p>
-                    <form onsubmit="window.actions.login(event)" class="space-y-4">
-                        <input name="email" type="email" placeholder="E-mail" required class="w-full p-5 rounded-3xl bg-white border border-slate-100 outline-none font-bold shadow-sm">
-                        <button class="w-full py-5 btn-main text-white rounded-3xl font-black uppercase tracking-widest shadow-xl shadow-indigo-200">ENTRAR</button>
-                        <button type="button" onclick="window.state.view='cadastro';window.render()" class="w-full py-3 text-slate-400 font-bold uppercase text-[10px] tracking-widest">Ainda não tenho conta</button>
+
+            if (window.state.view === 'login') {
+                root.innerHTML = `
+                <div class="p-8 h-screen flex flex-col justify-center max-w-md mx-auto">
+                    <h1 class="text-4xl font-black text-indigo-600 mb-2 italic text-center">AppEgg</h1>
+                    <form onsubmit="window.actions.login(event)" class="space-y-4 mt-8">
+                        <input name="email" type="email" placeholder="E-mail" required class="w-full p-4 rounded-2xl border font-bold">
+                        <input name="senha" type="password" placeholder="Senha" required class="w-full p-4 rounded-2xl border font-bold">
+                        <button class="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase">Entrar</button>
+                        <button type="button" onclick="window.state.view='cadastro';window.render()" class="w-full text-[10px] font-bold text-slate-400 uppercase">Ainda não sou cliente</button>
                     </form>
                 </div>`;
             } else if (window.state.view === 'cadastro') {
-                root.innerHTML = `<div class="p-8 max-w-md mx-auto">
-                    <h2 class="font-black text-2xl text-slate-800 mb-6">Criar Cadastro</h2>
+                root.innerHTML = `
+                <div class="p-8 max-w-md mx-auto">
+                    <h2 class="text-2xl font-black mb-6">Cadastro</h2>
                     <form onsubmit="window.actions.salvarCadastro(event)" class="space-y-4">
-                        <input name="nome" placeholder="Nome / Razão Social" required class="w-full p-4 rounded-2xl border bg-white outline-none">
-                        <input name="doc" placeholder="CPF ou CNPJ" required class="w-full p-4 rounded-2xl border bg-white outline-none">
-                        <input name="whatsapp" placeholder="WhatsApp" required class="w-full p-4 rounded-2xl border bg-white outline-none">
-                        <input name="email" type="email" placeholder="E-mail" required class="w-full p-4 rounded-2xl border bg-white outline-none">
-                        <div class="grid grid-cols-2 gap-3">
-                            <input name="rua" placeholder="Rua" required class="p-4 rounded-2xl border bg-white outline-none">
-                            <input name="numero" placeholder="Nº" required class="p-4 rounded-2xl border bg-white outline-none">
+                        <input name="nome" placeholder="Nome" required class="w-full p-4 rounded-xl border">
+                        <input name="doc" placeholder="CPF ou CNPJ" required class="w-full p-4 rounded-xl border">
+                        <input name="whatsapp" placeholder="WhatsApp" required class="w-full p-4 rounded-xl border">
+                        <input name="email" type="email" placeholder="E-mail" required class="w-full p-4 rounded-xl border">
+                        <div class="grid grid-cols-2 gap-4">
+                            <input name="cidade" placeholder="Cidade" required class="p-4 rounded-xl border">
+                            <input name="estado" placeholder="UF" maxlength="2" required class="p-4 rounded-xl border">
                         </div>
-                        <button class="w-full py-5 btn-main text-white rounded-3xl font-black uppercase">CADASTRAR E ENTRAR</button>
+                        <button class="w-full py-4 bg-indigo-600 text-white rounded-xl font-black">CADASTRAR</button>
+                        <button type="button" onclick="window.state.view='login';window.render()" class="w-full text-xs font-bold text-indigo-600 underline uppercase">Já tenho cadastro</button>
                     </form>
                 </div>`;
             } else {
-                root.innerHTML = `<header class="p-6 flex justify-between items-center bg-white border-b sticky top-0 z-50">
+                root.innerHTML = `
+                <header class="p-6 bg-white border-b sticky top-0 z-50 flex justify-between items-center">
                     <h1 class="font-black text-indigo-600 italic text-xl">AppEgg</h1>
-                    <button onclick="localStorage.clear(); location.reload()" class="text-[10px] text-slate-400 font-bold uppercase">Sair</button>
+                    <div class="relative">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                        </svg>
+                        <span class="cart-badge">${window.state.carrinho.length}</span>
+                    </div>
                 </header>
-                <div class="p-4 grid gap-4 max-w-xl mx-auto">
-                    ${window.state.produtos.map(p => `
-                        <div class="product-card p-6 flex justify-between items-center">
-                            <div>
-                                <h3 class="font-black text-slate-800 uppercase text-xs tracking-tight">${p.nome}</h3>
-                                <p class="text-3xl font-black text-indigo-600">R$ ${p.preco.toFixed(2)}</p>
-                                <span class="text-[9px] font-bold text-slate-400 uppercase">Preço por ${p.tipo_estoque}</span>
+                
+                <div class="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    ${CATALOGO_PADRAO.map(p => `
+                        <div class="egg-card shadow-sm">
+                            <img src="${p.img}" class="w-full h-40 object-cover">
+                            <div class="p-4">
+                                <h3 class="font-black text-slate-800 text-sm uppercase">${p.nome}</h3>
+                                <p class="text-[10px] text-slate-400 mb-3">${p.desc}</p>
+                                
+                                <div class="space-y-2 border-t pt-3">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-[10px] font-bold text-slate-500 uppercase">Caixa (30 dz)</span>
+                                        <span class="text-[10px] font-black text-red-400 uppercase">Indisponível</span>
+                                    </div>
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-[10px] font-bold text-slate-500 uppercase">Cartela (30 un)</span>
+                                        <span class="text-[10px] font-black text-red-400 uppercase">Indisponível</span>
+                                    </div>
+                                </div>
+                                
+                                <button disabled class="w-full mt-4 py-3 btn-disabled rounded-xl text-[10px] font-black uppercase tracking-tighter">Aguardando Estoque</button>
                             </div>
-                            <button class="h-14 w-14 btn-main rounded-[24px] flex items-center justify-center text-white shadow-lg shadow-indigo-100">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4" /></svg>
-                            </button>
                         </div>
                     `).join('')}
                 </div>`;
             }
         };
+
         window.render();
     </script>
 </body>
