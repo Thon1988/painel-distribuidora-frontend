@@ -3,26 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AppEgg</title>
+    <title>AppEgg - Ovos Frescos</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&display=swap');
         body { font-family: 'Inter', sans-serif; background: #fff; margin: 0; -webkit-tap-highlight-color: transparent; }
         .product-card { background: #fff; border-radius: 20px; border: 1px solid #f3f4f6; position: relative; }
         .wa-float { position: fixed; bottom: 120px; right: 20px; background: #25D366; color: white; width: 55px; height: 55px; border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 60; box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
-        .cart-bar { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; padding: 20px; border-top: 1px solid #eee; z-index: 50; display: flex; justify-content: space-between; align-items: center; }
-        .btn-toggle { border: 2px solid #f3f4f6; transition: all 0.2s; }
+        .btn-toggle { border: 2px solid #f3f4f6; transition: all 0.2s; font-weight: 800; font-size: 10px; text-transform: uppercase; }
         .btn-toggle.active { border-color: #e11d48; background-color: #fff1f2; color: #e11d48; }
+        .notif-banner { position: fixed; top: 20px; left: 20px; right: 20px; background: #e11d48; color: #white; padding: 20px; border-radius: 20px; z-index: 1000; box-shadow: 0 20px 40px rgba(0,0,0,0.2); text-align: center; font-weight: 900; animation: slideIn 0.5s ease; color: white; }
+        @keyframes slideIn { from { transform: translateY(-100px); } to { transform: translateY(0); } }
     </style>
 </head>
 <body>
     <div id="app-root">
-        <div class="h-screen flex items-center justify-center font-black text-rose-500 uppercase tracking-widest">🥚 Abrindo AppEgg...</div>
+        <div class="h-screen flex items-center justify-center font-black text-rose-500 uppercase tracking-widest">🥚 AppEgg...</div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-        import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, serverTimestamp, onSnapshot, query, where } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyD3Otz9-zdZH-E5Feg9IOGWPzVycoe8gro",
@@ -42,164 +43,136 @@
             tela: 'catalogo',
             cliente: JSON.parse(localStorage.getItem('appegg_user')) || null,
             frequencia: 'Compra Única',
-            pagamento: 'PIX'
+            pagamento: 'PIX',
+            logistica: 'Entregar'
         };
+
+        // NOTIFICAÇÕES EM TEMPO REAL
+        function monitorarMeusPedidos() {
+            if (!window.state.cliente) return;
+            const q = query(collection(db, "vendas_logs"), where("clienteWhatsapp", "==", window.state.cliente.whatsapp));
+            onSnapshot(q, (snapshot) => {
+                snapshot.docChanges().forEach((change) => {
+                    if (change.type === "modified") {
+                        const v = change.doc.data();
+                        const b = document.createElement('div');
+                        b.className = "notif-banner italic uppercase";
+                        b.innerText = v.status === 'CANCELADO' ? `🚨 CANCELADO: ${v.motivoCancelamento}` : `🥚 APPEGG: Pedido ${v.status}!`;
+                        document.body.appendChild(b);
+                        setTimeout(() => b.remove(), 7000);
+                    }
+                });
+            });
+        }
 
         window.mudarTela = (t) => { window.state.tela = t; window.render(); window.scrollTo(0,0); };
         window.add = (id) => { window.state.carrinho[id] = (window.state.carrinho[id] || 0) + 1; window.render(); };
         window.sub = (id) => { if (window.state.carrinho[id] > 1) window.state.carrinho[id]--; else delete window.state.carrinho[id]; window.render(); };
 
         window.finalizarPedido = async () => {
-            const itensArr = Object.entries(window.state.carrinho);
-            const itensTexto = itensArr.map(([id, q]) => {
+            const itens = Object.entries(window.state.carrinho).map(([id, q]) => {
                 const p = window.state.produtos.find(x => x.id == id);
                 return `${q}x ${p.nome}`;
             }).join(', ');
-            
-            const total = itensArr.reduce((acc, [id, q]) => {
-                const p = window.state.produtos.find(x => x.id == id);
-                return acc + (p.preco * q);
-            }, 0);
+            const total = Object.entries(window.state.carrinho).reduce((acc, [id, q]) => acc + (window.state.produtos.find(x => x.id == id).preco * q), 0);
 
             try {
                 await addDoc(collection(db, "vendas_logs"), {
                     clienteNome: window.state.cliente.nome,
                     clienteWhatsapp: window.state.cliente.whatsapp,
-                    produto: itensTexto,
+                    clienteEndereco: window.state.logistica === 'Entregar' ? window.state.cliente.endereco : 'RETIRADA',
+                    produto: itens,
                     precoNoMomento: total,
                     entrega: window.state.frequencia,
                     pagamento: window.state.pagamento,
                     status: 'PENDENTE',
                     criadoEm: serverTimestamp()
                 });
-                alert("🥚 Sucesso! Seu pedido foi enviado.");
+                alert("🥚 Pedido enviado com sucesso!");
                 window.state.carrinho = {};
                 window.mudarTela('catalogo');
-            } catch (e) { 
-                console.error(e);
-                alert("Erro ao enviar pedido. Verifique sua conexão."); 
-            }
+            } catch (e) { alert("Erro ao conectar com o banco. Tente novamente."); }
         };
 
         window.render = () => {
             const root = document.getElementById('app-root');
             if (!window.state.cliente) {
-                root.innerHTML = `<div class="h-screen flex flex-col justify-center px-10"><h1 class="text-6xl font-black text-rose-600 italic text-center mb-8 uppercase tracking-tighter">AppEgg</h1><form onsubmit="event.preventDefault(); window.state.cliente={nome:this.nome.value, whatsapp:this.whatsapp.value}; localStorage.setItem('appegg_user', JSON.stringify(window.state.cliente)); window.render()" class="space-y-4"><input name="nome" placeholder="Seu Nome" class="w-full p-5 bg-gray-50 rounded-2xl font-bold outline-none border-none" required><input name="whatsapp" placeholder="WhatsApp" class="w-full p-5 bg-gray-50 rounded-2xl font-bold outline-none border-none" required><button class="w-full py-5 bg-rose-600 text-white rounded-2xl font-black uppercase shadow-lg italic">Entrar</button></form></div>`;
+                root.innerHTML = `<div class="p-10 min-h-screen flex flex-col justify-center"><h1 class="text-6xl font-black text-rose-600 italic mb-8 uppercase tracking-tighter">AppEgg</h1><form onsubmit="event.preventDefault(); const u={nome:this.nome.value, whatsapp:this.whatsapp.value, endereco:this.endereco.value}; window.state.cliente=u; localStorage.setItem('appegg_user', JSON.stringify(u)); window.render(); location.reload();" class="space-y-4 text-left"><input name="nome" placeholder="Seu Nome" class="w-full p-5 bg-gray-50 rounded-2xl font-bold outline-none border-none" required><input name="whatsapp" placeholder="WhatsApp" class="w-full p-5 bg-gray-50 rounded-2xl font-bold outline-none border-none" required><textarea name="endereco" placeholder="Endereço Completo" class="w-full p-5 bg-gray-50 rounded-2xl font-bold outline-none border-none h-32" required></textarea><button class="w-full py-5 bg-rose-600 text-white rounded-2xl font-black uppercase italic shadow-xl">Cadastrar e Entrar</button></form></div>`;
                 return;
             }
 
             if (window.state.tela === 'carrinho') {
                 const itens = Object.entries(window.state.carrinho);
-                const total = itens.reduce((acc, [id, q]) => {
-                    const p = window.state.produtos.find(x => x.id == id);
-                    return acc + (p ? p.preco * q : 0);
-                }, 0);
-
+                const total = itens.reduce((acc, [id, q]) => acc + (window.state.produtos.find(x => x.id == id).preco * q), 0);
                 root.innerHTML = `
-                <div class="p-6 pb-64 animate-in fade-in duration-300">
-                    <button onclick="window.mudarTela('catalogo')" class="text-rose-600 font-black uppercase text-[10px] mb-8 flex items-center gap-2">← Voltar para as compras</button>
-                    <h2 class="text-3xl font-black uppercase italic mb-8">Meu Carrinho</h2>
-                    
+                <div class="p-6 pb-64">
+                    <button onclick="window.mudarTela('catalogo')" class="text-rose-600 font-black uppercase text-[10px] mb-8">← Continuar Comprando</button>
+                    <h2 class="text-3xl font-black uppercase italic mb-8">Meus Ovos</h2>
                     <div class="space-y-4 mb-10">
-                        ${itens.map(([id, q]) => {
-                            const p = window.state.produtos.find(x => x.id == id);
-                            return `
+                        ${itens.map(([id, q]) => `
                             <div class="flex items-center gap-4 bg-gray-50 p-4 rounded-2xl">
-                                <img src="${p.foto_url}" class="w-12 h-12 object-contain">
-                                <div class="flex-1 font-black text-[10px] uppercase">${p.nome}<br><span class="text-rose-600 italic">R$ ${(p.preco*q).toFixed(2)}</span></div>
+                                <div class="flex-1 font-black text-[10px] uppercase">${window.state.produtos.find(x => x.id == id).nome}</div>
                                 <div class="flex items-center gap-2">
-                                    <button onclick="window.sub('${id}')" class="w-8 h-8 bg-white rounded-lg shadow font-black text-rose-600">-</button>
+                                    <button onclick="window.sub('${id}')" class="w-8 h-8 bg-white rounded-lg font-black text-rose-600">-</button>
                                     <span class="font-bold text-sm">${q}</span>
-                                    <button onclick="window.add('${id}')" class="w-8 h-8 bg-white rounded-lg shadow font-black text-rose-600">+</button>
+                                    <button onclick="window.add('${id}')" class="w-8 h-8 bg-white rounded-lg font-black text-rose-600">+</button>
                                 </div>
-                            </div>`;
-                        }).join('')}
+                            </div>
+                        `).join('')}
                     </div>
-
-                    <div class="mb-10 p-6 bg-gray-50 rounded-[32px]">
-                        <p class="font-black text-[10px] text-gray-400 uppercase mb-4 text-center tracking-widest italic">1. Programar Compra</p>
-                        <div class="grid grid-cols-2 gap-2 mb-8">
-                            ${['Compra Única', 'Diária', 'Semanal', 'Quinzenal', 'Mensal'].map(f => `
-                                <button onclick="window.state.frequencia='${f}'; window.render()" class="btn-toggle py-4 rounded-xl font-black text-[10px] uppercase ${window.state.frequencia === f ? 'active' : 'bg-white text-gray-400'}">${f}</button>
-                            `).join('')}
-                        </div>
-
-                        <p class="font-black text-[10px] text-gray-400 uppercase mb-4 text-center tracking-widest italic">2. Escolher Pagamento</p>
-                        <div class="grid grid-cols-1 gap-2">
-                            ${['PIX', 'Cartão de Crédito', 'Cartão de Débito', 'Dinheiro'].map(p => `
-                                <button onclick="window.state.pagamento='${p}'; window.render()" class="btn-toggle py-4 rounded-xl font-black text-[10px] uppercase ${window.state.pagamento === p ? 'active' : 'bg-white text-gray-400'}">${p}</button>
-                            `).join('')}
-                        </div>
+                    <div class="space-y-6">
+                        <section>
+                            <p class="font-black text-[10px] text-gray-400 uppercase mb-2">Logística</p>
+                            <div class="grid grid-cols-2 gap-2">
+                                <button onclick="window.state.logistica='Entregar'; window.render()" class="btn-toggle py-4 rounded-xl ${window.state.logistica === 'Entregar' ? 'active' : 'bg-gray-50'}">Entregar</button>
+                                <button onclick="window.state.logistica='Retirar'; window.render()" class="btn-toggle py-4 rounded-xl ${window.state.logistica === 'Retirar' ? 'active' : 'bg-gray-50'}">Retirar</button>
+                            </div>
+                        </section>
+                        <section>
+                            <p class="font-black text-[10px] text-gray-400 uppercase mb-2">Pagamento</p>
+                            <div class="grid grid-cols-2 gap-2">
+                                ${['PIX', 'CRÉDITO', 'DÉBITO', 'DINHEIRO'].map(p => `
+                                    <button onclick="window.state.pagamento='${p}'; window.render()" class="btn-toggle py-3 rounded-xl ${window.state.pagamento === p ? 'active' : 'bg-gray-50'}">${p}</button>
+                                `).join('')}
+                            </div>
+                        </section>
                     </div>
-
                     <div class="fixed bottom-0 left-0 right-0 p-6 bg-white border-t z-50">
-                        <div class="flex justify-between items-center mb-4">
-                            <span class="font-bold text-gray-400 uppercase text-[10px]">Total Geral</span>
-                            <span class="text-2xl font-black italic">R$ ${total.toFixed(2)}</span>
-                        </div>
-                        <button onclick="window.finalizarPedido()" class="w-full py-5 bg-rose-600 text-white rounded-2xl font-black uppercase shadow-xl italic tracking-tighter">Confirmar Pedido</button>
+                        <div class="flex justify-between items-center mb-4"><span class="font-bold text-gray-400 text-[10px]">TOTAL</span><span class="text-2xl font-black italic">R$ ${total.toFixed(2)}</span></div>
+                        <button onclick="window.finalizarPedido()" class="w-full py-5 bg-rose-600 text-white rounded-2xl font-black uppercase shadow-xl italic">Confirmar Pedido</button>
                     </div>
                 </div>`;
-            } 
-            else {
+            } else {
                 root.innerHTML = `
                 <header class="p-6 sticky top-0 bg-white/90 backdrop-blur-md z-40 border-b flex justify-between items-center">
-                    <h1 class="text-2xl font-black text-rose-600 italic uppercase tracking-tighter">AppEgg</h1>
-                    <span class="text-[9px] font-black text-gray-400 uppercase tracking-widest italic">Olá, ${window.state.cliente.nome.split(' ')[0]}</span>
+                    <h1 class="text-2xl font-black text-rose-600 italic uppercase">AppEgg</h1>
+                    <span class="text-[9px] font-black text-gray-400 uppercase">Olá, ${window.state.cliente.nome.split(' ')[0]}</span>
                 </header>
-
-                <div class="p-4 grid grid-cols-2 gap-3 pb-20">
+                <div class="p-4 grid grid-cols-2 gap-3 pb-32">
                     ${window.state.produtos.map(p => {
                         const q = window.state.carrinho[p.id] || 0;
-                        return `
-                        <div class="product-card p-3 flex flex-col">
-                            <span class="absolute top-2 left-2 bg-rose-50 text-rose-600 text-[8px] font-black px-2 py-1 rounded-md uppercase">${p.tipo_estoque}</span>
-                            <div class="h-24 flex items-center justify-center mb-2"><img src="${p.foto_url}" class="max-h-full object-contain"></div>
-                            <h3 class="font-black text-[9px] text-gray-800 uppercase h-8 overflow-hidden">${p.nome}</h3>
-                            <p class="text-rose-600 font-black text-sm my-2 italic">R$ ${parseFloat(p.preco).toFixed(2)}</p>
+                        return `<div class="product-card p-3 flex flex-col items-center">
+                            <img src="${p.foto_url}" class="h-20 mb-2">
+                            <h3 class="font-black text-[9px] text-gray-800 uppercase text-center">${p.nome}</h3>
+                            <p class="text-rose-600 font-black text-xs my-2 italic">R$ ${parseFloat(p.preco).toFixed(2)}</p>
                             ${q === 0 ? 
-                                `<button onclick="window.add('${p.id}')" class="w-full bg-rose-600 text-white py-3 rounded-xl text-[9px] font-black uppercase shadow-sm">Adicionar</button>` : 
-                                `<div class="flex items-center justify-between bg-gray-50 rounded-xl p-1 border border-rose-100"><button onclick="window.sub('${p.id}')" class="w-8 h-8 font-black text-rose-600">-</button><span class="font-bold text-xs">${q}</span><button onclick="window.add('${p.id}')" class="w-8 h-8 font-black text-rose-600">+</button></div>`
+                                `<button onclick="window.add('${p.id}')" class="w-full bg-rose-600 text-white py-3 rounded-xl text-[9px] font-black uppercase">Add</button>` : 
+                                `<div class="flex items-center gap-4"><button onclick="window.sub('${p.id}')" class="font-black text-rose-600">-</button><span class="font-bold text-xs">${q}</span><button onclick="window.add('${p.id}')" class="font-black text-rose-600">+</button></div>`
                             }
                         </div>`;
                     }).join('')}
                 </div>
-
-                <footer class="p-10 bg-gray-50 text-center border-t border-gray-100 mb-32">
-                    <h2 class="text-xl font-black text-rose-600 italic mb-2 uppercase tracking-tighter italic">AppEgg</h2>
-                    <p class="text-[10px] text-gray-400 font-bold leading-relaxed">
-                        Rua Antonio Freire da Silva, 67<br>
-                        Jardim das Camélias, São Paulo - SP<br>
-                        <span class="text-rose-500 font-black">11 98570-6243</span>
-                    </p>
-                </footer>
-
-                ${Object.keys(window.state.carrinho).length > 0 ? `
-                <div class="cart-bar shadow-2xl animate-in slide-in-from-bottom duration-300">
-                    <p class="font-black italic text-gray-800 text-lg uppercase tracking-tighter">🛒 AppEgg</p>
-                    <button onclick="window.mudarTela('carrinho')" class="bg-rose-600 px-8 py-4 rounded-2xl text-white font-black text-xs uppercase italic shadow-lg">Ver Carrinho</button>
-                </div>` : ''}
-
-                <a href="https://wa.me/5511985706243" target="_blank" class="wa-float">
-                    <svg width="25" height="25" fill="currentColor" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.588-5.946 0-6.556 5.332-11.888 11.888-11.888 3.176 0 6.161 1.237 8.404 3.48s3.481 5.229 3.481 8.408c0 6.556-5.332 11.888-11.888 11.888-2.003 0-3.96-.503-5.69-1.465l-6.394 1.688zm6.105-4.576c1.559.926 3.447 1.414 5.373 1.414 5.617 0 10.188-4.571 10.188-10.188 0-2.72-1.057-5.277-2.977-7.197s-4.477-2.977-7.197-2.977c-5.617 0-10.188 4.571-10.188 10.188 0 1.902.521 3.745 1.508 5.389l-1.011 3.693 3.797-.982z"/></svg>
-                </a>`;
+                ${Object.keys(window.state.carrinho).length > 0 ? `<div class="fixed bottom-6 left-6 right-6 p-4 bg-white shadow-2xl rounded-3xl border flex justify-between items-center z-50 animate-bounce"><p class="font-black italic text-gray-800">🛒 CARRINHO</p><button onclick="window.mudarTela('carrinho')" class="bg-rose-600 px-6 py-3 rounded-2xl text-white font-black text-xs uppercase italic">Ver Agora</button></div>` : ''}`;
             }
         };
 
         async function init() {
             try {
                 const r = await fetch("https://painel-distribuidora-backend.onrender.com/api/produtos");
-                if (!r.ok) throw new Error();
                 window.state.produtos = await r.json();
                 window.render();
-            } catch (e) {
-                // Tenta apenas 1 vez após 5 segundos se falhar
-                setTimeout(async () => {
-                    const r = await fetch("https://painel-distribuidora-backend.onrender.com/api/produtos");
-                    window.state.produtos = await r.json();
-                    window.render();
-                }, 5000);
-            }
+                monitorarMeusPedidos();
+            } catch (e) { setTimeout(init, 3000); }
         }
         init();
     </script>

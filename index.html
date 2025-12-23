@@ -9,7 +9,7 @@
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
         body { font-family: 'Inter', sans-serif; background: #f9fafb; color: #1f2937; }
         .card { background: #ffffff; border: 1px solid #f3f4f6; border-radius: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02); }
-        .nav-link { font-size: 11px; font-weight: 800; text-transform: uppercase; color: #9ca3af; padding: 12px 16px; border-radius: 12px; cursor: pointer; }
+        .nav-link { font-size: 11px; font-weight: 800; text-transform: uppercase; color: #9ca3af; padding: 12px 16px; border-radius: 12px; cursor: pointer; transition: all 0.2s; }
         .nav-link.active { color: #e11d48; background: #fff1f2; }
         .status-badge { font-size: 9px; font-weight: 800; padding: 4px 8px; border-radius: 6px; text-transform: uppercase; }
     </style>
@@ -60,27 +60,48 @@
         };
 
         function renderPedidos() {
-            const pendentes = window.state.logs.filter(l => l.status !== 'FINALIZADO');
+            const ativos = window.state.logs.filter(l => l.status !== 'FINALIZADO' && l.status !== 'CANCELADO');
             return `
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    ${pendentes.length ? pendentes.map(l => `
-                        <div class="card p-6 border-l-4 border-rose-500">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    ${ativos.length ? ativos.map(l => `
+                        <div class="card p-6 border-l-4 ${l.status === 'SAIU PARA ENTREGA' ? 'border-blue-500' : 'border-rose-500'}">
                             <div class="flex justify-between items-start mb-4">
                                 <div>
                                     <h3 class="font-black uppercase italic text-gray-800">${l.clienteNome}</h3>
                                     <p class="text-[10px] font-bold text-gray-400">${l.clienteWhatsapp}</p>
                                 </div>
-                                <span class="status-badge bg-rose-50 text-rose-600">${l.entrega}</span>
+                                <span class="status-badge ${l.status === 'SAIU PARA ENTREGA' ? 'bg-blue-100 text-blue-600' : 'bg-rose-50 text-rose-600'}">
+                                    ${l.status || 'PENDENTE'}
+                                </span>
                             </div>
+                            
                             <div class="bg-gray-50 p-4 rounded-2xl mb-4 text-gray-700 font-bold text-xs">
+                                <p class="text-rose-600 mb-1 uppercase text-[9px]">Itens do Pedido:</p>
                                 ${l.produto}
+                                <div class="mt-3 pt-3 border-t border-gray-200 text-[10px] text-gray-400">
+                                    📍 ${l.clienteEndereco || 'Retirada'} | 💳 ${l.pagamento}
+                                </div>
                             </div>
-                            <div class="flex justify-between items-center">
+
+                            <div class="flex justify-between items-center mb-6">
                                 <p class="font-black text-2xl text-gray-800">R$ ${(parseFloat(l.precoNoMomento)||0).toFixed(2)}</p>
-                                <button onclick="window.actions.mudarStatus('${l.id}','FINALIZADO')" class="bg-gray-800 text-white px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest">Concluir</button>
+                                <span class="text-[10px] font-black text-gray-300 uppercase italic">${l.entrega}</span>
+                            </div>
+
+                            <div class="grid grid-cols-1 gap-2">
+                                <div class="flex gap-2">
+                                    <select onchange="window.actions.mudarStatus('${l.id}', this.value)" class="flex-1 p-3 bg-gray-100 rounded-xl text-[10px] font-black uppercase outline-none cursor-pointer">
+                                        <option value="">Atualizar Status...</option>
+                                        <option value="EM SEPARAÇÃO">Em Separação</option>
+                                        <option value="EMBALANDO">Embalando</option>
+                                        <option value="SAIU PARA ENTREGA">Saiu para Entrega</option>
+                                        <option value="FINALIZADO">Concluído/Entregue</option>
+                                    </select>
+                                    <button onclick="window.actions.cancelarPedido('${l.id}')" class="bg-gray-100 text-gray-400 px-4 rounded-xl text-[18px] hover:text-rose-600 transition-colors">×</button>
+                                </div>
                             </div>
                         </div>
-                    `).join('') : '<p class="text-center col-span-2 text-gray-400 font-bold py-20">Nenhum pedido pendente.</p>'}
+                    `).join('') : '<div class="col-span-2 text-center py-20"><p class="text-gray-300 font-black uppercase italic tracking-widest">Nenhum pedido novo</p></div>'}
                 </div>
             `;
         }
@@ -88,43 +109,37 @@
         function renderEstoque() {
             return `
                 <div class="card p-6 mb-8 border-2 border-rose-50">
-                    <h3 class="font-black text-xs uppercase mb-4 text-rose-600">Novo Produto</h3>
+                    <h3 class="font-black text-xs uppercase mb-4 text-rose-600 italic">Adicionar Produto ao App</h3>
                     <form onsubmit="window.actions.salvarProduto(event)" class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <select onchange="document.getElementById('nome_input').value = this.value === 'manual' ? '' : this.value" class="p-4 bg-gray-50 rounded-2xl outline-none font-bold text-sm">
-                            <option value="">Categoria...</option>
-                            <option value="Ovo Branco Pequeno">Ovo Branco Pequeno</option>
-                            <option value="Ovo Branco Médio">Ovo Branco Médio</option>
-                            <option value="Ovo Branco Grande">Ovo Branco Grande</option>
-                            <option value="Ovo Branco Extra">Ovo Branco Extra</option>
-                            <option value="Ovo Vermelho Pequeno">Ovo Vermelho Pequeno</option>
-                            <option value="Ovo Vermelho Médio">Ovo Vermelho Médio</option>
-                            <option value="Ovo Vermelho Grande">Ovo Vermelho Grande</option>
-                            <option value="Ovo Vermelho Extra">Ovo Vermelho Extra</option>
+                            <option value="">Sugestões de Ovos...</option>
+                            <option value="Ovo Branco Extra (G)">Ovo Branco Extra (G)</option>
+                            <option value="Ovo Vermelho Extra (G)">Ovo Vermelho Extra (G)</option>
                             <option value="Ovo de Codorna">Ovo de Codorna</option>
-                            <option value="manual">Personalizado...</option>
+                            <option value="manual">Outro Nome...</option>
                         </select>
-                        <input id="nome_input" name="nome" placeholder="Descrição" class="p-4 bg-gray-50 rounded-2xl outline-none font-bold text-sm" required>
+                        <input id="nome_input" name="nome" placeholder="Nome do Produto" class="p-4 bg-gray-50 rounded-2xl outline-none font-bold text-sm" required>
                         <select name="tipo_estoque" class="p-4 bg-gray-50 rounded-2xl outline-none font-bold text-sm">
                             <option value="Caixa">Caixa</option>
+                            <option value="Cartela">Cartela</option>
                             <option value="Dúzia">Dúzia</option>
-                            <option value="Unidade">Unidade</option>
                         </select>
-                        <input name="quantidade" type="number" placeholder="Estoque Inicial" class="p-4 bg-gray-50 rounded-2xl outline-none font-bold text-sm" required>
+                        <input name="quantidade" type="number" placeholder="Qtd Estoque" class="p-4 bg-gray-50 rounded-2xl outline-none font-bold text-sm" required>
                         <input name="preco" type="number" step="0.01" placeholder="Preço R$" class="p-4 bg-gray-50 rounded-2xl outline-none font-bold text-sm" required>
-                        <input name="foto_url" placeholder="URL da Foto" class="p-4 bg-gray-50 rounded-2xl outline-none font-bold text-sm" required>
-                        <button class="md:col-span-3 bg-rose-600 text-white font-black py-4 rounded-2xl uppercase italic tracking-widest">Salvar no App</button>
+                        <input name="foto_url" placeholder="Link da Imagem (JPG/PNG)" class="p-4 bg-gray-50 rounded-2xl outline-none font-bold text-sm" required>
+                        <button class="md:col-span-3 bg-rose-600 text-white font-black py-5 rounded-2xl uppercase italic tracking-tighter shadow-lg shadow-rose-200">Publicar no AppEgg</button>
                     </form>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     ${window.state.produtos.map(p => `
-                        <div class="card p-4 flex items-center gap-4">
-                            <img src="${p.foto_url}" class="w-12 h-12 rounded-lg object-contain bg-gray-50">
+                        <div class="card p-4 flex items-center gap-4 group">
+                            <img src="${p.foto_url}" class="w-14 h-14 rounded-xl object-contain bg-gray-50 border">
                             <div class="flex-1">
-                                <p class="font-black text-[9px] uppercase text-gray-400">${p.tipo_estoque} | Qtd: ${p.quantidade || 0}</p>
-                                <p class="font-black text-xs uppercase text-gray-800 line-clamp-1">${p.nome}</p>
-                                <p class="text-xs text-rose-600 font-bold">R$ ${parseFloat(p.preco).toFixed(2)}</p>
+                                <p class="font-black text-[8px] uppercase text-gray-400">${p.tipo_estoque} • ESTOQUE: ${p.quantidade || 0}</p>
+                                <p class="font-bold text-xs text-gray-800 truncate w-32">${p.nome}</p>
+                                <p class="text-sm text-rose-600 font-black italic">R$ ${parseFloat(p.preco).toFixed(2)}</p>
                             </div>
-                            <button onclick="window.actions.excluirProduto('${p.id}')" class="text-gray-200 hover:text-red-500 font-bold text-xl px-2">×</button>
+                            <button onclick="window.actions.excluirProduto('${p.id}')" class="opacity-0 group-hover:opacity-100 text-rose-600 font-bold text-xl px-2 transition-all">×</button>
                         </div>
                     `).join('')}
                 </div>
@@ -132,29 +147,32 @@
         }
 
         function renderClientes() {
-            // Agrupa logs por whatsapp para ter lista de clientes únicos
             const clientesUnicos = [...new Map(window.state.logs.map(i => [i['clienteWhatsapp'], i])).values()];
             return `
                 <div class="space-y-4">
-                    <h2 class="font-black text-gray-400 uppercase text-[10px] tracking-widest mb-6">Base de Clientes Ativos</h2>
-                    ${clientesUnicos.map(c => {
-                        const compras = window.state.logs.filter(l => l.clienteWhatsapp === c.clienteWhatsapp);
-                        const total = compras.reduce((acc, curr) => acc + (parseFloat(curr.precoNoMomento) || 0), 0);
-                        return `
-                        <div class="card p-6 border-l-8 border-green-400">
-                            <div class="flex justify-between items-center mb-4">
-                                <div>
-                                    <h3 class="font-black uppercase text-gray-800">${c.clienteNome}</h3>
-                                    <p class="text-xs font-bold text-gray-400">${c.clienteWhatsapp}</p>
+                    <h2 class="font-black text-gray-400 uppercase text-[10px] tracking-widest mb-6 italic">Base de Dados AppEgg</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        ${clientesUnicos.map(c => {
+                            const compras = window.state.logs.filter(l => l.clienteWhatsapp === c.clienteWhatsapp);
+                            const total = compras.reduce((acc, curr) => acc + (parseFloat(curr.precoNoMomento) || 0), 0);
+                            return `
+                            <div class="card p-6 border-l-8 border-green-400">
+                                <div class="flex justify-between items-center mb-4">
+                                    <div>
+                                        <h3 class="font-black uppercase text-gray-800">${c.clienteNome}</h3>
+                                        <p class="text-xs font-bold text-gray-400">${c.clienteWhatsapp}</p>
+                                    </div>
+                                    <a href="https://wa.me/55${c.clienteWhatsapp.replace(/\D/g,'')}" target="_blank" class="bg-green-500 text-white p-3 rounded-xl hover:scale-105 transition-transform">
+                                        <svg width="16" height="16" fill="white" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.588-5.946 0-6.556 5.332-11.888 11.888-11.888 3.176 0 6.161 1.237 8.404 3.48s3.481 5.229 3.481 8.408c0 6.556-5.332 11.888-11.888 11.888-2.003 0-3.96-.503-5.69-1.465l-6.394 1.688zm6.105-4.576c1.559.926 3.447 1.414 5.373 1.414 5.617 0 10.188-4.571 10.188-10.188 0-2.72-1.057-5.277-2.977-7.197s-4.477-2.977-7.197-2.977c-5.617 0-10.188 4.571-10.188 10.188 0 1.902.521 3.745 1.508 5.389l-1.011 3.693 3.797-.982z"/></svg>
+                                    </a>
                                 </div>
-                                <a href="https://wa.me/55${c.clienteWhatsapp.replace(/\D/g,'')}" target="_blank" class="bg-green-500 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase">WhatsApp</a>
-                            </div>
-                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                <div class="bg-gray-50 p-3 rounded-xl"><p class="text-[9px] font-bold text-gray-400 uppercase">Pedidos</p><p class="font-black text-gray-700">${compras.length}</p></div>
-                                <div class="bg-gray-50 p-3 rounded-xl"><p class="text-[9px] font-bold text-gray-400 uppercase">Total Comprado</p><p class="font-black text-rose-600">R$ ${total.toFixed(2)}</p></div>
-                            </div>
-                        </div>`;
-                    }).join('')}
+                                <div class="flex gap-4">
+                                    <div class="bg-gray-50 px-4 py-2 rounded-xl flex-1 text-center"><p class="text-[8px] font-bold text-gray-400 uppercase">Pedidos</p><p class="font-black text-gray-700">${compras.length}</p></div>
+                                    <div class="bg-gray-50 px-4 py-2 rounded-xl flex-1 text-center"><p class="text-[8px] font-bold text-gray-400 uppercase">Gasto Total</p><p class="font-black text-rose-600">R$ ${total.toFixed(2)}</p></div>
+                                </div>
+                            </div>`;
+                        }).join('')}
+                    </div>
                 </div>
             `;
         }
@@ -183,17 +201,25 @@
                 window.actions.load();
             },
             excluirProduto: async (id) => { 
-                if(confirm("Deseja excluir este produto do AppEgg?")) { 
+                if(confirm("Remover este ovo do App?")) { 
                     await fetch(`${API_BASE}/produtos/${id}`, {method:'DELETE'}); 
                     window.actions.load(); 
                 } 
             },
             mudarStatus: async (id, status) => { 
+                if(!status) return;
                 await updateDoc(doc(db, "vendas_logs", id), { status }); 
+            },
+            cancelarPedido: async (id) => {
+                const motivo = prompt("Motivo do cancelamento (aparecerá para o cliente):");
+                if(motivo) {
+                    await updateDoc(doc(db, "vendas_logs", id), { status: "CANCELADO", motivoCancelamento: motivo });
+                    setTimeout(() => deleteDoc(doc(db, "vendas_logs", id)), 10000);
+                }
             }
         };
 
-        // Escuta em tempo real pedidos do Firebase
+        // Escuta em tempo real do Firebase
         onSnapshot(query(collection(db, "vendas_logs"), orderBy("criadoEm", "desc")), (s) => {
             if(window.state.lastCount > 0 && s.docs.length > window.state.lastCount) {
                 document.getElementById('alert-sound').play().catch(()=>{});
