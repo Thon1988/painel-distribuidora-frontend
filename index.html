@@ -1,205 +1,194 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>AppEgg Admin</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700;900&display=swap" rel="stylesheet">
 <style>
-body{font-family:'DM Sans',sans-serif;background:#fafafa}
-.card{background:#fff;border-radius:24px;border:1px solid #eee}
-.nav{font-size:11px;font-weight:800;text-transform:uppercase}
-.active{background:#ffe4e6;color:#be123c}
+body { font-family:'DM Sans',sans-serif;background:#fafafa }
+.nav-btn.active{background:#ffe4e6;color:#be123c}
 </style>
 </head>
 <body>
 
 <div id="app"></div>
-<audio id="beep" src="https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3"></audio>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-import { getFirestore, collection, onSnapshot, query, orderBy, doc, updateDoc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 
 const firebaseConfig = {
- apiKey: "AIzaSyD3Otz9-zdZH-E5Feg9IOGWPzVycoe8gro",
- authDomain: "distribuidora-de-ovos-aline.firebaseapp.com",
- projectId: "distribuidora-de-ovos-aline"
+  apiKey: "AIzaSyD3Otz9-zdZH-E5Feg9IOGWPzVycoe8gro",
+  authDomain: "distribuidora-de-ovos-aline.firebaseapp.com",
+  projectId: "distribuidora-de-ovos-aline",
+  storageBucket: "distribuidora-de-ovos-aline.firebasestorage.app",
+  messagingSenderId: "92187548716",
+  appId: "1:92187548716:web:d61d18a29aa76aead7c589"
 };
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const auth = getAuth(app);
+const appFB = initializeApp(firebaseConfig);
+const auth = getAuth(appFB);
+const db = getFirestore(appFB);
 
-const API = "https://painel-distribuidora-backend.onrender.com/api";
+const API_PRODUTOS = "https://painel-distribuidora-backend.onrender.com/api/produtos";
 
 const state = {
- user:null,
- view:'pedidos',
- pedidos:[],
- produtos:[],
- pix:{tipo:'',chave:'',nome:''},
- alerta:0
+  user:null,
+  view:'pedidos',
+  pedidos:[],
+  produtos:[],
+  pix:{
+    tipo:'CNPJ',
+    chave:'',
+    nome:'Distribuidora AppEgg'
+  }
 };
 
 onAuthStateChanged(auth,u=>{
- state.user=u;
- if(u){
-  carregarPix();
-  carregarProdutos();
-  realtime();
- }
- render();
+  state.user=u;
+  if(u){
+    carregarPedidos();
+    carregarProdutos();
+  }
+  render();
 });
 
 function render(){
- const root=document.getElementById('app');
- if(!state.user){
-  root.innerHTML=`
-  <div class="min-h-screen flex items-center justify-center">
-   <form onsubmit="login(event)" class="card p-8 w-80">
-    <h1 class="text-3xl font-black text-rose-600 mb-6">AppEgg</h1>
-    <input name="email" placeholder="Email" class="w-full p-4 mb-3 bg-gray-100 rounded-xl">
-    <input name="pass" type="password" placeholder="Senha" class="w-full p-4 mb-4 bg-gray-100 rounded-xl">
-    <button class="w-full bg-rose-600 text-white py-4 rounded-xl font-black">Entrar</button>
-   </form>
+  const el=document.getElementById("app");
+  if(!state.user){
+    el.innerHTML=`
+    <div class="min-h-screen flex items-center justify-center">
+      <form onsubmit="login(event)" class="bg-white p-10 rounded-3xl shadow w-full max-w-sm space-y-4">
+        <h1 class="text-3xl font-black text-rose-600 text-center italic">AppEgg</h1>
+        <input name="email" type="email" placeholder="E-mail" class="w-full p-4 bg-gray-100 rounded-xl" required>
+        <input name="pass" type="password" placeholder="Senha" class="w-full p-4 bg-gray-100 rounded-xl" required>
+        <button class="w-full py-4 bg-rose-600 text-white rounded-xl font-black uppercase">Entrar</button>
+      </form>
+    </div>`;
+    return;
+  }
+
+  el.innerHTML=`
+  <header class="bg-white border-b px-6 py-4 flex justify-between items-center">
+    <div class="text-2xl font-black italic text-rose-600">AppEgg</div>
+    <div class="flex gap-2">
+      ${navBtn('pedidos','Pedidos')}
+      ${navBtn('estoque','Estoque')}
+      ${navBtn('pix','PIX')}
+      ${navBtn('relatorios','Relatórios')}
+      ${navBtn('clientes','Clientes')}
+      <button onclick="logout()" class="px-4 py-2 text-xs font-black uppercase text-gray-400">Sair</button>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto p-6">
+    ${renderView()}
+  </main>
+
+  <footer class="text-center text-xs text-gray-400 py-6">
+    AppEgg • Distribuidora de Ovos Aline • 23/12/2025
+  </footer>
+  `;
+}
+
+function navBtn(v,l){
+  return `<button onclick="state.view='${v}';render()" class="nav-btn px-4 py-2 rounded-xl text-xs font-black uppercase ${state.view===v?'active':''}">${l}</button>`;
+}
+
+function renderView(){
+  if(state.view==='pedidos') return renderPedidos();
+  if(state.view==='estoque') return renderEstoque();
+  if(state.view==='pix') return renderPix();
+  if(state.view==='relatorios') return renderRelatorios();
+  if(state.view==='clientes') return renderClientes();
+}
+
+function renderPedidos(){
+  return state.pedidos.map(p=>`
+  <div class="bg-white p-6 rounded-3xl shadow mb-4">
+    <div class="flex justify-between mb-2">
+      <b>${p.clienteNome}</b>
+      <span class="text-xs font-black text-rose-600">${p.status}</span>
+    </div>
+    <p class="text-sm">${p.produto}</p>
+    <p class="text-xs text-gray-400">${p.pagamento}</p>
+    <div class="flex gap-2 mt-4">
+      <button onclick="mudarStatus('${p.id}','EMBALANDO')" class="btn">Embalar</button>
+      <button onclick="mudarStatus('${p.id}','PRONTO')" class="btn">Pronto</button>
+      <button onclick="mudarStatus('${p.id}','FINALIZADO')" class="btn">Finalizar</button>
+    </div>
+  </div>`).join('');
+}
+
+function renderEstoque(){
+  return `
+  <h2 class="font-black mb-4">Produtos</h2>
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    ${state.produtos.map(p=>`
+      <div class="bg-white p-4 rounded-2xl shadow">
+        <img src="${p.foto_url}" class="h-20 mx-auto mb-2 object-contain">
+        <b class="block text-xs">${p.nome}</b>
+        <p class="text-rose-600 font-black">R$ ${p.preco.toFixed(2)}</p>
+      </div>`).join('')}
+  </div>
+  `;
+}
+
+function renderPix(){
+  return `
+  <div class="bg-white p-6 rounded-3xl shadow max-w-md">
+    <h2 class="font-black mb-4">Configurar PIX</h2>
+    <select onchange="state.pix.tipo=this.value" class="w-full p-3 bg-gray-100 rounded-xl mb-3">
+      <option>CPF</option><option>CNPJ</option><option>Email</option><option>Telefone</option><option>Aleatória</option>
+    </select>
+    <input oninput="state.pix.chave=this.value" placeholder="Chave PIX" class="w-full p-3 bg-gray-100 rounded-xl mb-3">
+    <input oninput="state.pix.nome=this.value" placeholder="Nome Recebedor" class="w-full p-3 bg-gray-100 rounded-xl">
   </div>`;
-  return;
- }
-
- root.innerHTML=`
- <nav class="bg-white border-b p-4 flex gap-2">
-  ${btn('pedidos','Pedidos')}
-  ${btn('clientes','Clientes')}
-  ${btn('relatorios','Relatórios')}
-  ${btn('estoque','Estoque')}
-  ${btn('pix','PIX')}
-  <button onclick="logout()" class="ml-auto px-4 text-xs font-black">SAIR</button>
- </nav>
- <main class="p-6 max-w-6xl mx-auto">
-  ${conteudo()}
- </main>`;
 }
 
-window.login=async(e)=>{
- e.preventDefault();
- await signInWithEmailAndPassword(auth,e.target.email.value,e.target.pass.value);
+function renderRelatorios(){
+  const total = state.pedidos.filter(p=>p.status==='FINALIZADO').reduce((s,p)=>s+(p.precoNoMomento||0),0);
+  return `<h2 class="font-black text-3xl text-rose-600">R$ ${total.toFixed(2)}</h2>`;
 }
+
+function renderClientes(){
+  const unicos=[...new Set(state.pedidos.map(p=>p.clienteWhatsapp))];
+  return unicos.map(c=>`
+    <div class="bg-white p-4 rounded-xl mb-2">${c}</div>
+  `).join('');
+}
+
+window.login=async e=>{
+  e.preventDefault();
+  await signInWithEmailAndPassword(auth,e.target.email.value,e.target.pass.value);
+};
 
 window.logout=()=>signOut(auth);
 
-function btn(v,t){
- return `<button onclick="state.view='${v}';render()" class="nav px-4 py-2 rounded-xl ${state.view===v?'active':''}">${t}</button>`;
-}
-
-function conteudo(){
- if(state.view==='pedidos')return pedidos();
- if(state.view==='clientes')return clientes();
- if(state.view==='relatorios')return relatorios();
- if(state.view==='estoque')return estoque();
- if(state.view==='pix')return pix();
-}
-
-function pedidos(){
- return state.pedidos.map(p=>`
- <div class="card p-6 mb-4 border-l-8 ${p.status.includes('PAGO')?'border-green-500':'border-rose-500'}">
-  <div class="flex justify-between mb-2">
-   <b>${p.clienteNome}</b>
-   <span class="text-xs">${p.status}</span>
-  </div>
-  <p class="text-sm mb-2">${p.produto}</p>
-  <p class="text-xs text-gray-400">${p.pagamento}</p>
-
-  <div class="grid grid-cols-2 gap-2 mt-4">
-   <button onclick="status('${p.id}','EMBALANDO')" class="bg-blue-500 text-white py-3 rounded-xl text-xs">Embalar</button>
-   <button onclick="pronto('${p.id}','${p.pagamento}')" class="bg-orange-500 text-white py-3 rounded-xl text-xs">Pronto</button>
-   <button onclick="status('${p.id}','FINALIZADO')" class="bg-green-500 text-white py-3 rounded-xl text-xs">Finalizar</button>
-   <button onclick="status('${p.id}','CANCELADO')" class="bg-gray-200 py-3 rounded-xl text-xs">Cancelar</button>
-  </div>
- </div>
- `).join('');
-}
-
-window.status=async(id,s)=>{
- await updateDoc(doc(db,"vendas_logs",id),{status:s});
-}
-
-window.pronto=async(id,pag)=>{
- const s=pag.includes("RETIRADA")?"PRONTO PARA RETIRADA":"SAIU PARA ENTREGA";
- await updateDoc(doc(db,"vendas_logs",id),{status:s,horarioSaiu:new Date()});
-}
-
-function clientes(){
- const map={};
- state.pedidos.forEach(p=>{
-  map[p.clienteWhatsapp]=map[p.clienteWhatsapp]||[];
-  map[p.clienteWhatsapp].push(p);
- });
- return Object.entries(map).map(([k,v])=>`
- <div class="card p-4 mb-4">
-  <b>${v[0].clienteNome}</b>
-  ${v.map(p=>`<p class="text-xs">${p.produto} — ${p.status}</p>`).join('')}
- </div>`).join('');
-}
-
-function relatorios(){
- const fin=state.pedidos.filter(p=>p.status==='FINALIZADO');
- const total=fin.reduce((a,b)=>a+(b.precoNoMomento||0),0);
- return `<div class="card p-6">
-  <h2 class="text-3xl font-black">R$ ${total.toFixed(2)}</h2>
-  <p class="text-xs">${fin.length} pedidos finalizados</p>
- </div>`;
-}
-
-function estoque(){
- return state.produtos.map(p=>`
- <div class="card p-4 mb-2 flex justify-between">
-  <b>${p.nome}</b>
-  <span>${p.quantidade}</span>
- </div>`).join('');
-}
-
-function pix(){
- return `
- <div class="card p-6 max-w-md">
-  <h2 class="font-black mb-4">Chave PIX</h2>
-  <select id="tipo" class="w-full p-3 mb-3 bg-gray-100 rounded-xl">
-   <option>CPF</option><option>CNPJ</option><option>Telefone</option><option>Email</option><option>Aleatória</option>
-  </select>
-  <input id="chave" placeholder="Chave" class="w-full p-3 mb-3 bg-gray-100 rounded-xl">
-  <input id="nome" placeholder="Nome Recebedor" class="w-full p-3 mb-4 bg-gray-100 rounded-xl">
-  <button onclick="salvarPix()" class="bg-rose-600 text-white w-full py-4 rounded-xl font-black">Salvar</button>
- </div>`;
-}
-
-window.salvarPix=async()=>{
- await setDoc(doc(db,"config","pix"),{
-  tipo:tipo.value,chave:chave.value,nome:nome.value
- });
- alert("PIX salvo");
-}
-
-async function carregarPix(){
- const d=await getDoc(doc(db,"config","pix"));
- if(d.exists())state.pix=d.data();
+function carregarPedidos(){
+  onSnapshot(query(collection(db,"vendas_logs"),orderBy("criadoEm","desc")),s=>{
+    state.pedidos=s.docs.map(d=>({id:d.id,...d.data()}));
+    render();
+  });
 }
 
 async function carregarProdutos(){
- const r=await fetch(API+"/produtos");
- state.produtos=await r.json();
+  const r=await fetch(API_PRODUTOS);
+  state.produtos=await r.json();
+  render();
 }
 
-function realtime(){
- onSnapshot(query(collection(db,"vendas_logs"),orderBy("criadoEm","desc")),s=>{
-  state.pedidos=s.docs.map(d=>({id:d.id,...d.data()}));
-  const pend=state.pedidos.filter(p=>p.status==="PENDENTE").length;
-  if(pend>state.alerta)document.getElementById("beep").play();
-  state.alerta=pend;
-  render();
- });
-}
+window.mudarStatus=async(id,st)=>{
+  const ref=doc(db,"vendas_logs",id);
+  const up={status:st};
+  if(st==='EMBALANDO') up.horarioEmbalando=new Date();
+  if(st==='PRONTO') up.horarioSaiu=new Date();
+  if(st==='FINALIZADO') up.horarioConcluido=new Date();
+  await updateDoc(ref,up);
+};
 </script>
 </body>
 </html>

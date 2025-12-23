@@ -1,237 +1,130 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>AppEgg</title>
-
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700;900&display=swap" rel="stylesheet">
-
 <style>
-body { font-family: 'DM Sans', sans-serif; background:#fff }
-.logo { font-weight:900; color:#e11d48; font-style:italic }
-.nav { position:fixed; bottom:20px; left:15px; right:15px; background:#111827; border-radius:26px; display:flex; justify-content:space-around; padding:10px; z-index:100 }
-.nav button { flex:1; color:#9ca3af; font-size:10px; font-weight:700; text-transform:uppercase }
-.nav .active { background:#e11d48; color:#fff; border-radius:18px }
-.timeline { border-left:2px solid #f3f4f6; padding-left:16px; margin-top:10px }
-.dot { width:8px; height:8px; background:#e11d48; border-radius:50%; position:absolute; left:-5px }
+body{font-family:'DM Sans',sans-serif}
+.nav.active{background:#e11d48;color:#fff}
 </style>
 </head>
-
 <body>
+
 <div id="app"></div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-import { getFirestore, collection, addDoc, onSnapshot, query, where, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+import { getFirestore, collection, addDoc, onSnapshot, query, where, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 
-const firebaseConfig = {
- apiKey: "AIzaSyD3Otz9-zdZH-E5Feg9IOGWPzVycoe8gro",
- authDomain: "distribuidora-de-ovos-aline.firebaseapp.com",
- projectId: "distribuidora-de-ovos-aline",
- storageBucket: "distribuidora-de-ovos-aline.firebasestorage.app",
- messagingSenderId: "92187548716",
- appId: "1:92187548716:web:d61d18a29aa76aead7c589"
+const firebaseConfig={
+  apiKey:"AIzaSyD3Otz9-zdZH-E5Feg9IOGWPzVycoe8gro",
+  authDomain:"distribuidora-de-ovos-aline.firebaseapp.com",
+  projectId:"distribuidora-de-ovos-aline"
 };
 
-const appFirebase = initializeApp(firebaseConfig);
-const db = getFirestore(appFirebase);
-const auth = getAuth(appFirebase);
+const appFB=initializeApp(firebaseConfig);
+const auth=getAuth(appFB);
+const db=getFirestore(appFB);
 
-const API = "https://painel-distribuidora-backend.onrender.com/api";
+const API_PRODUTOS="https://painel-distribuidora-backend.onrender.com/api/produtos";
 
-const state = {
- user:null,
- tela:"catalogo",
- produtos:[],
- pedidos:[],
- modal:null,
- pix:null
-};
+const state={user:null,view:'catalogo',produtos:[],pedidos:[]};
 
-const fmt = ts => ts?.toDate ? ts.toDate().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : "--:--";
-
-onAuthStateChanged(auth, u=>{
- state.user=u;
- if(u){ carregarProdutos(); ouvirPedidos(); }
- render();
+onAuthStateChanged(auth,u=>{
+  state.user=u;
+  if(u){ carregarProdutos(); monitorarPedidos(); }
+  render();
 });
 
 function render(){
- const el=document.getElementById("app");
- if(!state.user){
+  const el=document.getElementById("app");
+  if(!state.user){
+    el.innerHTML=`
+    <div class="min-h-screen flex items-center justify-center">
+      <form onsubmit="login(event)" class="p-10 bg-white rounded-3xl shadow w-full max-w-sm space-y-4">
+        <h1 class="text-4xl font-black italic text-rose-600 text-center">AppEgg</h1>
+        <input name="email" class="w-full p-4 bg-gray-100 rounded-xl" placeholder="E-mail" required>
+        <input name="pass" type="password" class="w-full p-4 bg-gray-100 rounded-xl" placeholder="Senha" required>
+        <button class="w-full py-4 bg-rose-600 text-white rounded-xl font-black uppercase">Entrar</button>
+      </form>
+    </div>`;
+    return;
+  }
+
   el.innerHTML=`
-   <div class="p-10 min-h-screen flex flex-col justify-center text-center">
-    <div class="logo text-5xl mb-10">AppEgg</div>
-    <form onsubmit="login(event)" class="space-y-3">
-     <input name="email" required class="w-full p-5 bg-gray-50 rounded-xl" placeholder="E-mail">
-     <input name="pass" type="password" required class="w-full p-5 bg-gray-50 rounded-xl" placeholder="Senha">
-     <button class="w-full py-4 bg-rose-600 text-white font-black rounded-xl">Entrar</button>
-    </form>
-   </div>`;
-  return;
- }
+  <div class="pb-32">
+    ${state.view==='catalogo'?renderCatalogo():renderPedidos()}
+  </div>
 
- el.innerHTML=`
- <div class="pb-32">
-  ${state.tela==="catalogo"?catalogo():pedidos()}
- </div>
-
- ${state.modal?modal():''}
-
- <div class="nav">
-  <button onclick="nav('catalogo')" class="${state.tela==='catalogo'?'active':''}">🥚 Comprar</button>
-  <button onclick="nav('pedidos')" class="${state.tela==='pedidos'?'active':''}">📦 Pedidos</button>
-  <button onclick="sair()">🚪 Sair</button>
- </div>`;
+  <nav class="fixed bottom-4 left-4 right-4 bg-gray-900 rounded-3xl flex">
+    <button onclick="state.view='catalogo';render()" class="nav flex-1 py-3 ${state.view==='catalogo'?'active':''}">Comprar</button>
+    <button onclick="state.view='pedidos';render()" class="nav flex-1 py-3 ${state.view==='pedidos'?'active':''}">Pedidos</button>
+    <button onclick="logout()" class="flex-1 py-3 text-gray-400">Sair</button>
+  </nav>
+  `;
 }
 
-window.nav=t=>{ state.tela=t; render(); };
+function renderCatalogo(){
+  return `<div class="p-4 grid grid-cols-2 gap-4">
+    ${state.produtos.map(p=>`
+      <div class="bg-white p-4 rounded-3xl shadow">
+        <img src="${p.foto_url}" class="h-20 mx-auto mb-2 object-contain">
+        <p class="text-xs font-bold">${p.nome}</p>
+        <p class="text-rose-600 font-black">R$ ${p.preco.toFixed(2)}</p>
+        <button onclick="comprar('${p.nome}',${p.preco})" class="w-full mt-2 bg-gray-900 text-white py-2 rounded-xl text-xs font-black">Pedir</button>
+      </div>`).join('')}
+  </div>`;
+}
+
+function renderPedidos(){
+  return `<div class="p-6 space-y-4">
+    ${state.pedidos.map(p=>`
+      <div class="bg-white p-4 rounded-2xl shadow">
+        <b>${p.produto}</b>
+        <p class="text-xs text-gray-400">${p.status}</p>
+      </div>`).join('')}
+  </div>`;
+}
 
 window.login=async e=>{
- e.preventDefault();
- await signInWithEmailAndPassword(auth,e.target.email.value,e.target.pass.value);
+  e.preventDefault();
+  await signInWithEmailAndPassword(auth,e.target.email.value,e.target.pass.value);
 };
-
-window.sair=()=>signOut(auth);
+window.logout=()=>signOut(auth);
 
 async function carregarProdutos(){
- const r=await fetch(API+"/produtos");
- state.produtos=await r.json();
- render();
-}
-
-function ouvirPedidos(){
- const q=query(
-  collection(db,"vendas_logs"),
-  where("clienteWhatsapp","==",state.user.email),
-  orderBy("criadoEm","desc")
- );
- onSnapshot(q,s=>{
-  state.pedidos=s.docs.map(d=>({id:d.id,...d.data()}));
+  const r=await fetch(API_PRODUTOS);
+  state.produtos=await r.json();
   render();
- });
 }
 
-function catalogo(){
- return `
- <header class="p-6 flex justify-between">
-  <div class="logo text-2xl">AppEgg</div>
- </header>
-
- <div class="grid grid-cols-2 gap-4 p-4">
- ${state.produtos.map(p=>`
-  <div class="border rounded-3xl p-4 text-center ${p.quantidade<=0?'opacity-40':''}">
-   <img src="${p.foto_url}" class="h-20 mx-auto mb-2">
-   <p class="font-bold text-xs uppercase">${p.nome}</p>
-   <p class="text-rose-600 font-black">R$ ${p.preco.toFixed(2)}</p>
-   <button ${p.quantidade<=0?'disabled':''}
-    onclick="abrir(${encodeURIComponent(JSON.stringify(p))})"
-    class="mt-3 w-full py-3 rounded-xl bg-gray-900 text-white text-[10px] font-black uppercase">
-    ${p.quantidade<=0?'Esgotado':'Pedir'}
-   </button>
-  </div>`).join("")}
- </div>`;
-}
-
-window.abrir=p=>{
- state.modal=JSON.parse(decodeURIComponent(p));
- state.pix=null;
- render();
+window.comprar=async(nome,preco)=>{
+  await addDoc(collection(db,"vendas_logs"),{
+    clienteNome:state.user.email,
+    clienteWhatsapp:state.user.email,
+    produto:nome,
+    precoNoMomento:preco,
+    pagamento:"PIX ONLINE",
+    status:"PENDENTE",
+    criadoEm:serverTimestamp()
+  });
+  alert("Pedido enviado!");
 };
 
-function modal(){
- const p=state.modal;
- return `
- <div class="fixed inset-0 bg-black/50 flex items-end z-50">
- <form onsubmit="finalizar(event)" class="bg-white w-full rounded-t-[40px] p-8 space-y-4">
-  <h2 class="font-black text-xl uppercase">Finalizar Pedido</h2>
-
-  <div class="bg-gray-50 p-4 rounded-xl flex gap-4">
-   <img src="${p.foto_url}" class="w-12">
-   <div>
-    <p class="font-bold text-xs uppercase">${p.nome}</p>
-    <p class="font-black text-rose-600">R$ ${p.preco.toFixed(2)}</p>
-   </div>
-  </div>
-
-  <select name="pagamento" required onchange="gerarPix(this.value)"
-   class="w-full p-4 bg-gray-100 rounded-xl font-bold">
-   <option value="">Forma de pagamento</option>
-   <option value="PIX NA ENTREGA">PIX na Entrega</option>
-   <option value="PIX NA RETIRADA">PIX na Retirada</option>
-   <option value="DINHEIRO NA ENTREGA">Dinheiro na Entrega</option>
-   <option value="DINHEIRO NA RETIRADA">Dinheiro na Retirada</option>
-  </select>
-
-  ${state.pix?`
-  <div class="bg-blue-50 p-4 rounded-xl">
-   <p class="text-xs font-black uppercase text-blue-600">Chave PIX</p>
-   <p class="font-mono text-xs break-all">${state.pix}</p>
-  </div>`:''}
-
-  <div class="flex gap-2">
-   <button type="button" onclick="cancelar()" class="flex-1 py-4">Cancelar</button>
-   <button class="flex-1 py-4 bg-rose-600 text-white font-black rounded-xl">Confirmar</button>
-  </div>
- </form></div>`;
-}
-
-window.gerarPix=v=>{
- state.pix=v.includes("PIX") ? "PIX-"+crypto.randomUUID().slice(0,12).toUpperCase() : null;
- render();
-};
-
-window.cancelar=()=>{ state.modal=null; state.pix=null; render(); };
-
-window.finalizar=async e=>{
- e.preventDefault();
- const f=new FormData(e.target);
- const p=state.modal;
-
- await addDoc(collection(db,"vendas_logs"),{
-  clienteNome:state.user.email.split("@")[0].toUpperCase(),
-  clienteWhatsapp:state.user.email,
-  produto:p.nome,
-  produtoId:p.id,
-  precoNoMomento:p.preco,
-  pagamento:f.get("pagamento"),
-  pixChave:state.pix,
-  status:"PENDENTE",
-  criadoEm:serverTimestamp()
- });
-
- state.modal=null;
- state.tela="pedidos";
- render();
-};
-
-function pedidos(){
- return `
- <div class="p-6">
-  <h2 class="font-black text-2xl uppercase mb-6">Meus Pedidos</h2>
-  <div class="space-y-4">
-  ${state.pedidos.map(p=>`
-   <div class="border rounded-3xl p-6">
-    <div class="flex justify-between mb-2">
-     <span class="text-[10px] font-black text-rose-600 uppercase">${p.status}</span>
-     <span class="font-black">R$ ${p.precoNoMomento.toFixed(2)}</span>
-    </div>
-    <p class="text-xs font-bold uppercase">${p.produto}</p>
-
-    ${p.pixChave?`<p class="text-[10px] mt-2 font-mono">PIX: ${p.pixChave}</p>`:''}
-
-    <div class="timeline mt-4 text-[10px] font-bold text-gray-500 space-y-2">
-     <div class="relative"><span class="dot"></span>Pedido: ${fmt(p.criadoEm)}</div>
-     <div class="relative"><span class="dot ${!p.horarioEmbalando?'bg-gray-200':''}"></span>Embalando: ${fmt(p.horarioEmbalando)}</div>
-     <div class="relative"><span class="dot ${!p.horarioSaiu?'bg-gray-200':''}"></span>Logística: ${fmt(p.horarioSaiu)}</div>
-     <div class="relative"><span class="dot ${!p.horarioConcluido?'bg-gray-200':''}"></span>Finalizado: ${fmt(p.horarioConcluido)}</div>
-    </div>
-   </div>`).join("") || "<p class='text-center text-gray-300'>Nenhum pedido</p>"}
-  </div>
- </div>`;
+function monitorarPedidos(){
+  onSnapshot(
+    query(collection(db,"vendas_logs"),
+      where("clienteWhatsapp","==",state.user.email),
+      orderBy("criadoEm","desc")),
+    s=>{
+      state.pedidos=s.docs.map(d=>d.data());
+      render();
+    }
+  );
 }
 </script>
 </body>
