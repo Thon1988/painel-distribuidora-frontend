@@ -15,10 +15,12 @@
         .timeline-dot { width: 8px; height: 8px; border-radius: 50%; background: #e11d48; position: relative; z-index: 10; }
         .timeline-step { position: relative; padding-left: 20px; border-left: 2px solid #f3f4f6; margin-left: 3px; padding-bottom: 15px; }
         .timeline-step:last-child { border-left: 2px solid transparent; }
+        .stat-card { background: white; padding: 20px; border-radius: 24px; border: 1px solid #f3f4f6; }
     </style>
 </head>
 <body>
     <div id="app-root"></div>
+    <audio id="notif-sound" src="https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3" preload="auto"></audio>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
@@ -41,6 +43,7 @@
 
         window.state = { 
             user: null, view: 'pedidos', produtos: [], logs: [], editando: null, clienteSelecionado: null,
+            filtroRelatorio: 'dia', ultimaContagem: 0,
             tiposEmbalagem: ["Unidade", "Dúzia", "Cartela (20)", "Cartela (30)", "Caixa"],
             listaPadrao: ["Ovo Branco Grande", "Ovo Branco Extra", "Ovo Vermelho Grande", "Ovo Vermelho Extra", "Ovo Caipira", "Ovo de Codorna"]
         };
@@ -73,18 +76,20 @@
                 return;
             }
 
-            root.innerHTML = `
-                <nav class="bg-white border-b px-6 sticky top-0 z-50 h-20 flex items-center justify-between">
+            root.innerHTML = `<nav class="bg-white border-b px-6 sticky top-0 z-50 h-20 flex items-center justify-between">
                     <div class="logo-text">AppEgg</div>
-                    <div class="flex gap-2">
+                    <div class="flex gap-1">
                         <button onclick="window.state.view='pedidos';window.render()" class="nav-link ${window.state.view==='pedidos'?'active':''}">Pedidos</button>
+                        <button onclick="window.state.view='relatorios';window.render()" class="nav-link ${window.state.view==='relatorios'?'active':''}">Relatórios</button>
                         <button onclick="window.state.view='clientes';window.render()" class="nav-link ${window.state.view==='clientes'?'active':''}">Clientes</button>
                         <button onclick="window.state.view='estoque';window.render()" class="nav-link ${window.state.view==='estoque'?'active':''}">Estoque</button>
                         <button onclick="window.actions.logout()" class="p-3 text-gray-300 font-black text-[10px] uppercase">Sair</button>
                     </div>
                 </nav>
                 <main class="max-w-5xl mx-auto p-6">
-                    ${window.state.view === 'pedidos' ? renderPedidos() : window.state.view === 'clientes' ? renderClientes() : renderEstoque()}
+                    ${window.state.view === 'pedidos' ? renderPedidos() : 
+                      window.state.view === 'relatorios' ? renderRelatorios() :
+                      window.state.view === 'clientes' ? renderClientes() : renderEstoque()}
                 </main>`;
         };
 
@@ -96,26 +101,76 @@
                         <div><h3 class="font-black uppercase">${l.clienteNome}</h3><p class="text-[10px] font-bold text-gray-400">${l.clienteWhatsapp}</p></div>
                         <span class="bg-amber-50 text-amber-600 text-[10px] font-black px-3 py-1 rounded-full">${l.status}</span>
                     </div>
-                    <div class="bg-gray-50 p-4 rounded-2xl mb-4 text-xs font-bold">${l.produto}</div>
+                    <div class="bg-gray-50 p-4 rounded-2xl mb-2 text-xs font-bold uppercase">${l.produto}</div>
+                    <div class="px-2 mb-4">
+                        <p class="text-[10px] font-black text-gray-400 uppercase">Pagamento: <span class="text-gray-900">${l.pagamento || 'N/A'}</span></p>
+                        <p class="text-[10px] font-black text-gray-400 uppercase">Obs: <span class="text-rose-600">${l.observacao || 'Sem obs'}</span></p>
+                    </div>
                     <div class="grid grid-cols-2 gap-2">
-                        <button onclick="window.actions.mudarStatus('${l.id}', 'EMBALANDO')" class="bg-blue-500 text-white py-3 rounded-xl text-[9px] font-black uppercase">Embalando</button>
-                        <button onclick="window.actions.mudarStatus('${l.id}', '${l.pagamento.includes('RETIRAR') ? 'DISPONÍVEL PARA RETIRAR' : 'SAIU PARA ENTREGA'}')" class="bg-orange-500 text-white py-3 rounded-xl text-[9px] font-black uppercase">Logística</button>
+                        <button onclick="window.actions.mudarStatus('${l.id}', 'EMBALANDO', '${l.produtoId}')" class="bg-blue-500 text-white py-3 rounded-xl text-[9px] font-black uppercase">Embalando</button>
+                        <button onclick="window.actions.mudarStatus('${l.id}', '${l.pagamento?.includes('RETIRAR') ? 'DISPONÍVEL PARA RETIRAR' : 'SAIU PARA ENTREGA'}')" class="bg-orange-500 text-white py-3 rounded-xl text-[9px] font-black uppercase">Logística</button>
                         <button onclick="window.actions.mudarStatus('${l.id}', 'FINALIZADO')" class="bg-emerald-500 text-white py-3 rounded-xl text-[9px] font-black uppercase">Concluir</button>
                         <button onclick="window.actions.mudarStatus('${l.id}', 'CANCELADO')" class="bg-gray-200 text-gray-500 py-3 rounded-xl text-[9px] font-black uppercase">Cancelar</button>
                     </div>
                 </div>`).join('') || '<p class="text-center py-20 font-black text-gray-300 uppercase">Sem pedidos ativos</p>'}</div>`;
         }
 
+        function renderRelatorios() {
+            const concluido = window.state.logs.filter(l => l.status === 'FINALIZADO');
+            const filtrar = (periodo) => {
+                const hoje = new Date();
+                return concluido.filter(l => {
+                    const dataPed = l.criadoEm?.toDate ? l.criadoEm.toDate() : new Date();
+                    const diff = (hoje - dataPed) / (1000 * 60 * 60 * 24);
+                    if(periodo === 'dia') return diff <= 1;
+                    if(periodo === 'semana') return diff <= 7;
+                    if(periodo === 'quinzena') return diff <= 15;
+                    if(periodo === 'mes') return diff <= 30;
+                    return true;
+                });
+            };
+
+            const lista = filtrar(window.state.filtroRelatorio);
+            const total = lista.reduce((acc, curr) => acc + (curr.precoNoMomento || 0), 0);
+            const rank = {};
+            lista.forEach(l => rank[l.produto] = (rank[l.produto] || 0) + 1);
+            const maisVendidos = Object.entries(rank).sort((a,b) => b[1] - a[1]);
+
+            return `
+                <div class="flex gap-2 mb-8 overflow-x-auto pb-2">
+                    <button onclick="window.state.filtroRelatorio='dia';window.render()" class="px-6 py-3 rounded-2xl font-black text-[10px] uppercase ${window.state.filtroRelatorio==='dia'?'bg-rose-600 text-white':'bg-white border'}">Diário</button>
+                    <button onclick="window.state.filtroRelatorio='semana';window.render()" class="px-6 py-3 rounded-2xl font-black text-[10px] uppercase ${window.state.filtroRelatorio==='semana'?'bg-rose-600 text-white':'bg-white border'}">Semanal</button>
+                    <button onclick="window.state.filtroRelatorio='quinzena';window.render()" class="px-6 py-3 rounded-2xl font-black text-[10px] uppercase ${window.state.filtroRelatorio==='quinzena'?'bg-rose-600 text-white':'bg-white border'}">Quinzenal</button>
+                    <button onclick="window.state.filtroRelatorio='mes';window.render()" class="px-6 py-3 rounded-2xl font-black text-[10px] uppercase ${window.state.filtroRelatorio==='mes'?'bg-rose-600 text-white':'bg-white border'}">Mensal</button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+                    <div class="stat-card">
+                        <p class="text-[10px] font-black text-gray-400 uppercase mb-1">Faturamento Bruto</p>
+                        <h2 class="text-4xl font-black text-rose-600 tracking-tighter">R$ ${total.toFixed(2)}</h2>
+                        <p class="text-[10px] font-bold text-gray-400 mt-2">${lista.length} PEDIDOS CONCLUÍDOS</p>
+                    </div>
+                    <div class="stat-card">
+                        <p class="text-[10px] font-black text-gray-400 uppercase mb-4">Produtos Mais Vendidos</p>
+                        <div class="space-y-3">
+                            ${maisVendidos.slice(0,5).map(([nome, qtd]) => `
+                                <div class="flex justify-between items-center">
+                                    <span class="text-[10px] font-bold uppercase truncate pr-4">${nome}</span>
+                                    <span class="bg-rose-50 text-rose-600 font-black px-3 py-1 rounded-lg text-[10px]">${qtd} un</span>
+                                </div>
+                            `).join('') || '<p class="text-[10px] font-bold text-gray-300 uppercase">Sem vendas no período</p>'}
+                        </div>
+                    </div>
+                </div>`;
+        }
+
         function renderClientes() {
             const clientesUnicos = [...new Set(window.state.logs.map(l => l.clienteWhatsapp))];
             if (window.state.clienteSelecionado) {
                 const peds = window.state.logs.filter(l => l.clienteWhatsapp === window.state.clienteSelecionado);
-                return `
-                    <button onclick="window.state.clienteSelecionado=null;window.render()" class="mb-6 font-black text-rose-600 uppercase text-[10px]">← Voltar</button>
+                return `<button onclick="window.state.clienteSelecionado=null;window.render()" class="mb-6 font-black text-rose-600 uppercase text-[10px]">← Voltar</button>
                     <h2 class="text-2xl font-black mb-6 uppercase">Cliente: ${peds[0].clienteNome}</h2>
                     <div class="space-y-6">
-                        ${peds.map(p => `
-                            <div class="card p-6 border-l-4 ${p.status === 'CANCELADO' ? 'border-gray-300 opacity-60' : 'border-emerald-500'}">
+                        ${peds.map(p => `<div class="card p-6 border-l-4 ${p.status === 'CANCELADO' ? 'border-gray-300 opacity-60' : 'border-emerald-500'}">
                                 <div class="flex justify-between items-center mb-4">
                                     <span class="text-[10px] font-black uppercase px-2 py-1 bg-gray-100 rounded">${p.status}</span>
                                     <span class="text-lg font-black text-rose-600">R$ ${(p.precoNoMomento||0).toFixed(2)}</span>
@@ -127,22 +182,18 @@
                                     <div class="timeline-step"><div class="absolute left-[-5px] timeline-dot ${!p.horarioSaiu?'bg-gray-200':''}"></div><p class="text-[10px] font-black uppercase text-gray-400">Logística: <span class="text-gray-900">${formatTime(p.horarioSaiu)}</span></p></div>
                                     <div class="timeline-step"><div class="absolute left-[-5px] timeline-dot ${!p.horarioConcluido?'bg-gray-200':''}"></div><p class="text-[10px] font-black uppercase text-gray-400">Concluído: <span class="text-gray-900">${formatTime(p.horarioConcluido)}</span></p></div>
                                 </div>
-                            </div>`).join('')}
-                    </div>`;
+                            </div>`).join('')}</div>`;
             }
-            return `<div class="card overflow-hidden"><table class="w-full text-left">
-                <thead class="bg-gray-50 border-b"><tr class="text-[10px] font-black uppercase text-gray-400"><th class="p-4">Cliente</th><th class="p-4">Ação</th></tr></thead>
+            return `<div class="card overflow-hidden"><table class="w-full text-left"><thead class="bg-gray-50 border-b"><tr class="text-[10px] font-black uppercase text-gray-400"><th class="p-4">Cliente</th><th class="p-4">Ação</th></tr></thead>
                 <tbody class="divide-y">${clientesUnicos.map(zap => {
                     const peds = window.state.logs.filter(l => l.clienteWhatsapp === zap);
                     return `<tr class="text-xs font-bold"><td class="p-4 uppercase">${peds[0].clienteNome}</td><td class="p-4"><button onclick="window.state.clienteSelecionado='${zap}';window.render()" class="text-rose-600 font-black uppercase text-[10px]">Ver Detalhes</button></td></tr>`
-                }).join('')}</tbody>
-            </table></div>`;
+                }).join('')}</tbody></table></div>`;
         }
 
         function renderEstoque() {
             const p = window.state.editando || { nome: '', quantidade: '', preco: '', foto_url: '', tipo_estoque: 'Caixa' };
-            return `
-                <div class="card p-8 mb-10">
+            return `<div class="card p-8 mb-10">
                     <form onsubmit="window.actions.salvarProduto(event)" class="grid grid-cols-1 md:grid-cols-4 gap-4">
                         <input name="nome" value="${p.nome}" list="ovos-lista" placeholder="Nome do Ovo" class="p-4 bg-gray-50 rounded-2xl font-bold text-sm outline-none border focus:border-rose-600" required>
                         <datalist id="ovos-lista">${window.state.listaPadrao.map(o => `<option value="${o}">`).join('')}</datalist>
@@ -159,13 +210,12 @@
                     </form>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    ${window.state.produtos.map(prod => `
-                        <div class="card p-5 flex items-center gap-4">
+                    ${window.state.produtos.map(prod => `<div class="card p-5 flex items-center gap-4">
                             <img src="${prod.foto_url}" class="w-12 h-12 object-contain">
-                            <div class="flex-1"><p class="font-black text-xs uppercase">${prod.nome}</p><p class="text-rose-600 font-black text-sm">R$ ${parseFloat(prod.preco).toFixed(2)}</p></div>
+                            <div class="flex-1"><p class="font-black text-xs uppercase">${prod.nome}</p><p class="text-rose-600 font-black text-sm">R$ ${parseFloat(prod.preco).toFixed(2)}</p>
+                            <p class="text-[9px] font-bold text-gray-400">ESTOQUE: ${prod.quantidade}</p></div>
                             <button onclick="window.state.editando=${JSON.stringify(prod).replace(/"/g, '&quot;')};window.render()" class="text-blue-500 font-black text-[9px] uppercase">Editar</button>
-                        </div>`).join('')}
-                </div>`;
+                        </div>`).join('')}</div>`;
         }
 
         window.actions = {
@@ -173,9 +223,7 @@
                 e.preventDefault();
                 try { await signInWithEmailAndPassword(auth, e.target.email.value, e.target.pass.value); } catch (err) { alert("Erro no Login."); }
             },
-            logout: async () => {
-                await signOut(auth);
-            },
+            logout: async () => { await signOut(auth); },
             load: async () => {
                 const r = await fetch(`${API_BASE}/produtos`);
                 window.state.produtos = await r.json();
@@ -192,16 +240,27 @@
             },
             excluirProduto: async (id) => {
                 if(confirm("Excluir item?")) {
-                    await fetch(`${API_BASE}/produtos/${id}`, {method:'DELETE'});
+                    await fetch(`${API_BASE}/produtos/${id}, {method:'DELETE'}`);
                     window.state.editando = null;
                     window.actions.load();
                 }
             },
-            mudarStatus: async (id, status) => {
+            mudarStatus: async (id, status, produtoId) => {
                 const update = { status };
                 const agora = new Date();
-                if (status === 'EMBALANDO') update.horarioEmbalando = agora;
-                if (status === 'SAIU PARA ENTREGA' || status === 'DISPONÍVEL PARA RETIRAR') update.horarioSaiu = agora;
+                if (status === 'EMBALANDO') {
+                    update.horarioEmbalando = agora;
+                    const p = window.state.produtos.find(x => x.id == produtoId);
+                    if(p && p.quantidade > 0) {
+                        await fetch(`${API_BASE}/produtos/${produtoId}`, {
+                            method: 'PUT',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({...p, quantidade: p.quantidade - 1})
+                        });
+                        window.actions.load();
+                    }
+                }
+                if (status.includes('ENTREGA') || status.includes('RETIRAR')) update.horarioSaiu = agora;
                 if (status === 'FINALIZADO') update.horarioConcluido = agora;
                 await updateDoc(doc(db, "vendas_logs", id), update);
             }
@@ -209,7 +268,15 @@
 
         function initRealtime() {
             onSnapshot(query(collection(db, "vendas_logs"), orderBy("criadoEm", "desc")), (s) => {
-                window.state.logs = s.docs.map(d => ({ id: d.id, ...d.data() }));
+                const logs = s.docs.map(d => ({ id: d.id, ...d.data() }));
+                
+                // Logica do Som: Verifica se entrou pedido novo PENDENTE
+                const novosPendentes = logs.filter(l => l.status === 'PENDENTE');
+                if (novosPendentes.length > window.state.ultimaContagem) {
+                    document.getElementById('notif-sound').play().catch(e => console.log("Interação necessária para som"));
+                }
+                window.state.ultimaContagem = novosPendentes.length;
+                window.state.logs = logs;
                 window.render();
             });
         }

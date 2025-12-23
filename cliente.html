@@ -7,15 +7,22 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&display=swap');
-        body { font-family: 'Inter', sans-serif; background: #fff; }
+        body { font-family: 'Inter', sans-serif; background: #fff; color: #1f2937; }
         .logo-text { font-weight: 800; color: #e11d48; letter-spacing: -0.05em; }
         .nav-bottom { position: fixed; bottom: 20px; left: 15px; right: 15px; background: #111827; border-radius: 24px; display: flex; justify-content: space-around; padding: 10px; z-index: 100; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
-        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 12px; border-radius: 18px; color: #9ca3af; }
+        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 12px; border-radius: 18px; color: #9ca3af; transition: all 0.2s; }
         .nav-item.active { background: #e11d48; color: white; }
         .nav-text { font-size: 10px; font-weight: 800; text-transform: uppercase; }
         .timeline-dot { width: 6px; height: 6px; border-radius: 50%; background: #e11d48; position: relative; z-index: 10; }
         .timeline-step { position: relative; padding-left: 15px; border-left: 2px solid #f3f4f6; margin-left: 2px; padding-bottom: 12px; }
         .timeline-step:last-child { border-left: 2px solid transparent; }
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 200; display: flex; align-items: flex-end; }
+        
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+        .animate-slide-up { animation: slideUp 0.3s ease-out forwards; }
     </style>
 </head>
 <body>
@@ -39,11 +46,21 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
 
-        window.state = { user: null, produtos: [], tela: 'catalogo', meusPedidos: [] };
+        window.state = { 
+            user: null, 
+            produtos: [], 
+            tela: 'catalogo', 
+            meusPedidos: [], 
+            confirmando: null, 
+            detalhesAbertos: null 
+        };
 
         onAuthStateChanged(auth, (user) => {
             window.state.user = user;
-            if (user) { initApp(); monitorarPedidos(); }
+            if (user) { 
+                initApp(); 
+                monitorarPedidos(); 
+            }
             window.render();
         });
 
@@ -56,11 +73,11 @@
         window.render = () => {
             const root = document.getElementById('app-root');
             if (!window.state.user) {
-                root.innerHTML = `<div class="p-10 min-h-screen flex flex-col justify-center text-center">
-                    <div class="logo-text text-5xl mb-12">AppEgg</div>
+                root.innerHTML = `<div class="p-10 min-h-screen flex flex-col justify-center text-center bg-white">
+                    <div class="logo-text text-5xl mb-12 italic">AppEgg</div>
                     <form onsubmit="window.actions.login(event)" class="space-y-4">
-                        <input name="email" type="email" placeholder="E-mail" class="w-full p-5 bg-gray-50 rounded-2xl font-bold border outline-none">
-                        <input name="pass" type="password" placeholder="Senha" class="w-full p-5 bg-gray-50 rounded-2xl font-bold border outline-none">
+                        <input name="email" type="email" placeholder="E-mail" class="w-full p-5 bg-gray-50 rounded-2xl font-bold border outline-none" required>
+                        <input name="pass" type="password" placeholder="Senha" class="w-full p-5 bg-gray-50 rounded-2xl font-bold border outline-none" required>
                         <button class="w-full py-5 bg-rose-600 text-white rounded-2xl font-black uppercase shadow-xl mt-4">Entrar</button>
                     </form>
                 </div>`;
@@ -69,6 +86,7 @@
 
             let content = window.state.tela === 'catalogo' ? renderCatalogo() : renderPedidos();
             root.innerHTML = `<div class="pb-40">${content}</div>
+                ${window.state.confirmando ? renderModal() : ''}
                 <nav class="nav-bottom">
                     <button onclick="window.state.tela='catalogo';window.render()" class="nav-item ${window.state.tela==='catalogo'?'active':''}">
                         <span class="text-xl">🥚</span><span class="nav-text">Comprar</span>
@@ -83,66 +101,130 @@
         };
 
         function renderCatalogo() {
-            return `<header class="p-6 border-b sticky top-0 bg-white z-40 flex justify-between items-center"><div class="logo-text text-2xl">AppEgg</div></header>
+            return `<header class="p-6 border-b sticky top-0 bg-white z-40 flex justify-between items-center"><div class="logo-text text-2xl italic">AppEgg</div></header>
                 <div class="p-4 grid grid-cols-2 gap-4">
-                    ${window.state.produtos.map(p => `<div class="p-4 bg-white border rounded-[32px] flex flex-col items-center shadow-sm">
-                        <img src="${p.foto_url}" class="h-20 mb-3 object-contain"><h3 class="font-black text-[10px] uppercase text-center h-8 leading-tight">${p.nome}</h3>
+                    ${window.state.produtos.map(p => `
+                    <div class="p-4 bg-white border rounded-[32px] flex flex-col items-center shadow-sm ${p.quantidade <= 0 ? 'opacity-50' : ''}">
+                        <img src="${p.foto_url}" class="h-24 mb-3 object-contain">
+                        <h3 class="font-black text-[10px] uppercase text-center h-8 leading-tight mb-1">${p.nome}</h3>
                         <p class="text-rose-600 font-black text-sm mb-4">R$ ${parseFloat(p.preco).toFixed(2)}</p>
-                        <button onclick="window.actions.add('${p.id}')" class="w-full bg-gray-900 text-white py-3 rounded-2xl text-[9px] font-black uppercase">Pedir</button>
+                        ${p.quantidade > 0 
+                            ? `<button onclick="window.state.confirmando=${JSON.stringify(p).replace(/"/g, '&quot;')};window.render()" class="w-full bg-gray-900 text-white py-3 rounded-2xl text-[9px] font-black uppercase shadow-lg">Pedir Agora</button>`
+                            : `<button class="w-full bg-gray-100 text-gray-400 py-3 rounded-2xl text-[9px] font-black uppercase" disabled>Esgotado</button>`
+                        }
                     </div>`).join('')}
                 </div>`;
         }
 
+        function renderModal() {
+            const p = window.state.confirmando;
+            return `<div class="modal-overlay">
+                <div class="bg-white w-full p-8 rounded-t-[40px] shadow-2xl animate-slide-up">
+                    <div class="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-6"></div>
+                    <h2 class="text-xl font-black uppercase mb-4">Finalizar Pedido</h2>
+                    <div class="flex items-center gap-4 mb-6 bg-gray-50 p-4 rounded-3xl">
+                        <img src="${p.foto_url}" class="w-14 h-14 object-contain">
+                        <div>
+                            <p class="font-black text-[10px] uppercase text-gray-400">${p.nome}</p>
+                            <p class="text-xl font-black text-rose-600">R$ ${parseFloat(p.preco).toFixed(2)}</p>
+                        </div>
+                    </div>
+                    <form onsubmit="window.actions.finalizar(event)" class="space-y-4">
+                        <div>
+                            <label class="text-[9px] font-black uppercase text-gray-400 ml-2">Como vai pagar?</label>
+                            <select name="pagamento" class="w-full p-4 mt-1 bg-gray-100 rounded-2xl font-bold text-sm outline-none border-2 border-transparent focus:border-rose-600 appearance-none" required>
+                                <option value="PIX NA ENTREGA">PIX na Entrega</option>
+                                <option value="PIX NA RETIRADA">PIX na Retirada</option>
+                                <option value="DINHEIRO">Dinheiro / Troco</option>
+                                <option value="CARTÃO">Cartão (Maquininha)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-[9px] font-black uppercase text-gray-400 ml-2">Alguma observação?</label>
+                            <input name="obs" placeholder="Ex: Deixar no portão B, troco para 100..." class="w-full p-4 mt-1 bg-gray-100 rounded-2xl font-bold text-sm outline-none border-2 border-transparent focus:border-rose-600">
+                        </div>
+                        <div class="flex gap-2 pt-4">
+                            <button type="button" onclick="window.state.confirmando=null;window.render()" class="flex-1 py-4 font-black uppercase text-[10px] text-gray-400">Cancelar</button>
+                            <button class="flex-[2] py-4 bg-rose-600 text-white rounded-2xl font-black uppercase text-[11px] shadow-xl shadow-rose-200">Confirmar Compra</button>
+                        </div>
+                    </form>
+                </div>
+            </div>`;
+        }
+
         function renderPedidos() {
-            return `<div class="p-6"><h2 class="text-3xl font-black uppercase mb-8">Meus Pedidos</h2><div class="space-y-6">
-                ${window.state.meusPedidos.map(p => `
+            return `<div class="p-6">
+                <h2 class="text-3xl font-black uppercase mb-8">Meus Pedidos</h2>
+                <div class="space-y-4">
+                ${window.state.meusPedidos.map((p, idx) => `
                     <div class="bg-white border rounded-[32px] p-6 shadow-sm">
-                        <div class="flex justify-between items-center mb-4">
-                            <span class="text-[10px] font-black text-rose-600 uppercase tracking-widest">${p.status}</span>
+                        <div class="flex justify-between items-start mb-4">
+                            <span class="text-[9px] font-black text-rose-600 bg-rose-50 px-3 py-1 rounded-full uppercase">${p.status}</span>
                             <span class="text-lg font-black text-gray-900">R$ ${(p.precoNoMomento||0).toFixed(2)}</span>
                         </div>
-                        <p class="text-[11px] font-bold text-gray-800 leading-tight uppercase mb-4 border-b pb-2">${p.produto}</p>
-                        <div class="space-y-0">
-                            <div class="timeline-step"><div class="absolute left-[-4px] timeline-dot"></div><p class="text-[9px] font-black uppercase text-gray-400">Pedido: <span class="text-gray-900">${formatTime(p.criadoEm)}</span></p></div>
-                            <div class="timeline-step"><div class="absolute left-[-4px] timeline-dot ${!p.horarioEmbalando?'bg-gray-100':''}"></div><p class="text-[9px] font-black uppercase text-gray-400">Embalando: <span class="text-gray-900">${formatTime(p.horarioEmbalando)}</span></p></div>
-                            <div class="timeline-step"><div class="absolute left-[-4px] timeline-dot ${!p.horarioSaiu?'bg-gray-100':''}"></div><p class="text-[9px] font-black uppercase text-gray-400">Logística: <span class="text-gray-900">${formatTime(p.horarioSaiu)}</span></p></div>
-                            <div class="timeline-step"><div class="absolute left-[-4px] timeline-dot ${!p.horarioConcluido?'bg-gray-100':''}"></div><p class="text-[9px] font-black uppercase text-gray-400">Finalizado: <span class="text-gray-900">${formatTime(p.horarioConcluido)}</span></p></div>
-                        </div>
-                    </div>`).join('') || '<p class="text-center font-black py-20 text-gray-300 uppercase">Nenhum pedido</p>'}
+                        <p class="text-[11px] font-bold text-gray-800 leading-tight uppercase mb-4">${p.produto}</p>
+                        
+                        ${window.state.detalhesAbertos === idx ? `
+                            <div class="space-y-0 border-t pt-4 mt-4">
+                                <div class="timeline-step"><div class="absolute left-[-4px] timeline-dot"></div><p class="text-[9px] font-black uppercase text-gray-400">Pedido Feito: <span class="text-gray-900">${formatTime(p.criadoEm)}</span></p></div>
+                                <div class="timeline-step"><div class="absolute left-[-4px] timeline-dot ${!p.horarioEmbalando?'bg-gray-100':''}"></div><p class="text-[9px] font-black uppercase text-gray-400">Embalando: <span class="text-gray-900">${formatTime(p.horarioEmbalando)}</span></p></div>
+                                <div class="timeline-step"><div class="absolute left-[-4px] timeline-dot ${!p.horarioSaiu?'bg-gray-100':''}"></div><p class="text-[9px] font-black uppercase text-gray-400">Em Trânsito: <span class="text-gray-900">${formatTime(p.horarioSaiu)}</span></p></div>
+                                <div class="timeline-step"><div class="absolute left-[-4px] timeline-dot ${!p.horarioConcluido?'bg-gray-100':''}"></div><p class="text-[9px] font-black uppercase text-gray-400">Entregue: <span class="text-gray-900">${formatTime(p.horarioConcluido)}</span></p></div>
+                                <button onclick="window.state.detalhesAbertos=null;window.render()" class="w-full py-2 mt-2 text-[9px] font-black uppercase text-gray-300">Fechar Detalhes</button>
+                            </div>
+                        ` : `
+                            <button onclick="window.state.detalhesAbertos=${idx};window.render()" class="w-full py-3 bg-gray-50 rounded-2xl text-[9px] font-black uppercase text-gray-500">Acompanhar Status</button>
+                        `}
+                    </div>`).join('') || '<div class="text-center py-20"><p class="font-black text-gray-300 uppercase">Nenhum pedido ainda</p></div>'}
             </div></div>`;
         }
 
         window.actions = {
             login: async (e) => {
                 e.preventDefault();
-                try { await signInWithEmailAndPassword(auth, e.target.email.value, e.target.pass.value); } catch (err) { alert("Erro ao entrar."); }
+                try { await signInWithEmailAndPassword(auth, e.target.email.value, e.target.pass.value); } catch (err) { alert("Acesso negado."); }
             },
-            logout: async () => {
-                await signOut(auth);
-            },
-            add: (id) => { 
-                const p = window.state.produtos.find(x => x.id == id);
-                addDoc(collection(db, "vendas_logs"), {
-                    clienteNome: "Thon Cliente", clienteWhatsapp: window.state.user.email,
-                    produto: p.nome, precoNoMomento: p.preco, pagamento: 'PIX (RETIRAR)',
-                    status: 'PENDENTE', criadoEm: serverTimestamp()
-                });
-                alert("🥚 Pedido realizado com sucesso!");
-                window.state.tela = 'notificacoes';
-                window.render();
+            logout: async () => { if(confirm("Deseja sair?")) await signOut(auth); },
+            finalizar: async (e) => {
+                e.preventDefault();
+                const f = new FormData(e.target);
+                const p = window.state.confirmando;
+                
+                try {
+                    await addDoc(collection(db, "vendas_logs"), {
+                        clienteNome: window.state.user.email.split('@')[0].toUpperCase(),
+                        clienteWhatsapp: window.state.user.email,
+                        produto: p.nome, 
+                        produtoId: p.id, 
+                        precoNoMomento: p.preco,
+                        pagamento: f.get('pagamento'), 
+                        observacao: f.get('obs'),
+                        status: 'PENDENTE', 
+                        criadoEm: serverTimestamp()
+                    });
+                    
+                    window.state.confirmando = null;
+                    window.state.tela = 'notificacoes';
+                    window.render();
+                    alert("🥚 Pedido enviado! Acompanhe o status na aba Pedidos.");
+                } catch (err) {
+                    alert("Erro ao enviar. Tente novamente.");
+                }
             }
         };
 
         async function initApp() {
-            const r = await fetch("https://painel-distribuidora-backend.onrender.com/api/produtos");
-            window.state.produtos = await r.json();
-            window.render();
+            try {
+                const r = await fetch("https://painel-distribuidora-backend.onrender.com/api/produtos");
+                window.state.produtos = await r.json();
+                window.render();
+            } catch (err) { console.error("Erro API"); }
         }
 
         function monitorarPedidos() {
             const q = query(collection(db, "vendas_logs"), where("clienteWhatsapp", "==", window.state.user.email), orderBy("criadoEm", "desc"));
             onSnapshot(q, (s) => {
-                window.state.meusPedidos = s.docs.map(d => d.data());
+                window.state.meusPedidos = s.docs.map(d => ({ id: d.id, ...d.data() }));
                 window.render();
             });
         }
