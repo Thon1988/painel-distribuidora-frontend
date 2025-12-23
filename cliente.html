@@ -7,14 +7,16 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&display=swap');
-        body { font-family: 'Inter', sans-serif; background: #fff; margin: 0; padding: 0; }
+        body { font-family: 'Inter', sans-serif; background: #fff; margin: 0; }
         .product-card { background: #fff; border-radius: 20px; border: 1px solid #f3f4f6; position: relative; }
         .wa-float { position: fixed; bottom: 120px; right: 20px; background: #25D366; color: white; width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 60; box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
         .cart-bar { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; padding: 20px; border-top: 1px solid #eee; z-index: 50; display: flex; justify-content: space-between; align-items: center; }
     </style>
 </head>
 <body>
-    <div id="app-root">Carregando AppEgg...</div>
+    <div id="app-root" class="h-screen flex items-center justify-center font-bold text-rose-500 animate-pulse text-sm uppercase tracking-widest">
+        🥚 Abrindo AppEgg...
+    </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
@@ -41,28 +43,15 @@
         };
 
         window.mudarTela = (t) => { window.state.tela = t; window.render(); window.scrollTo(0,0); };
-        
-        window.add = (id) => { 
-            window.state.carrinho[id] = (window.state.carrinho[id] || 0) + 1; 
-            window.render(); 
-        };
-
-        window.sub = (id) => { 
-            if (window.state.carrinho[id] > 1) window.state.carrinho[id]--; 
-            else delete window.state.carrinho[id]; 
-            window.render(); 
-        };
+        window.add = (id) => { window.state.carrinho[id] = (window.state.carrinho[id] || 0) + 1; window.render(); };
+        window.sub = (id) => { if (window.state.carrinho[id] > 1) window.state.carrinho[id]--; else delete window.state.carrinho[id]; window.render(); };
 
         window.finalizarPedido = async () => {
             const itens = Object.entries(window.state.carrinho).map(([id, q]) => {
                 const p = window.state.produtos.find(x => x.id == id);
                 return `${q}x ${p.nome}`;
             }).join(', ');
-            
-            const total = Object.entries(window.state.carrinho).reduce((acc, [id, q]) => {
-                const p = window.state.produtos.find(x => x.id == id);
-                return acc + (p.preco * q);
-            }, 0);
+            const total = Object.entries(window.state.carrinho).reduce((acc, [id, q]) => acc + (window.state.produtos.find(x => x.id == id).preco * q), 0);
 
             try {
                 await addDoc(collection(db, "vendas_logs"), {
@@ -74,22 +63,22 @@
                     status: 'PENDENTE',
                     criadoEm: serverTimestamp()
                 });
-                alert("🥚 Pedido AppEgg enviado!");
+                alert("🥚 Pedido AppEgg enviado com sucesso!");
                 window.state.carrinho = {};
                 window.mudarTela('catalogo');
-            } catch (e) { alert("Erro ao conectar com o banco."); }
+            } catch (e) { alert("Erro ao enviar pedido."); }
         };
 
         window.render = () => {
             const root = document.getElementById('app-root');
             if (!window.state.cliente) {
                 root.innerHTML = `
-                <div class="h-screen flex flex-col justify-center px-10 text-center">
-                    <h1 class="text-5xl font-black text-rose-600 italic mb-8 uppercase tracking-tighter">AppEgg</h1>
+                <div class="h-screen flex flex-col justify-center px-10 text-center animate-in fade-in duration-500">
+                    <h1 class="text-6xl font-black text-rose-600 italic mb-8 uppercase tracking-tighter">AppEgg</h1>
                     <form onsubmit="event.preventDefault(); window.state.cliente={nome:this.nome.value, whatsapp:this.whatsapp.value}; localStorage.setItem('appegg_user', JSON.stringify(window.state.cliente)); window.render()" class="space-y-4 text-left">
-                        <input name="nome" placeholder="Seu Nome" class="w-full p-5 bg-gray-50 rounded-2xl font-bold border-none outline-none" required>
-                        <input name="whatsapp" placeholder="WhatsApp (DDD)" class="w-full p-5 bg-gray-50 rounded-2xl font-bold border-none outline-none" required>
-                        <button class="w-full py-5 bg-rose-600 text-white rounded-2xl font-black uppercase shadow-lg">Começar Compras</button>
+                        <input name="nome" placeholder="Seu Nome" class="w-full p-5 bg-gray-50 rounded-2xl font-bold outline-none" required>
+                        <input name="whatsapp" placeholder="WhatsApp" class="w-full p-5 bg-gray-50 rounded-2xl font-bold outline-none" required>
+                        <button class="w-full py-5 bg-rose-600 text-white rounded-2xl font-black uppercase shadow-lg italic">Entrar no AppEgg</button>
                     </form>
                 </div>`;
                 return;
@@ -97,7 +86,10 @@
 
             if (window.state.tela === 'carrinho') {
                 const itens = Object.entries(window.state.carrinho);
-                const total = itens.reduce((acc, [id, q]) => acc + (window.state.produtos.find(x => x.id == id).preco * q), 0);
+                const total = itens.reduce((acc, [id, q]) => {
+                    const p = window.state.produtos.find(x => x.id == id);
+                    return acc + (p ? p.preco * q : 0);
+                }, 0);
 
                 root.innerHTML = `
                 <div class="p-6 pb-48">
@@ -119,17 +111,17 @@
                         }).join('')}
                     </div>
                     <div class="mb-10 p-6 bg-gray-50 rounded-[32px]">
-                        <p class="font-black text-[10px] text-gray-400 uppercase mb-4 text-center tracking-widest">Programar Entrega?</p>
+                        <p class="font-black text-[10px] text-gray-400 uppercase mb-4 text-center tracking-widest italic">Programar Entrega?</p>
                         <div class="grid grid-cols-2 gap-2">
                             ${['Compra Única', 'Diária', 'Semanal', 'Quinzenal', 'Mensal'].map(f => `
-                                <button onclick="window.state.frequencia='${f}'; window.render()" class="py-4 rounded-xl border-2 font-black text-[10px] uppercase ${window.state.frequencia === f ? 'border-rose-600 bg-rose-600 text-white shadow-lg' : 'border-gray-200 bg-white text-gray-400'}">${f}</button>
+                                <button onclick="window.state.frequencia='${f}'; window.render()" class="py-4 rounded-xl border-2 font-black text-[10px] uppercase transition-all ${window.state.frequencia === f ? 'border-rose-600 bg-rose-600 text-white shadow-lg' : 'border-gray-200 bg-white text-gray-400'}">${f}</button>
                             `).join('')}
                         </div>
                     </div>
                 </div>
                 <div class="fixed bottom-0 left-0 right-0 p-6 bg-white border-t z-50">
                     <div class="flex justify-between items-center mb-4">
-                        <span class="font-bold text-gray-400 uppercase text-[10px]">Total</span>
+                        <span class="font-bold text-gray-400 uppercase text-[10px]">Total Geral</span>
                         <span class="text-2xl font-black italic">R$ ${total.toFixed(2)}</span>
                     </div>
                     <button onclick="window.finalizarPedido()" class="w-full py-5 bg-rose-600 text-white rounded-2xl font-black uppercase shadow-xl italic">Fechar Pedido</button>
@@ -137,8 +129,8 @@
             } else {
                 root.innerHTML = `
                 <header class="p-6 sticky top-0 bg-white/90 backdrop-blur-md z-40 border-b flex justify-between items-center">
-                    <h1 class="text-2xl font-black text-rose-600 italic uppercase tracking-tighter">AppEgg</h1>
-                    <span class="text-[9px] font-black text-gray-400 uppercase tracking-widest">Olá, ${window.state.cliente.nome.split(' ')[0]}</span>
+                    <h1 class="text-2xl font-black text-rose-600 italic uppercase">AppEgg</h1>
+                    <span class="text-[9px] font-black text-gray-400 uppercase tracking-widest italic">Olá, ${window.state.cliente.nome.split(' ')[0]}</span>
                 </header>
                 <div class="p-4 grid grid-cols-2 gap-3 pb-32">
                     ${window.state.produtos.map(p => {
@@ -147,19 +139,19 @@
                         <div class="product-card p-3 flex flex-col">
                             <span class="absolute top-2 left-2 bg-rose-50 text-rose-600 text-[8px] font-black px-2 py-1 rounded-md uppercase">${p.tipo_estoque}</span>
                             <div class="h-24 flex items-center justify-center mb-2"><img src="${p.foto_url}" class="max-h-full object-contain"></div>
-                            <h3 class="font-black text-[9px] text-gray-700 uppercase h-8 overflow-hidden">${p.nome}</h3>
-                            <p class="text-rose-600 font-black text-sm my-2">R$ ${parseFloat(p.preco).toFixed(2)}</p>
+                            <h3 class="font-black text-[9px] text-gray-800 uppercase h-8 overflow-hidden">${p.nome}</h3>
+                            <p class="text-rose-600 font-black text-sm my-2 italic">R$ ${parseFloat(p.preco).toFixed(2)}</p>
                             ${q === 0 ? 
-                                `<button onclick="window.add('${p.id}')" class="w-full bg-rose-600 text-white py-3 rounded-xl text-[9px] font-black uppercase">Adicionar</button>` : 
-                                `<div class="flex items-center justify-between bg-gray-50 rounded-xl p-1"><button onclick="window.sub('${p.id}')" class="w-8 h-8 font-black text-rose-600">-</button><span class="font-bold text-xs">${q}</span><button onclick="window.add('${p.id}')" class="w-8 h-8 font-black text-rose-600">+</button></div>`
+                                `<button onclick="window.add('${p.id}')" class="w-full bg-rose-600 text-white py-3 rounded-xl text-[9px] font-black uppercase shadow-sm">Adicionar</button>` : 
+                                `<div class="flex items-center justify-between bg-gray-50 rounded-xl p-1 border border-rose-100"><button onclick="window.sub('${p.id}')" class="w-8 h-8 font-black text-rose-600">-</button><span class="font-bold text-xs">${q}</span><button onclick="window.add('${p.id}')" class="w-8 h-8 font-black text-rose-600">+</button></div>`
                             }
                         </div>`;
                     }).join('')}
                 </div>
                 ${Object.keys(window.state.carrinho).length > 0 ? `
-                <div class="cart-bar shadow-2xl">
-                    <p class="font-black italic text-gray-800 text-lg">🛒 Carrinho</p>
-                    <button onclick="window.mudarTela('carrinho')" class="bg-rose-600 px-8 py-4 rounded-2xl text-white font-black text-xs uppercase italic shadow-lg">Ver Carrinho</button>
+                <div class="cart-bar shadow-2xl animate-in slide-in-from-bottom duration-300">
+                    <p class="font-black italic text-gray-800 text-lg uppercase tracking-tighter">🛒 AppEgg</p>
+                    <button onclick="window.mudarTela('carrinho')" class="bg-rose-600 px-8 py-4 rounded-2xl text-white font-black text-xs uppercase italic shadow-lg shadow-rose-100">Ver Carrinho</button>
                 </div>` : ''}
                 <a href="https://wa.me/5511985706243" target="_blank" class="wa-float">
                     <svg width="30" height="30" fill="currentColor" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.588-5.946 0-6.556 5.332-11.888 11.888-11.888 3.176 0 6.161 1.237 8.404 3.48s3.481 5.229 3.481 8.408c0 6.556-5.332 11.888-11.888 11.888-2.003 0-3.96-.503-5.69-1.465l-6.394 1.688zm6.105-4.576c1.559.926 3.447 1.414 5.373 1.414 5.617 0 10.188-4.571 10.188-10.188 0-2.72-1.057-5.277-2.977-7.197s-4.477-2.977-7.197-2.977c-5.617 0-10.188 4.571-10.188 10.188 0 1.902.521 3.745 1.508 5.389l-1.011 3.693 3.797-.982z"/></svg>
@@ -167,10 +159,22 @@
             }
         };
 
-        fetch("https://painel-distribuidora-backend.onrender.com/api/produtos")
-            .then(r => r.json())
-            .then(d => { window.state.produtos = d; window.render(); })
-            .catch(() => { document.getElementById('app-root').innerText = "Erro ao carregar produtos. Tente recarregar."; });
+        async function init() {
+            try {
+                const r = await fetch("https://painel-distribuidora-backend.onrender.com/api/produtos");
+                if(!r.ok) throw new Error("Erro no servidor");
+                window.state.produtos = await r.json();
+                window.render();
+            } catch (e) {
+                document.getElementById('app-root').innerHTML = `
+                <div class="text-center p-10">
+                    <p class="text-rose-600 font-black mb-4">Servidor em repouso...</p>
+                    <p class="text-[10px] text-gray-400 uppercase font-bold mb-6">Estamos acordando o estoque, aguarde 15 segundos.</p>
+                    <button onclick="location.reload()" class="bg-gray-100 px-6 py-3 rounded-xl font-black text-[10px] uppercase">Tentar Novamente</button>
+                </div>`;
+            }
+        }
+        init();
     </script>
 </body>
 </html>
