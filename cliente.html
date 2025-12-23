@@ -8,6 +8,7 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
         body { font-family: 'Inter', sans-serif; background: #ffffff; }
+        .btn-gradient { background: linear-gradient(90deg, #e11d48 0%, #fb7185 100%); }
     </style>
 </head>
 <body class="pb-10">
@@ -31,41 +32,6 @@
 
         window.state = { produtos: [], cliente: JSON.parse(localStorage.getItem('appegg_user')), checkoutItem: null };
 
-        window.render = () => {
-            const root = document.getElementById('app-root');
-            if(!window.state.cliente) {
-                root.innerHTML = `<div class="h-screen flex flex-col justify-center px-10"><h1 class="text-4xl font-black text-rose-600 italic text-center mb-8 italic">AppEgg</h1><form onsubmit="window.actions.login(event)" class="space-y-4"><input name="nome" placeholder="Nome" class="w-full p-4 border rounded-2xl" required><input name="whatsapp" placeholder="WhatsApp" class="w-full p-4 border rounded-2xl" required><button class="w-full py-4 bg-rose-600 text-white rounded-2xl font-black uppercase">Entrar</button></form></div>`;
-                return;
-            }
-
-            root.innerHTML = `
-                <header class="p-6 border-b border-gray-50"><h1 class="text-2xl font-black text-rose-600 uppercase italic">AppEgg</h1></header>
-                <main class="p-6 space-y-6">
-                    ${window.state.produtos.map(p => `
-                        <div class="border rounded-3xl overflow-hidden p-4">
-                            <img src="${p.foto_url}" class="h-48 w-full object-cover rounded-2xl mb-4">
-                            <h3 class="font-black uppercase text-gray-800">${p.nome}</h3>
-                            <div class="flex justify-between items-center mt-2">
-                                <p class="text-xl font-black text-rose-600">R$ ${p.preco.toFixed(2)}</p>
-                                <button onclick='window.actions.comprar(${JSON.stringify(p)})' class="bg-black text-white px-6 py-3 rounded-xl font-bold text-xs uppercase">Pedir</button>
-                            </div>
-                        </div>
-                    `).join('')}
-
-                    <footer class="mt-10 p-8 bg-gray-50 rounded-[32px] text-center">
-                        <h4 class="font-black text-rose-600 italic">AppEgg</h4>
-                        <p class="text-[10px] font-bold text-gray-400 uppercase">Distribuidora de Ovos Aline</p>
-                        <div class="text-[11px] text-gray-400 my-4">
-                            <p>Rua Antonio Freire da Silva, 67</p>
-                            <p>Jardim das Camélias, São Paulo - SP</p>
-                            <p>WhatsApp: 11 98570-6243</p>
-                        </div>
-                        <a href="https://wa.me/5511985706243" target="_blank" class="inline-block bg-green-500 text-white px-6 py-3 rounded-2xl font-bold text-xs uppercase shadow-lg shadow-green-100">Falar no WhatsApp</a>
-                    </footer>
-                </main>
-            `;
-        };
-
         window.actions = {
             login: (e) => {
                 e.preventDefault();
@@ -75,19 +41,64 @@
                 window.render();
             },
             comprar: async (p) => {
+                const precoNum = parseFloat(p.preco) || 0;
                 await addDoc(collection(db, "vendas_logs"), {
                     clienteNome: window.state.cliente.nome,
                     clienteWhatsapp: window.state.cliente.whatsapp,
                     produto: p.nome,
-                    precoNoMomento: p.preco,
+                    precoNoMomento: precoNum,
                     status: 'PENDENTE',
                     criadoEm: serverTimestamp()
                 });
-                alert("Pedido realizado!");
+                alert("Pedido realizado com sucesso!");
             }
         };
 
-        fetch(`${API_BASE}/produtos`).then(r => r.json()).then(d => { window.state.produtos = d; window.render(); });
+        window.render = () => {
+            const root = document.getElementById('app-root');
+            if(!window.state.cliente) {
+                root.innerHTML = `<div class="h-screen flex flex-col justify-center px-10"><h1 class="text-4xl font-black text-rose-600 italic text-center mb-8">AppEgg</h1><form onsubmit="window.actions.login(event)" class="space-y-4"><input name="nome" placeholder="Nome" class="w-full p-4 border rounded-2xl outline-none" required><input name="whatsapp" placeholder="WhatsApp (Ex: 11985706243)" class="w-full p-4 border rounded-2xl outline-none" required><button class="w-full py-4 btn-gradient text-white rounded-2xl font-black uppercase shadow-lg">Entrar na Loja</button></form></div>`;
+                return;
+            }
+
+            root.innerHTML = `
+                <header class="p-6 border-b border-gray-50 flex justify-between items-center">
+                    <h1 class="text-2xl font-black text-rose-600 uppercase italic tracking-tighter">AppEgg</h1>
+                    <span class="text-[10px] font-bold text-gray-400 uppercase">Olá, ${window.state.cliente.nome.split(' ')[0]}</span>
+                </header>
+                <main class="p-6 space-y-6">
+                    ${window.state.produtos.map(p => {
+                        const precoExibicao = (parseFloat(p.preco) || 0).toFixed(2);
+                        return `
+                            <div class="border rounded-3xl overflow-hidden p-4 bg-white shadow-sm">
+                                <img src="${p.foto_url}" class="h-48 w-full object-cover rounded-2xl mb-4" onerror="this.src='https://images.unsplash.com/photo-1582722872445-44ad5c782967?w=500'">
+                                <h3 class="font-black uppercase text-gray-800 text-sm">${p.nome}</h3>
+                                <div class="flex justify-between items-center mt-3">
+                                    <p class="text-xl font-black text-rose-600">R$ ${precoExibicao}</p>
+                                    <button onclick='window.actions.comprar(${JSON.stringify(p)})' class="btn-gradient text-white px-6 py-3 rounded-xl font-bold text-xs uppercase shadow-md shadow-rose-100">Pedir</button>
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+
+                    <footer class="mt-10 p-8 bg-gray-50 rounded-[32px] text-center border border-gray-100">
+                        <h4 class="font-black text-rose-600 italic uppercase">AppEgg</h4>
+                        <p class="text-[10px] font-bold text-gray-400 uppercase">Distribuidora de Ovos Aline</p>
+                        <div class="text-[11px] text-gray-400 my-4 leading-relaxed">
+                            <p>Rua Antonio Freire da Silva, 67</p>
+                            <p>Jardim das Camélias, São Paulo - SP</p>
+                            <p class="font-bold text-gray-600 mt-2">WhatsApp: 11 98570-6243</p>
+                        </div>
+                        <a href="https://wa.me/5511985706243" target="_blank" class="inline-block bg-green-500 text-white px-8 py-3 rounded-2xl font-bold text-xs uppercase shadow-lg shadow-green-100 transition-transform active:scale-95">Falar com Aline</a>
+                    </footer>
+                </main>
+            `;
+        };
+
+        fetch(`${API_BASE}/produtos`)
+            .then(r => r.json())
+            .then(d => { window.state.produtos = d; window.render(); })
+            .catch(err => console.error("Erro ao carregar produtos:", err));
     </script>
 </body>
 </html>
