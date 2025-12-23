@@ -3,15 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AppEgg Admin</title>
+    <title>AppEgg Admin - Gestão</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
-        body { font-family: 'Inter', sans-serif; background: #f9fafb; color: #1f2937; }
-        .card { background: #ffffff; border: 1px solid #f3f4f6; border-radius: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02); }
+        body { font-family: 'Inter', sans-serif; background: #f9fafb; color: #1f2937; margin: 0; }
+        .card { background: #ffffff; border: 1px solid #f3f4f6; border-radius: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.03); }
         .nav-link { font-size: 11px; font-weight: 800; text-transform: uppercase; color: #9ca3af; padding: 12px 16px; border-radius: 12px; cursor: pointer; transition: all 0.2s; }
         .nav-link.active { color: #e11d48; background: #fff1f2; }
-        .status-badge { font-size: 9px; font-weight: 800; padding: 4px 8px; border-radius: 6px; text-transform: uppercase; }
+        .status-badge { font-size: 9px; font-weight: 900; text-transform: uppercase; padding: 4px 8px; border-radius: 8px; }
     </style>
 </head>
 <body>
@@ -21,6 +21,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
         import { getFirestore, collection, onSnapshot, query, orderBy, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyD3Otz9-zdZH-E5Feg9IOGWPzVycoe8gro",
@@ -30,206 +31,176 @@
             messagingSenderId: "92187548716",
             appId: "1:92187548716:web:d61d18a29aa76aead7c589"
         };
+
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        const auth = getAuth(app);
         const API_BASE = "https://painel-distribuidora-backend.onrender.com/api";
 
-        window.state = { view: 'pedidos', produtos: [], logs: [], lastCount: 0 };
+        window.state = { user: null, view: 'pedidos', produtos: [], logs: [], lastCount: 0 };
+
+        onAuthStateChanged(auth, (user) => {
+            window.state.user = user;
+            if (user) {
+                window.actions.loadProdutos();
+                initRealtimeOrders();
+            }
+            window.render();
+        });
 
         window.render = () => {
             const root = document.getElementById('app-root');
+            
+            if (!window.state.user) {
+                root.innerHTML = `
+                <div class="min-h-screen flex items-center justify-center p-6 bg-rose-600">
+                    <div class="bg-white p-10 rounded-[40px] w-full max-w-md shadow-2xl">
+                        <h1 class="text-4xl font-black text-rose-600 italic uppercase mb-2 tracking-tighter text-center">AppEgg</h1>
+                        <p class="text-gray-400 font-bold text-[10px] uppercase mb-8 text-center tracking-widest">Painel Administrativo</p>
+                        <form onsubmit="window.actions.login(event)" class="space-y-4">
+                            <input name="email" type="email" placeholder="E-mail (thon@...)" class="w-full p-5 bg-gray-50 rounded-2xl outline-none font-bold" required>
+                            <input name="pass" type="password" placeholder="Senha" class="w-full p-5 bg-gray-50 rounded-2xl outline-none font-bold" required>
+                            <button class="w-full py-5 bg-rose-600 text-white rounded-2xl font-black uppercase italic shadow-lg hover:bg-rose-700 transition-all">Entrar</button>
+                        </form>
+                    </div>
+                </div>`;
+                return;
+            }
+
             root.innerHTML = `
                 <nav class="bg-white border-b border-gray-100 px-6 sticky top-0 z-50 h-20 flex items-center justify-between">
                     <div class="flex items-center gap-2">
-                        <h1 class="font-black text-rose-600 text-xl italic uppercase tracking-tighter">AppEgg</h1>
-                        <span class="text-[10px] bg-gray-100 px-2 py-1 rounded font-black text-gray-400">ADMIN</span>
+                        <h1 class="font-black text-rose-600 text-2xl italic uppercase tracking-tighter">AppEgg</h1>
+                        <span class="text-[9px] bg-rose-600 text-white px-2 py-1 rounded-full font-black">ADMIN</span>
                     </div>
-                    <div class="flex gap-1">
+                    <div class="flex gap-2 items-center">
                         <button onclick="window.state.view='pedidos';window.render()" class="nav-link ${window.state.view==='pedidos'?'active':''}">Pedidos</button>
                         <button onclick="window.state.view='estoque';window.render()" class="nav-link ${window.state.view==='estoque'?'active':''}">Estoque</button>
-                        <button onclick="window.state.view='clientes';window.render()" class="nav-link ${window.state.view==='clientes'?'active':''}">Clientes</button>
+                        <button onclick="signOut(auth)" class="ml-4 p-2 text-gray-400 hover:text-rose-600 transition-colors">
+                            <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                        </button>
                     </div>
                 </nav>
-
                 <main class="max-w-5xl mx-auto p-6">
-                    ${window.state.view === 'pedidos' ? renderPedidos() : 
-                      window.state.view === 'estoque' ? renderEstoque() : 
-                      renderClientes()}
+                    ${window.state.view === 'pedidos' ? renderPedidos() : renderEstoque()}
                 </main>
             `;
         };
 
         function renderPedidos() {
-            const ativos = window.state.logs.filter(l => l.status !== 'FINALIZADO' && l.status !== 'CANCELADO');
+            const pendentes = window.state.logs.filter(l => l.status !== 'FINALIZADO' && l.status !== 'CANCELADO');
             return `
+                <div class="mb-6 flex justify-between items-end">
+                    <h2 class="text-3xl font-black italic uppercase">Pedidos Ativos</h2>
+                    <span class="font-black text-rose-600 text-sm bg-rose-50 px-4 py-2 rounded-full">${pendentes.length} Pedidos</span>
+                </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    ${ativos.length ? ativos.map(l => `
-                        <div class="card p-6 border-l-4 ${l.status === 'SAIU PARA ENTREGA' ? 'border-blue-500' : 'border-rose-500'}">
+                    ${pendentes.map(l => `
+                        <div class="card p-6 border-t-8 border-rose-500">
                             <div class="flex justify-between items-start mb-4">
                                 <div>
-                                    <h3 class="font-black uppercase italic text-gray-800">${l.clienteNome}</h3>
-                                    <p class="text-[10px] font-bold text-gray-400">${l.clienteWhatsapp}</p>
+                                    <h3 class="font-black uppercase italic text-gray-800 text-lg">${l.clienteNome}</h3>
+                                    <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">${l.clienteWhatsapp}</p>
                                 </div>
-                                <span class="status-badge ${l.status === 'SAIU PARA ENTREGA' ? 'bg-blue-100 text-blue-600' : 'bg-rose-50 text-rose-600'}">
-                                    ${l.status || 'PENDENTE'}
-                                </span>
+                                <span class="status-badge bg-amber-100 text-amber-700">${l.status}</span>
                             </div>
-                            
-                            <div class="bg-gray-50 p-4 rounded-2xl mb-4 text-gray-700 font-bold text-xs">
-                                <p class="text-rose-600 mb-1 uppercase text-[9px]">Itens do Pedido:</p>
-                                ${l.produto}
-                                <div class="mt-3 pt-3 border-t border-gray-200 text-[10px] text-gray-400">
-                                    📍 ${l.clienteEndereco || 'Retirada'} | 💳 ${l.pagamento}
+                            <div class="bg-gray-50 p-4 rounded-2xl mb-4">
+                                <p class="text-[10px] font-black text-gray-400 uppercase mb-2 italic">Itens do Pedido</p>
+                                <p class="text-gray-700 font-bold text-xs leading-relaxed">${l.produto}</p>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <p class="text-[9px] font-black text-gray-400 uppercase">Total a Receber</p>
+                                    <p class="font-black text-2xl text-rose-600 italic">R$ ${(l.precoNoMomento||0).toFixed(2)}</p>
                                 </div>
-                            </div>
-
-                            <div class="flex justify-between items-center mb-6">
-                                <p class="font-black text-2xl text-gray-800">R$ ${(parseFloat(l.precoNoMomento)||0).toFixed(2)}</p>
-                                <span class="text-[10px] font-black text-gray-300 uppercase italic">${l.entrega}</span>
-                            </div>
-
-                            <div class="grid grid-cols-1 gap-2">
                                 <div class="flex gap-2">
-                                    <select onchange="window.actions.mudarStatus('${l.id}', this.value)" class="flex-1 p-3 bg-gray-100 rounded-xl text-[10px] font-black uppercase outline-none cursor-pointer">
-                                        <option value="">Atualizar Status...</option>
-                                        <option value="EM SEPARAÇÃO">Em Separação</option>
-                                        <option value="EMBALANDO">Embalando</option>
-                                        <option value="SAIU PARA ENTREGA">Saiu para Entrega</option>
-                                        <option value="FINALIZADO">Concluído/Entregue</option>
-                                    </select>
-                                    <button onclick="window.actions.cancelarPedido('${l.id}')" class="bg-gray-100 text-gray-400 px-4 rounded-xl text-[18px] hover:text-rose-600 transition-colors">×</button>
+                                    <button onclick="window.actions.mudarStatus('${l.id}', 'FINALIZADO')" class="bg-emerald-500 text-white p-3 rounded-xl font-black text-[10px] uppercase">Concluir</button>
+                                    <button onclick="window.actions.mudarStatus('${l.id}', 'CANCELADO')" class="bg-gray-200 text-gray-500 p-3 rounded-xl font-black text-[10px] uppercase">X</button>
                                 </div>
                             </div>
                         </div>
-                    `).join('') : '<div class="col-span-2 text-center py-20"><p class="text-gray-300 font-black uppercase italic tracking-widest">Nenhum pedido novo</p></div>'}
-                </div>
-            `;
+                    `).join('') || '<div class="col-span-2 py-20 text-center font-black text-gray-300 uppercase italic">Tudo limpo por aqui! 🥚</div>'}
+                </div>`;
         }
 
         function renderEstoque() {
             return `
-                <div class="card p-6 mb-8 border-2 border-rose-50">
-                    <h3 class="font-black text-xs uppercase mb-4 text-rose-600 italic">Adicionar Produto ao App</h3>
-                    <form onsubmit="window.actions.salvarProduto(event)" class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <select onchange="document.getElementById('nome_input').value = this.value === 'manual' ? '' : this.value" class="p-4 bg-gray-50 rounded-2xl outline-none font-bold text-sm">
-                            <option value="">Sugestões de Ovos...</option>
-                            <option value="Ovo Branco Extra (G)">Ovo Branco Extra (G)</option>
-                            <option value="Ovo Vermelho Extra (G)">Ovo Vermelho Extra (G)</option>
-                            <option value="Ovo de Codorna">Ovo de Codorna</option>
-                            <option value="manual">Outro Nome...</option>
-                        </select>
-                        <input id="nome_input" name="nome" placeholder="Nome do Produto" class="p-4 bg-gray-50 rounded-2xl outline-none font-bold text-sm" required>
-                        <select name="tipo_estoque" class="p-4 bg-gray-50 rounded-2xl outline-none font-bold text-sm">
-                            <option value="Caixa">Caixa</option>
-                            <option value="Cartela">Cartela</option>
-                            <option value="Dúzia">Dúzia</option>
-                        </select>
-                        <input name="quantidade" type="number" placeholder="Qtd Estoque" class="p-4 bg-gray-50 rounded-2xl outline-none font-bold text-sm" required>
-                        <input name="preco" type="number" step="0.01" placeholder="Preço R$" class="p-4 bg-gray-50 rounded-2xl outline-none font-bold text-sm" required>
-                        <input name="foto_url" placeholder="Link da Imagem (JPG/PNG)" class="p-4 bg-gray-50 rounded-2xl outline-none font-bold text-sm" required>
-                        <button class="md:col-span-3 bg-rose-600 text-white font-black py-5 rounded-2xl uppercase italic tracking-tighter shadow-lg shadow-rose-200">Publicar no AppEgg</button>
+                <div class="card p-8 mb-10">
+                    <h3 class="font-black text-sm uppercase mb-6 text-rose-600 italic tracking-widest">Cadastrar Novo Produto</h3>
+                    <form onsubmit="window.actions.salvarProduto(event)" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <input name="nome" placeholder="Nome do Produto" class="p-4 bg-gray-50 rounded-2xl font-bold text-sm outline-none border border-transparent focus:border-rose-200" required>
+                        <input name="quantidade" type="number" placeholder="Estoque Inicial" class="p-4 bg-gray-50 rounded-2xl font-bold text-sm outline-none" required>
+                        <input name="preco" type="number" step="0.01" placeholder="Preço (0.00)" class="p-4 bg-gray-50 rounded-2xl font-bold text-sm outline-none" required>
+                        <input name="foto_url" placeholder="Link da Imagem" class="p-4 bg-gray-50 rounded-2xl font-bold text-sm outline-none" required>
+                        <button class="md:col-span-4 bg-rose-600 text-white font-black py-5 rounded-2xl uppercase italic shadow-lg hover:bg-rose-700 transition-all">Salvar no Catálogo</button>
                     </form>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                     ${window.state.produtos.map(p => `
-                        <div class="card p-4 flex items-center gap-4 group">
-                            <img src="${p.foto_url}" class="w-14 h-14 rounded-xl object-contain bg-gray-50 border">
+                        <div class="card p-5 flex items-center gap-4">
+                            <img src="${p.foto_url}" class="w-16 h-16 rounded-2xl object-contain bg-gray-50 p-2">
                             <div class="flex-1">
-                                <p class="font-black text-[8px] uppercase text-gray-400">${p.tipo_estoque} • ESTOQUE: ${p.quantidade || 0}</p>
-                                <p class="font-bold text-xs text-gray-800 truncate w-32">${p.nome}</p>
-                                <p class="text-sm text-rose-600 font-black italic">R$ ${parseFloat(p.preco).toFixed(2)}</p>
+                                <p class="font-black text-xs text-gray-800 uppercase italic">${p.nome}</p>
+                                <p class="text-sm text-rose-600 font-black">R$ ${parseFloat(p.preco).toFixed(2)}</p>
                             </div>
-                            <button onclick="window.actions.excluirProduto('${p.id}')" class="opacity-0 group-hover:opacity-100 text-rose-600 font-bold text-xl px-2 transition-all">×</button>
+                            <button onclick="window.actions.excluirProduto('${p.id}')" class="w-10 h-10 flex items-center justify-center bg-rose-50 text-rose-600 rounded-full font-bold text-xl hover:bg-rose-600 hover:text-white transition-all">×</button>
                         </div>
                     `).join('')}
-                </div>
-            `;
-        }
-
-        function renderClientes() {
-            const clientesUnicos = [...new Map(window.state.logs.map(i => [i['clienteWhatsapp'], i])).values()];
-            return `
-                <div class="space-y-4">
-                    <h2 class="font-black text-gray-400 uppercase text-[10px] tracking-widest mb-6 italic">Base de Dados AppEgg</h2>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        ${clientesUnicos.map(c => {
-                            const compras = window.state.logs.filter(l => l.clienteWhatsapp === c.clienteWhatsapp);
-                            const total = compras.reduce((acc, curr) => acc + (parseFloat(curr.precoNoMomento) || 0), 0);
-                            return `
-                            <div class="card p-6 border-l-8 border-green-400">
-                                <div class="flex justify-between items-center mb-4">
-                                    <div>
-                                        <h3 class="font-black uppercase text-gray-800">${c.clienteNome}</h3>
-                                        <p class="text-xs font-bold text-gray-400">${c.clienteWhatsapp}</p>
-                                    </div>
-                                    <a href="https://wa.me/55${c.clienteWhatsapp.replace(/\D/g,'')}" target="_blank" class="bg-green-500 text-white p-3 rounded-xl hover:scale-105 transition-transform">
-                                        <svg width="16" height="16" fill="white" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.588-5.946 0-6.556 5.332-11.888 11.888-11.888 3.176 0 6.161 1.237 8.404 3.48s3.481 5.229 3.481 8.408c0 6.556-5.332 11.888-11.888 11.888-2.003 0-3.96-.503-5.69-1.465l-6.394 1.688zm6.105-4.576c1.559.926 3.447 1.414 5.373 1.414 5.617 0 10.188-4.571 10.188-10.188 0-2.72-1.057-5.277-2.977-7.197s-4.477-2.977-7.197-2.977c-5.617 0-10.188 4.571-10.188 10.188 0 1.902.521 3.745 1.508 5.389l-1.011 3.693 3.797-.982z"/></svg>
-                                    </a>
-                                </div>
-                                <div class="flex gap-4">
-                                    <div class="bg-gray-50 px-4 py-2 rounded-xl flex-1 text-center"><p class="text-[8px] font-bold text-gray-400 uppercase">Pedidos</p><p class="font-black text-gray-700">${compras.length}</p></div>
-                                    <div class="bg-gray-50 px-4 py-2 rounded-xl flex-1 text-center"><p class="text-[8px] font-bold text-gray-400 uppercase">Gasto Total</p><p class="font-black text-rose-600">R$ ${total.toFixed(2)}</p></div>
-                                </div>
-                            </div>`;
-                        }).join('')}
-                    </div>
-                </div>
-            `;
+                </div>`;
         }
 
         window.actions = {
-            load: async () => { 
-                const r = await fetch(`${API_BASE}/produtos`); 
-                window.state.produtos = await r.json(); 
-                window.render(); 
+            login: async (e) => {
+                e.preventDefault();
+                try {
+                    await signInWithEmailAndPassword(auth, e.target.email.value, e.target.pass.value);
+                } catch (err) { alert("Acesso negado. Verifique e-mail e senha."); }
+            },
+            loadProdutos: async () => {
+                const r = await fetch(`${API_BASE}/produtos`);
+                window.state.produtos = await r.json();
+                window.render();
             },
             salvarProduto: async (e) => {
-                e.preventDefault(); 
+                e.preventDefault();
                 const f = new FormData(e.target);
-                await fetch(`${API_BASE}/produtos`, { 
-                    method: 'POST', 
-                    headers: {'Content-Type': 'application/json'}, 
-                    body: JSON.stringify({ 
-                        nome: f.get('nome'), 
-                        preco: parseFloat(f.get('preco')), 
-                        quantidade: parseInt(f.get('quantidade')), 
-                        tipo_estoque: f.get('tipo_estoque'), 
-                        foto_url: f.get('foto_url') 
-                    }) 
+                await fetch(`${API_BASE}/produtos`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        nome: f.get('nome'),
+                        preco: parseFloat(f.get('preco')),
+                        quantidade: parseInt(f.get('quantidade')),
+                        tipo_estoque: "Caixa",
+                        foto_url: f.get('foto_url')
+                    })
                 });
-                e.target.reset(); 
-                window.actions.load();
+                e.target.reset();
+                window.actions.loadProdutos();
             },
-            excluirProduto: async (id) => { 
-                if(confirm("Remover este ovo do App?")) { 
-                    await fetch(`${API_BASE}/produtos/${id}`, {method:'DELETE'}); 
-                    window.actions.load(); 
-                } 
-            },
-            mudarStatus: async (id, status) => { 
-                if(!status) return;
-                await updateDoc(doc(db, "vendas_logs", id), { status }); 
-            },
-            cancelarPedido: async (id) => {
-                const motivo = prompt("Motivo do cancelamento (aparecerá para o cliente):");
-                if(motivo) {
-                    await updateDoc(doc(db, "vendas_logs", id), { status: "CANCELADO", motivoCancelamento: motivo });
-                    setTimeout(() => deleteDoc(doc(db, "vendas_logs", id)), 10000);
+            excluirProduto: async (id) => {
+                if(confirm("Deseja remover este produto?")) {
+                    await fetch(`${API_BASE}/produtos/${id}`, {method:'DELETE'});
+                    window.actions.loadProdutos();
                 }
+            },
+            mudarStatus: async (id, status) => {
+                await updateDoc(doc(db, "vendas_logs", id), { status });
             }
         };
 
-        // Escuta em tempo real do Firebase
-        onSnapshot(query(collection(db, "vendas_logs"), orderBy("criadoEm", "desc")), (s) => {
-            if(window.state.lastCount > 0 && s.docs.length > window.state.lastCount) {
-                document.getElementById('alert-sound').play().catch(()=>{});
-            }
-            window.state.lastCount = s.docs.length;
-            window.state.logs = s.docs.map(d => ({ id: d.id, ...d.data() }));
-            window.render();
-        });
-
-        window.actions.load();
+        function initRealtimeOrders() {
+            const q = query(collection(db, "vendas_logs"), orderBy("criadoEm", "desc"));
+            onSnapshot(q, (snapshot) => {
+                // Toca som se houver novo pedido
+                if (window.state.lastCount > 0 && snapshot.docs.length > window.state.lastCount) {
+                    document.getElementById('alert-sound').play().catch(e => console.log("Som bloqueado pelo browser"));
+                }
+                window.state.lastCount = snapshot.docs.length;
+                window.state.logs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+                window.render();
+            });
+        }
     </script>
 </body>
 </html>
