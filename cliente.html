@@ -3,22 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AppEgg</title>
+    <title>AppEgg - Cliente</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,700;0,9..40,900;1,9..40,400&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'DM Sans', sans-serif; background: #fff; }
+        body { font-family: 'DM Sans', sans-serif; background: #fff; color: #1a1a1a; }
         .logo-text { font-weight: 900; color: #e11d48; letter-spacing: -0.05em; font-style: italic; }
-        .nav-bottom { position: fixed; bottom: 20px; left: 15px; right: 15px; background: #111827; border-radius: 26px; display: flex; justify-content: space-around; padding: 10px; z-index: 100; }
-        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; color: #6b7280; padding: 12px; border-radius: 20px; }
+        .nav-bottom { position: fixed; bottom: 20px; left: 15px; right: 15px; background: #111827; border-radius: 26px; display: flex; justify-content: space-around; padding: 10px; z-index: 100; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; color: #6b7280; padding: 12px; border-radius: 20px; border: none; background: transparent; transition: 0.3s; }
         .nav-item.active { background: #e11d48; color: white; }
         .nav-text { font-size: 10px; font-weight: 700; text-transform: uppercase; margin-top: 4px; }
-        .timeline-step { position: relative; padding-left: 15px; border-left: 2px solid #f3f4f6; margin-left: 2px; padding-bottom: 12px; }
+        .timeline-step { position: relative; padding-left: 20px; border-left: 2px solid #f3f4f6; margin-left: 2px; padding-bottom: 12px; }
         .timeline-step:last-child { border-left: 2px solid transparent; }
-        .timeline-dot { width: 6px; height: 6px; border-radius: 50%; background: #e11d48; position: relative; left: -19px; top: 6px; }
+        .timeline-dot { width: 8px; height: 8px; border-radius: 50%; background: #e11d48; position: absolute; left: -5px; top: 4px; }
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 200; display: flex; align-items: flex-end; }
-        .slide-up { animation: slide 0.3s ease-out; }
+        .slide-up { animation: slide 0.3s ease-out; background: white; width: 100%; padding: 32px; border-top-left-radius: 40px; border-top-right-radius: 40px; }
         @keyframes slide { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        .btn-pix { background: #00bfa5; color: white; font-weight: 900; font-size: 10px; padding: 8px 12px; border-radius: 12px; text-transform: uppercase; }
     </style>
 </head>
 <body>
@@ -42,21 +43,35 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
 
-        window.state = { user: null, produtos: [], tela: 'catalogo', meusPedidos: [], confirmando: null, pixGerado: null };
+        window.state = { 
+            user: null, 
+            produtos: [], 
+            tela: 'catalogo', 
+            meusPedidos: [], 
+            confirmando: null, 
+            pixGerado: null 
+        };
 
         onAuthStateChanged(auth, (user) => {
             window.state.user = user;
-            if (user) { initApp(); monitorarPedidos(); }
+            if (user) { 
+                initApp(); 
+                monitorarPedidos(); 
+            }
             window.render();
         });
 
-        const formatTime = (ts) => ts ? (ts.toDate ? ts.toDate() : new Date(ts)).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '--:--';
+        const formatTime = (ts) => {
+            if (!ts) return "--:--";
+            const date = ts.toDate ? ts.toDate() : new Date(ts);
+            return date.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+        };
 
         window.render = () => {
             const root = document.getElementById('app-root');
             if (!window.state.user) {
                 root.innerHTML = `<div class="p-10 min-h-screen flex flex-col justify-center text-center">
-                    <div class="logo-text text-5xl mb-12">AppEgg</div>
+                    <div class="logo-text text-5xl mb-12 italic">AppEgg</div>
                     <form onsubmit="window.actions.login(event)" class="space-y-3">
                         <input name="email" type="email" placeholder="E-mail" class="w-full p-5 bg-gray-50 rounded-2xl font-bold border-none outline-none" required>
                         <input name="pass" type="password" placeholder="Senha" class="w-full p-5 bg-gray-50 rounded-2xl font-bold border-none outline-none" required>
@@ -66,7 +81,10 @@
                 return;
             }
 
-            root.innerHTML = `<div class="pb-32">${window.state.tela === 'catalogo' ? renderCatalogo() : renderPedidos()}</div>
+            root.innerHTML = `
+                <div class="pb-32">
+                    ${window.state.tela === 'catalogo' ? renderCatalogo() : renderPedidos()}
+                </div>
                 ${window.state.confirmando ? renderModal() : ''}
                 <nav class="nav-bottom">
                     <button onclick="window.state.tela='catalogo';window.render()" class="nav-item ${window.state.tela==='catalogo'?'active':''}">🥚<span class="nav-text">Início</span></button>
@@ -76,103 +94,154 @@
         };
 
         function renderCatalogo() {
-            return `<header class="p-6 flex justify-between items-center"><div class="logo-text text-2xl">AppEgg</div></header>
+            return `
+                <header class="p-6 flex justify-between items-center"><div class="logo-text text-2xl italic">AppEgg</div></header>
                 <div class="px-4 grid grid-cols-2 gap-4">
                     ${window.state.produtos.map(p => `
                     <div class="p-4 border rounded-[30px] flex flex-col items-center ${p.quantidade <= 0 ? 'opacity-40' : ''}">
                         <img src="${p.foto_url}" class="h-24 mb-2 object-contain">
                         <h3 class="font-bold text-[10px] uppercase text-center h-8">${p.nome}</h3>
                         <p class="text-rose-600 font-black text-sm mb-4">R$ ${parseFloat(p.preco).toFixed(2)}</p>
-                        <button onclick="${p.quantidade > 0 ? `window.state.confirmando=${JSON.stringify(p).replace(/"/g, '&quot;')};window.render()` : ''}" 
-                                class="w-full py-3 rounded-2xl text-[9px] font-black uppercase ${p.quantidade > 0 ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-400'}" 
-                                ${p.quantidade <= 0 ? 'disabled' : ''}>${p.quantidade > 0 ? 'Pedir' : 'Esgotado'}</button>
+                        <button onclick="${p.quantidade > 0 ? `window.actions.abrirModal(${JSON.stringify(p).replace(/"/g, '&quot;')})` : ''}" 
+                                class="w-full py-3 rounded-2xl text-[9px] font-black uppercase ${p.quantidade > 0 ? 'bg-gray-900 text-white shadow-lg' : 'bg-gray-100 text-gray-400'}" 
+                                ${p.quantidade <= 0 ? 'disabled' : ''}>${p.quantidade > 0 ? 'Pedir Agora' : 'Esgotado'}</button>
                     </div>`).join('')}
                 </div>`;
         }
 
         function renderModal() {
             const p = window.state.confirmando;
-            return `<div class="modal-overlay">
-                <div class="bg-white w-full p-8 rounded-t-[40px] slide-up">
-                    <h2 class="text-xl font-black uppercase mb-6">Finalizar Compra</h2>
-                    <form onsubmit="window.actions.finalizar(event)" class="space-y-4">
-                        <div class="bg-gray-50 p-4 rounded-2xl mb-4 flex gap-4 items-center">
-                            <img src="${p.foto_url}" class="w-12 h-12 object-contain">
-                            <div><p class="font-bold text-xs uppercase">${p.nome}</p><p class="text-rose-600 font-black">R$ ${p.preco.toFixed(2)}</p></div>
-                        </div>
-                        <select id="tipo_pgto" name="pagamento" class="w-full p-4 bg-gray-100 rounded-2xl font-bold text-sm outline-none" onchange="window.state.pixGerado = this.value.includes('PIX') ? 'APPEGGPAY'+Math.random().toString(36).substring(7).toUpperCase() : null; window.render();" required>
-                            <option value="">Selecione o Pagamento</option>
-                            <option value="PIX NA ENTREGA">PIX na Entrega</option>
-                            <option value="PIX NA RETIRADA">PIX na Retirada</option>
-                            <option value="DINHEIRO NA ENTREGA">Dinheiro na Entrega</option>
-                            <option value="DINHEIRO NA RETIRADA">Dinheiro na Retirada</option>
-                        </select>
-                        ${window.state.pixGerado ? `
-                            <div class="bg-blue-50 p-4 rounded-2xl border border-blue-100">
-                                <p class="text-[9px] font-black text-blue-600 uppercase mb-1">Copia e Cola PIX:</p>
-                                <p class="text-[10px] font-mono font-bold break-all bg-white p-2 rounded-lg border">${window.state.pixGerado}</p>
+            return `
+                <div class="modal-overlay">
+                    <div class="slide-up">
+                        <h2 class="text-xl font-black uppercase mb-6">Finalizar Pedido</h2>
+                        <form onsubmit="window.actions.finalizar(event)" class="space-y-4">
+                            <div class="bg-gray-50 p-4 rounded-2xl mb-4 flex gap-4 items-center border">
+                                <img src="${p.foto_url}" class="w-12 h-12 object-contain">
+                                <div><p class="font-bold text-xs uppercase">${p.nome}</p><p class="text-rose-600 font-black">R$ ${p.preco.toFixed(2)}</p></div>
                             </div>
-                        ` : ''}
-                        <input name="obs" placeholder="Alguma observação? (Opcional)" class="w-full p-4 bg-gray-100 rounded-2xl font-bold text-sm outline-none">
-                        <div class="flex gap-2">
-                            <button type="button" onclick="window.state.confirmando=null;window.state.pixGerado=null;window.render()" class="flex-1 py-4 font-bold text-gray-400 uppercase text-xs">Voltar</button>
-                            <button class="flex-[2] py-4 bg-rose-600 text-white rounded-2xl font-black uppercase text-xs">Confirmar</button>
-                        </div>
-                    </form>
-                </div>
-            </div>`;
+                            
+                            <p class="text-[10px] font-black uppercase text-gray-400 ml-1">Como deseja pagar?</p>
+                            <select id="tipo_pgto" name="pagamento" class="w-full p-4 bg-gray-100 rounded-2xl font-bold text-sm outline-none border-none" onchange="window.actions.gerarPix(this.value)" required>
+                                <option value="">Escolha a opção...</option>
+                                <option value="PIX NA ENTREGA">PIX na Entrega</option>
+                                <option value="PIX NA RETIRADA">PIX na Retirada</option>
+                                <option value="DINHEIRO NA ENTREGA">Dinheiro na Entrega</option>
+                                <option value="DINHEIRO NA RETIRADA">Dinheiro na Retirada</option>
+                            </select>
+
+                            ${window.state.pixGerado ? `
+                                <div class="bg-blue-50 p-4 rounded-2xl border border-blue-100 animate-pulse">
+                                    <p class="text-[9px] font-black text-blue-600 uppercase mb-1">Chave PIX Gerada:</p>
+                                    <p class="text-[10px] font-mono font-bold break-all bg-white p-2 rounded-lg border">${window.state.pixGerado}</p>
+                                    <button type="button" onclick="navigator.clipboard.writeText('${window.state.pixGerado}');alert('Copiado!')" class="mt-2 w-full btn-pix">Copiar Chave</button>
+                                </div>
+                            ` : ''}
+
+                            <input name="obs" placeholder="Observação (ex: troco para 50, campainha...)" class="w-full p-4 bg-gray-100 rounded-2xl font-bold text-sm outline-none">
+                            
+                            <div class="flex gap-2 pt-4">
+                                <button type="button" onclick="window.state.confirmando=null;window.state.pixGerado=null;window.render()" class="flex-1 py-4 font-bold text-gray-400 uppercase text-xs">Cancelar</button>
+                                <button class="flex-[2] py-4 bg-rose-600 text-white rounded-2xl font-black uppercase text-xs shadow-lg shadow-rose-100">Confirmar Pedido</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>`;
         }
 
         function renderPedidos() {
-            return `<div class="p-6"><h2 class="text-2xl font-black uppercase mb-6">Acompanhar Pedidos</h2><div class="space-y-4">
-                ${window.state.meusPedidos.map(p => `
-                    <div class="p-6 border rounded-[30px] bg-white">
-                        <div class="flex justify-between items-start mb-4">
-                            <span class="text-[9px] font-black text-rose-600 bg-rose-50 px-3 py-1 rounded-full uppercase">${p.status}</span>
-                            <span class="font-black text-gray-900">R$ ${p.precoNoMomento.toFixed(2)}</span>
-                        </div>
-                        <p class="text-[11px] font-bold uppercase mb-4">${p.produto}</p>
-                        <div class="border-t pt-4">
-                            <div class="timeline-step"><div class="timeline-dot"></div><p class="text-[9px] font-bold text-gray-400 uppercase">Realizado: ${formatTime(p.criadoEm)}</p></div>
-                            <div class="timeline-step"><div class="timeline-dot ${!p.horarioEmbalando?'bg-gray-100':''}"></div><p class="text-[9px] font-bold text-gray-400 uppercase">Embalando: ${formatTime(p.horarioEmbalando)}</p></div>
-                            <div class="timeline-step" style="border:none"><div class="timeline-dot ${!p.horarioSaiu?'bg-gray-100':''}"></div><p class="text-[9px] font-bold text-gray-400 uppercase">Pronto/Em Trânsito: ${formatTime(p.horarioSaiu)}</p></div>
-                        </div>
-                    </div>`).join('') || '<p class="text-center py-10 font-bold text-gray-300 uppercase">Nenhum pedido</p>'}
-            </div></div>`;
+            return `
+                <div class="p-6">
+                    <h2 class="text-2xl font-black uppercase mb-6">Meus Pedidos</h2>
+                    <div class="space-y-4">
+                        ${window.state.meusPedidos.map(p => `
+                            <div class="p-6 border rounded-[30px] bg-white shadow-sm">
+                                <div class="flex justify-between items-start mb-4">
+                                    <span class="text-[9px] font-black text-rose-600 bg-rose-50 px-3 py-1 rounded-full uppercase">${p.status}</span>
+                                    <span class="font-black text-gray-900">R$ ${p.precoNoMomento.toFixed(2)}</span>
+                                </div>
+                                <p class="text-[11px] font-bold uppercase mb-4 text-gray-500">${p.produto}</p>
+                                
+                                <div class="border-t pt-4">
+                                    <div class="timeline-step">
+                                        <div class="timeline-dot"></div>
+                                        <p class="text-[9px] font-bold text-gray-400 uppercase">Pedido Recebido: ${formatTime(p.criadoEm)}</p>
+                                    </div>
+                                    <div class="timeline-step">
+                                        <div class="timeline-dot ${!p.horarioEmbalando?'bg-gray-100':''}"></div>
+                                        <p class="text-[9px] font-bold text-gray-400 uppercase">Embalagem: ${formatTime(p.horarioEmbalando)}</p>
+                                    </div>
+                                    <div class="timeline-step" style="border:none">
+                                        <div class="timeline-dot ${!p.horarioSaiu?'bg-gray-100':''}"></div>
+                                        <p class="text-[9px] font-bold text-gray-400 uppercase">Aguardando Você / Trânsito: ${formatTime(p.horarioSaiu)}</p>
+                                    </div>
+                                </div>
+                            </div>`).join('') || '<div class="text-center py-20 font-bold text-gray-300 uppercase">Nenhum pedido encontrado</div>'}
+                    </div>
+                </div>`;
         }
 
         window.actions = {
             login: async (e) => {
                 e.preventDefault();
-                try { await signInWithEmailAndPassword(auth, e.target.email.value, e.target.pass.value); } catch (err) { alert("Erro ao entrar."); }
+                try { await signInWithEmailAndPassword(auth, e.target.email.value, e.target.pass.value); } catch (err) { alert("Erro ao entrar. Verifique as credenciais."); }
             },
-            logout: async () => { await signOut(auth); },
+            logout: async () => { if(confirm("Sair do AppEgg?")) await signOut(auth); },
+            abrirModal: (produto) => {
+                window.state.confirmando = produto;
+                window.state.pixGerado = null;
+                window.render();
+            },
+            gerarPix: (valor) => {
+                if (valor.includes('PIX')) {
+                    window.state.pixGerado = "APPEGGPAY" + Math.random().toString(36).substring(2, 12).toUpperCase();
+                } else {
+                    window.state.pixGerado = null;
+                }
+                window.render();
+            },
             finalizar: async (e) => {
                 e.preventDefault();
                 const f = new FormData(e.target);
                 const p = window.state.confirmando;
-                await addDoc(collection(db, "vendas_logs"), {
-                    clienteNome: window.state.user.email.split('@')[0].toUpperCase(),
-                    clienteWhatsapp: window.state.user.email,
-                    produto: p.nome, produtoId: p.id, precoNoMomento: p.preco,
-                    pagamento: f.get('pagamento'), observacao: f.get('obs'),
-                    status: 'PENDENTE', criadoEm: serverTimestamp()
-                });
-                window.state.confirmando = null;
-                window.state.pixGerado = null;
-                window.state.tela = 'notificacoes';
-                window.render();
+                
+                try {
+                    await addDoc(collection(db, "vendas_logs"), {
+                        clienteNome: window.state.user.email.split('@')[0].toUpperCase(),
+                        clienteWhatsapp: window.state.user.email,
+                        produto: p.nome, 
+                        produtoId: p.id, 
+                        precoNoMomento: p.preco,
+                        pagamento: f.get('pagamento'), 
+                        observacao: f.get('obs'),
+                        status: 'PENDENTE', 
+                        criadoEm: serverTimestamp()
+                    });
+                    
+                    window.state.confirmando = null;
+                    window.state.pixGerado = null;
+                    window.state.tela = 'notificacoes';
+                    window.render();
+                } catch (err) {
+                    alert("Erro ao enviar pedido.");
+                }
             }
         };
 
         async function initApp() {
-            const r = await fetch("https://painel-distribuidora-backend.onrender.com/api/produtos");
-            window.state.produtos = await r.json();
-            window.render();
+            try {
+                const r = await fetch("https://painel-distribuidora-backend.onrender.com/api/produtos");
+                window.state.produtos = await r.json();
+                window.render();
+            } catch (e) { console.error("Erro ao carregar produtos"); }
         }
 
         function monitorarPedidos() {
-            const q = query(collection(db, "vendas_logs"), where("clienteWhatsapp", "==", window.state.user.email), orderBy("criadoEm", "desc"));
+            const q = query(
+                collection(db, "vendas_logs"), 
+                where("clienteWhatsapp", "==", window.state.user.email), 
+                orderBy("criadoEm", "desc")
+            );
             onSnapshot(q, (s) => {
                 window.state.meusPedidos = s.docs.map(d => ({ id: d.id, ...d.data() }));
                 window.render();
