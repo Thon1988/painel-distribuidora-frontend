@@ -1,113 +1,153 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AppEgg - Catálogo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <title>AppEgg • Comprar</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
-        :root { --primary: #ffce00; --dark: #333; }
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
-        body { background: #1a1a1a; display: flex; justify-content: center; padding: 20px; }
-        
-        .phone-container { 
-            width: 100%; max-width: 400px; background: white; height: 850px; 
-            border-radius: 30px; overflow: hidden; position: relative;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 8px solid #333;
-        }
-
-        header { background: var(--primary); padding: 25px; text-align: center; }
-        .catalogo { padding: 15px; height: calc(100% - 100px); overflow-y: auto; }
-        
-        .prod-card { 
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 15px; border-bottom: 1px solid #eee; margin-bottom: 10px;
-            background: #f9f9f9; border-radius: 10px;
-        }
-
-        .btn-buy { background: #27ae60; color: white; border: none; padding: 8px 15px; border-radius: 5px; font-weight: bold; cursor: pointer; }
-        
-        /* Modal de Nome */
-        #modalNome { 
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
-            background: rgba(0,0,0,0.9); color: white; display: flex; 
-            flex-direction: column; justify-content: center; align-items: center; z-index: 100;
-        }
-        input { padding: 12px; width: 80%; border-radius: 5px; border: none; margin-bottom: 10px; }
+        body { font-family: 'DM Sans', sans-serif; background:#f4f4f5; display: flex; justify-content: center; }
+        #app { width: 100%; max-width: 450px; background: #fff; min-height: 100vh; position: relative; }
+        .logo { color:#e11d48; font-weight:900; font-style: italic; }
+        .nav-bottom { position:fixed; bottom:16px; width: calc(100% - 40px); max-width: 410px; background:#111827; border-radius:22px; display:flex; justify-content:space-around; padding:12px; z-index:50; }
+        .nav-item { color:#9ca3af; font-size:10px; font-weight:800; text-transform: uppercase; text-align: center; background: none; border: none; }
+        .nav-item.active { color:#fff }
+        .card { border-radius: 24px; border: 1px solid #f3f4f6; padding: 18px; margin-bottom: 12px; }
+        .modal { position:fixed; inset:0; background:rgba(0,0,0,0.8); display:flex; align-items:flex-end; z-index:100; }
+        .modal-content { background:#fff; width:100%; max-width:450px; padding:30px; border-radius:32px 32px 0 0; margin: 0 auto; }
     </style>
 </head>
 <body>
+    <div id="app"></div>
 
-<div class="phone-container">
-    <div id="modalNome">
-        <h3>Olá! Qual seu nome?</h3>
-        <p style="font-size: 0.7rem; margin-bottom: 15px;">Para identificarmos seu pedido</p>
-        <input type="text" id="nomeCliente" placeholder="Digite seu nome...">
-        <button onclick="salvarCliente()" style="background:var(--primary); padding:10px 30px; border:none; border-radius:5px; font-weight:bold;">Entrar</button>
-    </div>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, where, orderBy, serverTimestamp, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
 
-    <header>
-        <h2 id="saudacao">Catálogo AppEgg</h2>
-    </header>
+        const firebaseConfig = {
+            apiKey: "AIzaSyD3Otz9-zdZH-E5Feg9IOGWPzVycoe8gro",
+            authDomain: "distribuidora-de-ovos-aline.firebaseapp.com",
+            projectId: "distribuidora-de-ovos-aline",
+            storageBucket: "distribuidora-de-ovos-aline.firebasestorage.app",
+            messagingSenderId: "92187548716",
+            appId: "1:92187548716:web:d61d18a29aa76aead7c589"
+        };
 
-    <div class="catalogo" id="listaProdutosCliente">
-        <p style="text-align: center; margin-top: 50px;">Carregando catálogo...</p>
-    </div>
-</div>
+        const appFB = initializeApp(firebaseConfig);
+        const db = getFirestore(appFB);
+        const auth = getAuth(appFB);
 
-<script>
-    let clienteAtual = "";
+        window.state = { user: null, tela: 'catalogo', produtos: [], pedidos: [], config: {}, comprando: null };
 
-    function salvarCliente() {
-        const nome = document.getElementById('nomeCliente').value;
-        if(nome.length < 3) return alert("Digite seu nome real");
-        clienteAtual = nome;
-        document.getElementById('modalNome').style.display = 'none';
-        document.getElementById('saudacao').innerText = `Olá, ${nome}!`;
-        renderizarCatalogo();
-    }
-
-    function renderizarCatalogo() {
-        const produtos = JSON.parse(localStorage.getItem('egg_produtos')) || [];
-        const container = document.getElementById('listaProdutosCliente');
-        
-        if(produtos.length === 0) {
-            container.innerHTML = "<p style='text-align:center'>O estoque está vazio no momento.</p>";
-            return;
-        }
-
-        container.innerHTML = "";
-        produtos.forEach(p => {
-            container.innerHTML += `
-                <div class="prod-card">
-                    <div>
-                        <div style="font-weight:bold">${p.nome}</div>
-                        <div style="color:green; font-size:0.9rem">R$ ${p.preco.toFixed(2)}</div>
-                    </div>
-                    <button class="btn-buy" onclick="fazerPedido('${p.nome}', ${p.preco})">Pedir</button>
-                </div>
-            `;
+        onAuthStateChanged(auth, async u => {
+            state.user = u;
+            if(u) {
+                const d = await getDoc(doc(db, 'config', 'loja'));
+                state.config = d.data() || {};
+                carregarProdutos();
+                monitorarPedidos();
+            }
+            render();
         });
-    }
 
-    function fazerPedido(item, total) {
-        const confirma = confirm(`Confirmar pedido de ${item}?`);
-        if(confirma) {
-            const pedidos = JSON.parse(localStorage.getItem('egg_pedidos')) || [];
-            const novoPedido = {
-                id: Date.now(),
-                cliente: clienteAtual,
-                item: item,
-                total: total,
-                data: new Date().toLocaleString('pt-BR')
-            };
-            pedidos.push(novoPedido);
-            localStorage.setItem('egg_pedidos', JSON.stringify(pedidos));
-            alert("Pedido enviado com sucesso! Aguarde a entrega.");
+        async function carregarProdutos() {
+            try {
+                const r = await fetch("https://painel-distribuidora-backend.onrender.com/api/produtos");
+                state.produtos = await r.json();
+                render();
+            } catch(e) { console.error("Erro ao carregar catálogo"); }
         }
-    }
 
-    // Tenta renderizar caso já exista no storage
-    window.onload = renderizarCatalogo;
-</script>
+        function monitorarPedidos() {
+            onSnapshot(query(collection(db,"vendas_logs"), where("clienteWhatsapp","==",state.user.email), orderBy("criadoEm","desc")), s => {
+                state.pedidos = s.docs.map(d => ({id: d.id, ...d.data()})); render();
+            });
+        }
+
+        window.render = () => {
+            const app = document.getElementById('app');
+            if(!state.user) {
+                app.innerHTML = `<div class="p-10 text-center mt-20"><div class="logo text-5xl mb-12">AppEgg</div><form onsubmit="login(event)" class="space-y-4"><input name="email" type="email" placeholder="E-mail" class="w-full p-4 rounded-2xl bg-gray-100 font-bold border-none outline-none"><input name="senha" type="password" placeholder="Senha" class="w-full p-4 rounded-2xl bg-gray-100 font-bold border-none outline-none"><button class="w-full p-4 bg-rose-600 text-white rounded-2xl font-black uppercase">Entrar</button></form></div>`;
+                return;
+            }
+            app.innerHTML = `
+                <div class="pb-32 px-5 pt-10">
+                    ${state.tela==='catalogo' ? renderCatalogo() : renderPedidos()}
+                </div>
+                ${state.comprando ? renderModal() : ''}
+                <nav class="nav-bottom">
+                    <button onclick="nav('catalogo')" class="nav-item ${state.tela==='catalogo'?'active':''}">🥚<br>Comprar</button>
+                    <button onclick="nav('pedidos')" class="nav-item ${state.tela==='pedidos'?'active':''}">📦<br>Pedidos</button>
+                    <button onclick="logout()" class="nav-item">🚪<br>Sair</button>
+                </nav>`;
+        }
+
+        function renderCatalogo() {
+            return `<h1 class="logo text-3xl mb-8">AppEgg</h1>
+                <div class="grid grid-cols-2 gap-4">
+                    ${state.produtos.map(p => `
+                        <div class="card text-center bg-white shadow-sm">
+                            <img src="${p.foto_url}" class="h-20 mx-auto mb-3 object-contain">
+                            <p class="font-black text-[10px] uppercase h-8 leading-tight mb-2">${p.nome}</p>
+                            <p class="text-rose-600 font-black text-xs mb-2">R$ ${p.preco.toFixed(2)}</p>
+                            <button onclick="abrirCompra(${JSON.stringify(p).replace(/"/g,'&quot;')})" class="w-full bg-rose-600 text-white py-2 rounded-xl text-[10px] font-black uppercase">Pedir</button>
+                        </div>`).join('') || '<p class="col-span-2 text-center text-gray-400 mt-10 uppercase font-bold text-xs">Carregando estoque...</p>'}
+                </div>`;
+        }
+
+        function renderModal() {
+            const p = state.comprando;
+            return `<div class="modal"><div class="modal-content">
+                <h3 class="text-xl font-black uppercase italic mb-6">Finalizar Pedido</h3>
+                <form onsubmit="finalizarPedido(event)" class="space-y-4">
+                    <p class="text-[10px] font-black uppercase text-gray-400">Plano de Entrega</p>
+                    <select name="frequencia" class="w-full p-4 bg-gray-100 rounded-2xl font-bold border-none outline-none">
+                        <option value="AVULSA">Compra Única (Avulsa)</option>
+                        <option value="SEMANAL">Plano Semanal</option>
+                        <option value="QUINZENAL">Plano Quinzenal</option>
+                        <option value="MENSAL">Plano Mensal</option>
+                    </select>
+                    <p class="text-[10px] font-black uppercase text-gray-400">Forma de Recebimento</p>
+                    <select name="pagamento" class="w-full p-4 bg-gray-100 rounded-2xl font-bold border-none outline-none">
+                        <option value="PIX NA RETIRADA">PIX na Retirada</option>
+                        <option value="PIX NA ENTREGA">PIX na Entrega</option>
+                        <option value="DINHEIRO NA RETIRADA">Dinheiro na Retirada</option>
+                    </select>
+                    <button class="w-full bg-rose-600 text-white py-5 rounded-2xl font-black uppercase mt-4">Confirmar Agora</button>
+                    <button type="button" onclick="state.comprando=null;render()" class="w-full text-gray-400 font-bold text-xs uppercase py-2">Cancelar</button>
+                </form>
+            </div></div>`;
+        }
+
+        function renderPedidos() {
+            return `<h2 class="text-2xl font-black mb-6 italic uppercase">Meus Pedidos</h2>
+                ${state.pedidos.map(p => `
+                    <div class="card bg-white shadow-sm">
+                        <div class="flex justify-between mb-2"><span class="font-black text-rose-600 text-[9px] uppercase italic">${p.status}</span><span class="font-black text-xs">R$ ${p.precoNoMomento?.toFixed(2)}</span></div>
+                        <p class="font-black text-[11px] uppercase">${p.produto}</p>
+                        <p class="text-[9px] font-bold text-gray-400 uppercase mt-1">Plano: ${p.frequencia || 'AVULSA'}</p>
+                        ${p.status === 'PENDENTE' && state.config.pixChave ? `<div class="mt-3 p-3 bg-blue-50 rounded-xl text-[9px] font-bold text-blue-600">PIX (${state.config.pixTipo}): ${state.config.pixChave}</div>` : ''}
+                    </div>`).join('') || '<p class="text-gray-400 font-bold uppercase text-center mt-20 text-xs">Nenhum pedido</p>'}';
+        }
+
+        window.nav = t => { state.tela = t; render(); };
+        window.abrirCompra = p => { state.comprando = p; render(); };
+        window.login = async e => { e.preventDefault(); try { await signInWithEmailAndPassword(auth, e.target.email.value, e.target.senha.value); } catch(err){ alert("E-mail ou senha inválidos"); } };
+        window.logout = () => signOut(auth);
+        window.finalizarPedido = async e => {
+            e.preventDefault();
+            const f = new FormData(e.target);
+            await addDoc(collection(db,"vendas_logs"), {
+                clienteNome: state.user.email.split('@')[0].toUpperCase(),
+                clienteWhatsapp: state.user.email,
+                produto: state.comprando.nome, precoNoMomento: state.comprando.preco,
+                pagamento: f.get('pagamento'), frequencia: f.get('frequencia'),
+                status: "PENDENTE", criadoEm: serverTimestamp()
+            });
+            state.comprando = null; state.tela = 'pedidos'; render();
+        };
+    </script>
 </body>
 </html>
