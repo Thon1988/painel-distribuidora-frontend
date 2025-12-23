@@ -39,7 +39,7 @@
             const root = document.getElementById('app-root');
             root.innerHTML = `
                 <nav class="bg-white border-b border-gray-100 px-6 sticky top-0 z-50 h-20 flex items-center justify-between">
-                    <h1 class="font-black text-rose-600 text-xl italic uppercase">AppEgg Admin</h1>
+                    <h1 class="font-black text-rose-600 text-xl italic uppercase tracking-tighter">AppEgg Admin</h1>
                     <div class="flex gap-1">
                         <button onclick="window.state.view='pedidos';window.render()" class="nav-link ${window.state.view==='pedidos'?'active':''}">Pedidos</button>
                         <button onclick="window.state.view='estoque';window.render()" class="nav-link ${window.state.view==='estoque'?'active':''}">Estoque</button>
@@ -48,53 +48,75 @@
                 </nav>
 
                 <main class="max-w-5xl mx-auto p-6">
-                    ${window.state.view === 'pedidos' ? `
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            ${window.state.logs.filter(l => l.status !== 'FINALIZADO').map(l => `
-                                <div class="card p-6 border-l-4 border-rose-500">
-                                    <div class="flex justify-between mb-4"><h3 class="font-black uppercase italic">${l.clienteNome}</h3><span class="text-[10px] font-bold bg-gray-100 px-2 py-1 rounded">${l.entrega}</span></div>
-                                    <div class="bg-rose-50 p-4 rounded-2xl mb-4 text-rose-700 font-bold text-sm">${l.produto}</div>
-                                    <div class="flex justify-between items-center">
-                                        <p class="font-black text-xl">R$ ${(l.precoNoMomento||0).toFixed(2)}</p>
-                                        <button onclick="window.actions.mudarStatus('${l.id}','FINALIZADO')" class="bg-gray-800 text-white px-6 py-2 rounded-xl text-[10px] font-black uppercase">Concluir</button>
-                                    </div>
-                                </div>
-                            `).join('')}
-                        </div>
-                    ` : window.state.view === 'fidelidade' ? `
-                        <div class="space-y-4">
-                            ${[...new Map(window.state.logs.map(i => [i['clienteWhatsapp'], i])).values()].map(c => {
-                                const hist = window.state.logs.filter(l => l.clienteWhatsapp === c.clienteWhatsapp);
-                                return `
-                                <div class="card p-6">
-                                    <div class="flex justify-between items-center mb-4">
-                                        <div><h3 class="font-black uppercase">${c.clienteNome}</h3><p class="text-xs text-gray-400">${c.clienteWhatsapp}</p></div>
-                                        <a href="https://wa.me/55${c.clienteWhatsapp}" target="_blank" class="bg-green-500 text-white px-4 py-2 rounded-xl text-[10px] font-black">ZAP</a>
-                                    </div>
-                                    <div class="grid grid-cols-2 gap-4">
-                                        <div class="bg-gray-50 p-3 rounded-xl"><p class="text-[9px] font-bold text-gray-400 uppercase">Compras</p><p class="font-black">${hist.length}</p></div>
-                                        <div class="bg-gray-50 p-3 rounded-xl"><p class="text-[9px] font-bold text-gray-400 uppercase">Total</p><p class="font-black text-rose-600">R$ ${hist.reduce((a,b)=>a+(b.precoNoMomento||0),0).toFixed(2)}</p></div>
-                                    </div>
-                                </div>`;
-                            }).join('')}
-                        </div>
-                    ` : `
+                    ${window.state.view === 'estoque' ? `
                         <div class="card p-6 mb-8 border-2 border-rose-50">
-                            <form onsubmit="window.actions.salvarProduto(event)" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                                <select onchange="window.actions.selecionarTipo(this.value)" class="p-4 bg-gray-50 rounded-2xl outline-none font-bold text-sm"><option value="">Tipo...</option><option value="Ovo Branco">Ovo Branco</option><option value="Ovo Vermelho">Ovo Vermelho</option><option value="Ovo de Codorna">Ovo de Codorna</option><option value="manual">Manual...</option></select>
-                                <input id="nome_input" name="nome" placeholder="Nome" class="p-4 bg-gray-50 rounded-2xl outline-none font-bold text-sm" required>
-                                <select name="tipo_estoque" class="p-4 bg-gray-50 rounded-2xl outline-none font-bold text-sm"><option value="Unidade">Unidade</option><option value="Dúzia">Dúzia</option><option value="Caixa">Caixa</option></select>
-                                <input name="preco" type="number" step="0.01" placeholder="R$" class="p-4 bg-gray-50 rounded-2xl outline-none font-bold text-sm" required>
-                                <input name="foto_url" placeholder="URL Foto" class="p-4 bg-gray-50 rounded-2xl outline-none font-bold text-sm" required>
-                                <button class="lg:col-span-5 bg-rose-600 text-white font-black py-4 rounded-2xl uppercase">Salvar no AppEgg</button>
+                            <h3 class="font-black text-xs uppercase mb-4 text-rose-600">Cadastrar Produto no Estoque</h3>
+                            <form onsubmit="window.actions.salvarProduto(event)" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                <select onchange="window.actions.selecionarTipo(this.value)" class="p-4 bg-gray-50 rounded-2xl outline-none font-bold text-sm">
+                                    <option value="">Selecione o Ovo...</option>
+                                    <option value="Ovo Branco Pequeno">Ovo Branco Pequeno</option>
+                                    <option value="Ovo Branco Médio">Ovo Branco Médio</option>
+                                    <option value="Ovo Branco Grande">Ovo Branco Grande</option>
+                                    <option value="Ovo Branco Extra">Ovo Branco Extra</option>
+                                    <option value="Ovo Vermelho Pequeno">Ovo Vermelho Pequeno</option>
+                                    <option value="Ovo Vermelho Médio">Ovo Vermelho Médio</option>
+                                    <option value="Ovo Vermelho Grande">Ovo Vermelho Grande</option>
+                                    <option value="Ovo Vermelho Extra">Ovo Vermelho Extra</option>
+                                    <option value="Ovo de Codorna">Ovo de Codorna</option>
+                                    <option value="manual">Outro (Digitar nome)...</option>
+                                </select>
+                                <input id="nome_input" name="nome" placeholder="Nome Completo" class="p-4 bg-gray-50 rounded-2xl outline-none font-bold text-sm" required>
+                                <select name="tipo_estoque" class="p-4 bg-gray-50 rounded-2xl outline-none font-bold text-sm">
+                                    <option value="Caixa">Caixa</option>
+                                    <option value="Dúzia">Dúzia</option>
+                                    <option value="Unidade">Unidade</option>
+                                </select>
+                                <input name="quantidade" type="number" placeholder="Qtd em Estoque" class="p-4 bg-gray-50 rounded-2xl outline-none font-bold text-sm" required>
+                                <input name="preco" type="number" step="0.01" placeholder="Preço R$" class="p-4 bg-gray-50 rounded-2xl outline-none font-bold text-sm" required>
+                                <input name="foto_url" placeholder="Link da Foto" class="p-4 bg-gray-50 rounded-2xl outline-none font-bold text-sm" required>
+                                <button class="lg:col-span-3 bg-rose-600 text-white font-black py-4 rounded-2xl uppercase italic tracking-widest shadow-lg shadow-rose-100">Atualizar AppEgg</button>
                             </form>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                             ${window.state.produtos.map(p => `
                                 <div class="card p-4 flex items-center gap-4">
                                     <img src="${p.foto_url}" class="w-12 h-12 rounded-lg object-contain bg-gray-50">
-                                    <div class="flex-1"><p class="text-[9px] font-bold text-gray-400 uppercase">${p.tipo_estoque}</p><p class="font-black text-xs uppercase">${p.nome}</p></div>
+                                    <div class="flex-1">
+                                        <p class="font-black text-[9px] uppercase text-gray-400">${p.tipo_estoque} | Qtd: ${p.quantidade || 0}</p>
+                                        <p class="font-black text-xs uppercase text-gray-800">${p.nome}</p>
+                                        <p class="text-xs text-rose-600 font-bold">R$ ${parseFloat(p.preco).toFixed(2)}</p>
+                                    </div>
                                     <button onclick="window.actions.excluirProduto('${p.id}')" class="text-gray-200 hover:text-red-500 font-bold">×</button>
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : window.state.view === 'fidelidade' ? `
+                        <div class="space-y-4">
+                             ${[...new Map(window.state.logs.map(i => [i['clienteWhatsapp'], i])).values()].map(c => {
+                                const hist = window.state.logs.filter(l => l.clienteWhatsapp === c.clienteWhatsapp);
+                                return `
+                                <div class="card p-6 border-l-8 border-green-400">
+                                    <div class="flex justify-between items-center mb-4">
+                                        <div><h3 class="font-black uppercase text-gray-800">${c.clienteNome}</h3><p class="text-xs font-bold text-gray-400">${c.clienteWhatsapp}</p></div>
+                                        <a href="https://wa.me/55${c.clienteWhatsapp}" target="_blank" class="bg-green-500 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase">Chamar</a>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <div class="bg-gray-50 p-3 rounded-xl"><p class="text-[9px] font-bold text-gray-400 uppercase">Pedidos</p><p class="font-black text-gray-700">${hist.length}</p></div>
+                                        <div class="bg-gray-50 p-3 rounded-xl"><p class="text-[9px] font-bold text-gray-400 uppercase">Investido</p><p class="font-black text-rose-600">R$ ${hist.reduce((a,b)=>a+(parseFloat(b.precoNoMomento)||0),0).toFixed(2)}</p></div>
+                                    </div>
+                                </div>`;
+                            }).join('')}
+                        </div>
+                    ` : `
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            ${window.state.logs.filter(l => l.status !== 'FINALIZADO').map(l => `
+                                <div class="card p-6 border-l-4 border-rose-500 relative">
+                                    <div class="flex justify-between mb-4"><h3 class="font-black uppercase italic text-gray-800">${l.clienteNome}</h3><span class="text-[10px] font-black bg-rose-50 text-rose-600 px-2 py-1 rounded-lg uppercase tracking-tighter">${l.entrega}</span></div>
+                                    <div class="bg-gray-50 p-4 rounded-2xl mb-4 text-gray-700 font-bold text-xs leading-relaxed">${l.produto}</div>
+                                    <div class="flex justify-between items-center">
+                                        <p class="font-black text-2xl text-gray-800">R$ ${(parseFloat(l.precoNoMomento)||0).toFixed(2)}</p>
+                                        <button onclick="window.actions.mudarStatus('${l.id}','FINALIZADO')" class="bg-gray-800 text-white px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest">Finalizar</button>
+                                    </div>
                                 </div>
                             `).join('')}
                         </div>
@@ -108,10 +130,16 @@
             load: async () => { const r = await fetch(`${API_BASE}/produtos`); window.state.produtos = await r.json(); window.render(); },
             salvarProduto: async (e) => {
                 e.preventDefault(); const f = new FormData(e.target);
-                await fetch(`${API_BASE}/produtos`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ nome: f.get('nome'), preco: parseFloat(f.get('preco')), quantidade: 999, tipo_estoque: f.get('tipo_estoque'), foto_url: f.get('foto_url') }) });
+                await fetch(`${API_BASE}/produtos`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ 
+                    nome: f.get('nome'), 
+                    preco: parseFloat(f.get('preco')), 
+                    quantidade: parseInt(f.get('quantidade')), 
+                    tipo_estoque: f.get('tipo_estoque'), 
+                    foto_url: f.get('foto_url') 
+                }) });
                 e.target.reset(); window.actions.load();
             },
-            excluirProduto: async (id) => { if(confirm("Remover?")) { await fetch(`${API_BASE}/produtos/${id}`, {method:'DELETE'}); window.actions.load(); } },
+            excluirProduto: async (id) => { if(confirm("Remover item?")) { await fetch(`${API_BASE}/produtos/${id}`, {method:'DELETE'}); window.actions.load(); } },
             mudarStatus: async (id, status) => { await updateDoc(doc(db, "vendas_logs", id), { status }); }
         };
 
