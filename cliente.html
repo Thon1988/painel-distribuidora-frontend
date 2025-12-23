@@ -3,16 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AppEgg Cliente</title>
+    <title>AppEgg</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&display=swap');
         body { font-family: 'Inter', sans-serif; background: #fff; }
-        .btn-main { background: #e11d48; color: white; font-weight: 800; text-transform: uppercase; border-radius: 20px; padding: 18px; width: 100%; font-style: italic; }
+        .btn-main { background: #e11d48; color: white; font-weight: 800; text-transform: uppercase; border-radius: 24px; padding: 20px; width: 100%; border: none; }
+        .logo-text { font-weight: 800; color: #e11d48; letter-spacing: -0.05em; }
         .nav-bottom { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid #f3f4f6; display: flex; justify-content: space-around; padding: 15px; z-index: 100; }
         .nav-item { font-size: 10px; font-weight: 800; text-transform: uppercase; color: #9ca3af; }
         .nav-item.active { color: #e11d48; }
-        .notif-banner { position: fixed; top: 20px; left: 20px; right: 20px; background: #1f2937; color: white; padding: 20px; border-radius: 24px; z-index: 1000; font-weight: 800; text-align: center; }
+        .timeline-dot { width: 6px; height: 6px; border-radius: 50%; background: #e11d48; position: relative; z-index: 10; }
+        .timeline-step { position: relative; padding-left: 15px; border-left: 2px solid #f3f4f6; margin-left: 2px; padding-bottom: 12px; }
+        .timeline-step:last-child { border-left: 2px solid transparent; }
     </style>
 </head>
 <body>
@@ -36,7 +39,7 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
 
-        window.state = { user: null, produtos: [], carrinho: {}, tela: 'catalogo', meusPedidos: [] };
+        window.state = { user: null, produtos: [], tela: 'catalogo', meusPedidos: [] };
 
         onAuthStateChanged(auth, (user) => {
             window.state.user = user;
@@ -48,85 +51,70 @@
             const root = document.getElementById('app-root');
             if (!window.state.user) {
                 root.innerHTML = `<div class="p-10 min-h-screen flex flex-col justify-center text-center">
-                    <h1 class="text-6xl font-black text-rose-600 italic uppercase mb-12 tracking-tighter">AppEgg</h1>
+                    <div class="logo-text text-5xl mb-12">AppEgg</div>
                     <form onsubmit="window.actions.login(event)" class="space-y-4">
-                        <input name="email" type="email" placeholder="E-mail" class="w-full p-5 bg-gray-50 rounded-2xl font-bold outline-none border" required>
-                        <input name="pass" type="password" placeholder="Senha" class="w-full p-5 bg-gray-50 rounded-2xl font-bold outline-none border" required>
+                        <input name="email" type="email" placeholder="E-mail" class="w-full p-5 bg-gray-50 rounded-2xl font-bold border outline-none">
+                        <input name="pass" type="password" placeholder="Senha" class="w-full p-5 bg-gray-50 rounded-2xl font-bold border outline-none">
                         <button class="btn-main mt-4 shadow-xl">Entrar</button>
                     </form>
                 </div>`;
                 return;
             }
 
-            let content = '';
-            if (window.state.tela === 'catalogo') content = renderCatalogo();
-            if (window.state.tela === 'notificacoes') content = renderPedidos();
-
-            root.innerHTML = `
-                <div class="pb-32">${content}</div>
+            let content = window.state.tela === 'catalogo' ? renderCatalogo() : renderPedidos();
+            root.innerHTML = `<div class="pb-32">${content}</div>
                 <nav class="nav-bottom">
-                    <button onclick="window.state.tela='catalogo';window.render()" class="nav-item ${window.state.tela==='catalogo'?'active':''}">Ovos</button>
+                    <button onclick="window.state.tela='catalogo';window.render()" class="nav-item ${window.state.tela==='catalogo'?'active':''}">Comprar</button>
                     <button onclick="window.state.tela='notificacoes';window.render()" class="nav-item ${window.state.tela==='notificacoes'?'active':''}">Meus Pedidos</button>
                     <button onclick="signOut(auth)" class="nav-item">Sair</button>
                 </nav>`;
         };
 
         function renderCatalogo() {
-            return `
-                <header class="p-6 border-b sticky top-0 bg-white z-40 flex justify-between items-center">
-                    <h1 class="text-2xl font-black text-rose-600 italic uppercase">AppEgg</h1>
-                    <span class="text-[10px] font-black bg-rose-50 text-rose-600 px-3 py-1 rounded-full">ALINE OVOS</span>
-                </header>
+            return `<header class="p-6 border-b sticky top-0 bg-white z-40 flex justify-between items-center"><div class="logo-text text-2xl">AppEgg</div></header>
                 <div class="p-4 grid grid-cols-2 gap-4">
-                    ${window.state.produtos.map(p => `
-                        <div class="p-4 bg-white border rounded-[30px] flex flex-col items-center shadow-sm">
-                            <img src="${p.foto_url}" class="h-20 mb-3">
-                            <h3 class="font-black text-[9px] uppercase text-center h-8">${p.nome}</h3>
-                            <p class="text-rose-600 font-black text-sm italic mb-4">R$ ${parseFloat(p.preco).toFixed(2)}</p>
-                            <button onclick="window.actions.add('${p.id}')" class="w-full bg-gray-900 text-white py-3 rounded-2xl text-[9px] font-black uppercase">Adicionar</button>
-                        </div>
-                    `).join('')}
+                    ${window.state.produtos.map(p => `<div class="p-4 bg-white border rounded-[32px] flex flex-col items-center shadow-sm">
+                        <img src="${p.foto_url}" class="h-20 mb-3 object-contain"><h3 class="font-black text-[10px] uppercase text-center h-8 leading-tight">${p.nome}</h3>
+                        <p class="text-rose-600 font-black text-sm mb-4">R$ ${parseFloat(p.preco).toFixed(2)}</p>
+                        <button onclick="window.actions.add('${p.id}')" class="w-full bg-gray-900 text-white py-3 rounded-2xl text-[9px] font-black uppercase">Adicionar</button>
+                    </div>`).join('')}
+                </div>`;
+        }
+
+        function renderTimeline(p) {
+            const formatTime = (ts) => ts ? (ts.toDate ? ts.toDate() : new Date(ts)).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "--:--";
+            return `
+                <div class="mt-4 border-t pt-4">
+                    <div class="timeline-step"><div class="absolute left-[-4px] timeline-dot"></div><p class="text-[9px] font-black uppercase text-gray-400">Pedido: <span class="text-gray-900">${formatTime(p.criadoEm)}</span></p></div>
+                    <div class="timeline-step"><div class="absolute left-[-4px] timeline-dot ${!p.horarioEmbalando ? 'bg-gray-100' : ''}"></div><p class="text-[9px] font-black uppercase text-gray-400">Embalando: <span class="text-gray-900">${formatTime(p.horarioEmbalando)}</span></p></div>
+                    <div class="timeline-step"><div class="absolute left-[-4px] timeline-dot ${!p.horarioSaiu ? 'bg-gray-100' : ''}"></div><p class="text-[9px] font-black uppercase text-gray-400">Logística: <span class="text-gray-900">${formatTime(p.horarioSaiu)}</span></p></div>
+                    <div class="timeline-step"><div class="absolute left-[-4px] timeline-dot ${!p.horarioConcluido ? 'bg-gray-100' : ''}"></div><p class="text-[9px] font-black uppercase text-gray-400">Finalizado: <span class="text-gray-900">${formatTime(p.horarioConcluido)}</span></p></div>
                 </div>`;
         }
 
         function renderPedidos() {
-            return `
-                <div class="p-6">
-                    <h2 class="text-3xl font-black uppercase italic mb-8">Meus Pedidos</h2>
-                    <div class="space-y-6">
-                        ${window.state.meusPedidos.map(p => `
-                            <div class="bg-white border-2 rounded-[32px] p-6 ${p.status === 'FINALIZADO' ? 'border-emerald-100' : 'border-gray-50'} shadow-sm">
-                                <div class="flex justify-between items-center mb-4">
-                                    <span class="text-[10px] font-black text-rose-600 uppercase italic tracking-widest">${p.status}</span>
-                                    <span class="text-[9px] font-bold text-gray-400">${p.criadoEm?.toDate().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
-                                </div>
-                                <p class="text-[11px] font-bold text-gray-800 leading-tight mb-4 uppercase italic">${p.produto}</p>
-                                <div class="flex justify-between items-end">
-                                    <div class="text-[9px] font-black text-gray-400 uppercase">Total: <span class="text-gray-900 text-lg">R$ ${(p.precoNoMomento||0).toFixed(2)}</span></div>
-                                </div>
-                            </div>
-                        `).join('') || '<p class="text-center font-black py-20 text-gray-300 italic uppercase">Nenhum pedido ainda</p>'}
-                    </div>
-                </div>`;
+            return `<div class="p-6"><h2 class="text-3xl font-black uppercase mb-8">Meus Pedidos</h2><div class="space-y-6">
+                ${window.state.meusPedidos.map(p => `<div class="bg-white border rounded-[32px] p-6 shadow-sm">
+                    <div class="flex justify-between items-center mb-2"><span class="text-[10px] font-black text-rose-600 uppercase tracking-widest">${p.status}</span><span class="text-lg font-black">R$ ${(p.precoNoMomento||0).toFixed(2)}</span></div>
+                    <p class="text-[11px] font-bold text-gray-800 leading-tight uppercase">${p.produto}</p>
+                    ${renderTimeline(p)}
+                </div>`).join('') || '<p class="text-center font-black py-20 text-gray-300 uppercase">Nenhum pedido</p>'}
+            </div></div>`;
         }
 
         window.actions = {
             login: async (e) => {
                 e.preventDefault();
-                try { await signInWithEmailAndPassword(auth, e.target.email.value, e.target.pass.value); } catch (err) { alert("Erro."); }
+                try { await signInWithEmailAndPassword(auth, e.target.email.value, e.target.pass.value); } catch (err) { alert("Erro ao entrar."); }
             },
             add: (id) => { 
                 const p = window.state.produtos.find(x => x.id == id);
                 addDoc(collection(db, "vendas_logs"), {
-                    clienteNome: "Thon Cliente",
-                    clienteWhatsapp: window.state.user.email,
-                    produto: p.nome,
-                    precoNoMomento: p.preco,
-                    pagamento: 'PIX (RETIRAR)',
-                    status: 'PENDENTE',
-                    criadoEm: serverTimestamp()
+                    clienteNome: "Thon Cliente", clienteWhatsapp: window.state.user.email,
+                    produto: p.nome, precoNoMomento: p.preco, pagamento: 'PIX (RETIRAR)',
+                    status: 'PENDENTE', criadoEm: serverTimestamp()
                 });
-                alert("🥚 Pedido feito com sucesso!");
+                alert("🥚 Pedido realizado com sucesso!");
                 window.state.tela = 'notificacoes';
                 window.render();
             }
