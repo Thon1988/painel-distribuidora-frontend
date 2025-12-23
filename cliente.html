@@ -3,19 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AppEgg | Loja Atacadista</title>
+    <title>AppEgg | Ovos Direto da Granja</title>
+    <link rel="manifest" href="manifest.json">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&display=swap');
-        body { font-family: 'Inter', sans-serif; background: #f3f4f6; }
-        .product-card { background: white; border-radius: 12px; border: 1px solid #e5e7eb; overflow: hidden; display: flex; flex-col: column; }
-        .btn-buy { background: #e11d48; color: white; border-radius: 6px; font-weight: 800; text-transform: uppercase; font-size: 11px; transition: all 0.2s; }
-        .btn-buy:active { transform: scale(0.95); }
-        .btn-off { background: #d1d5db; color: #9ca3af; cursor: not-allowed; }
-        .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 20px; }
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@900&family=Inter:wght@400;600;800&display=swap');
+        body { font-family: 'Inter', sans-serif; background: #fff; }
+        .font-title { font-family: 'Montserrat', sans-serif; }
+        .product-card { border-radius: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.03); border: 1px solid #f3f4f6; }
+        .btn-gradient { background: linear-gradient(90deg, #e11d48 0%, #fb7185 100%); }
+        .tag { position: absolute; top: 15px; left: 15px; padding: 4px 10px; border-radius: 99px; font-size: 8px; font-weight: 900; text-transform: uppercase; }
+        .tag-fitness { background: #dcfce7; color: #166534; }
+        .tag-bolos { background: #fef9c3; color: #854d0e; }
     </style>
 </head>
-<body class="pb-10">
+<body class="pb-24">
     <div id="app-root"></div>
 
     <script type="module">
@@ -30,117 +32,104 @@
             messagingSenderId: "92187548716",
             appId: "1:92187548716:web:d61d18a29aa76aead7c589"
         };
-
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const API_BASE = "https://painel-distribuidora-backend.onrender.com/api";
 
         window.state = { 
             produtos: [], 
+            cliente: JSON.parse(localStorage.getItem('appegg_user')),
             checkoutItem: null,
-            cliente: JSON.parse(localStorage.getItem('appegg_user')) || { nome: "Thon Cliente", email: "thon@cliente.com" }
+            tipoCompra: 'unica',
+            frequencia: 'semanal'
         };
 
         window.actions = {
-            load: async () => {
-                try {
-                    const res = await fetch(`${API_BASE}/produtos`);
-                    window.state.produtos = await res.json();
-                    window.render();
-                } catch (e) {
-                    console.error("Erro ao carregar loja:", e);
-                    // Fallback para não ficar em branco
-                    window.render();
-                }
-            },
-            abrirCheckout: (p) => {
-                if(p.quantidade <= 0) return alert("⚠️ Este item está esgotado no momento.");
-                window.state.checkoutItem = p;
+            login: (e) => {
+                e.preventDefault();
+                const user = { nome: e.target.nome.value, whatsapp: e.target.whatsapp.value };
+                localStorage.setItem('appegg_user', JSON.stringify(user));
+                window.state.cliente = user;
                 window.render();
             },
-            finalizarPedido: async (metodo) => {
+            finalizar: async (metodo) => {
                 const p = window.state.checkoutItem;
-                try {
-                    await addDoc(collection(db, "vendas_logs"), {
-                        clienteNome: window.state.cliente.nome,
-                        clienteEmail: window.state.cliente.email,
-                        produtoNome: p.nome,
-                        precoNoMomento: p.preco,
-                        quantidade: 1,
-                        metodoPagamento: metodo,
-                        status: "PENDENTE",
-                        criadoEm: serverTimestamp()
-                    });
-                    alert("🚀 Pedido realizado com sucesso via " + metodo);
-                    window.state.checkoutItem = null;
-                    window.actions.load();
-                } catch (err) {
-                    alert("Erro ao processar pedido. Tente novamente.");
-                }
+                await addDoc(collection(db, "vendas_logs"), {
+                    clienteNome: window.state.cliente.nome,
+                    clienteWhatsapp: window.state.cliente.whatsapp,
+                    produto: p.nome,
+                    precoNoMomento: p.preco,
+                    tipo: window.state.tipoCompra,
+                    frequencia: window.state.tipoCompra === 'assinatura' ? window.state.frequencia : 'N/A',
+                    pagamento: metodo,
+                    status: 'PENDENTE',
+                    criadoEm: serverTimestamp()
+                });
+                alert("🛒 Pedido Enviado com Sucesso!");
+                window.state.checkoutItem = null;
+                window.render();
             }
         };
 
         window.render = () => {
             const root = document.getElementById('app-root');
+            if(!window.state.cliente) {
+                root.innerHTML = `
+                    <div class="h-screen flex flex-col justify-center p-10">
+                        <h1 class="font-title text-4xl text-rose-600 mb-8 italic text-center">AppEgg</h1>
+                        <form onsubmit="window.actions.login(event)" class="space-y-4">
+                            <input name="nome" placeholder="Seu Nome Completo" class="w-full p-4 border rounded-2xl font-bold" required>
+                            <input name="whatsapp" placeholder="WhatsApp (Apenas números)" class="w-full p-4 border rounded-2xl font-bold" required>
+                            <button class="w-full py-4 btn-gradient text-white rounded-2xl font-black uppercase shadow-lg">Entrar</button>
+                        </form>
+                    </div>
+                `;
+                return;
+            }
+
             root.innerHTML = `
-                <header class="bg-white p-4 border-b sticky top-0 z-50 flex justify-between items-center shadow-md">
-                    <h1 class="font-black text-rose-600 italic text-2xl tracking-tighter uppercase">AppEgg</h1>
-                    <div class="text-[10px] font-bold text-gray-400 uppercase">Loja Aberta</div>
+                <header class="p-6 flex justify-between items-center">
+                    <h1 class="font-title text-2xl text-rose-600 italic uppercase">AppEgg</h1>
+                    <div class="bg-gray-100 p-2 rounded-full px-4 text-[10px] font-black uppercase">Olá, ${window.state.cliente.nome.split(' ')[0]}</div>
                 </header>
 
-                <main class="p-4 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-6xl mx-auto">
-                    ${window.state.produtos.length === 0 ? '<div class="col-span-full text-center py-20 text-gray-400 font-bold uppercase tracking-widest text-xs">Carregando estoque do AppEgg...</div>' : ''}
-                    
+                <div class="px-6 grid gap-8">
                     ${window.state.produtos.map(p => `
-                        <div class="product-card p-3 flex flex-col ${p.quantidade <= 0 ? 'opacity-50' : ''}">
-                            <div class="relative">
-                                <img src="${p.foto_url || 'https://images.unsplash.com/photo-1582722872445-44ad5c789d75?w=200'}" 
-                                     class="w-full h-32 object-contain mb-2 rounded-lg"
-                                     onerror="this.src='https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=200'">
-                                ${p.quantidade <= 0 ? '<span class="absolute top-2 left-2 bg-red-600 text-white text-[8px] font-black px-2 py-1 rounded uppercase">Esgotado</span>' : ''}
+                        <div class="product-card flex flex-col relative overflow-hidden bg-white">
+                            <div class="h-48 bg-gray-50 flex items-center justify-center p-6">
+                                <img src="${p.foto_url}" class="max-h-full object-contain drop-shadow-xl">
+                                <span class="tag ${p.nome.includes('Branco') ? 'tag-bolos' : 'tag-fitness'}">${p.nome.includes('Branco') ? 'Bolos & Massas' : 'Saúde & Fitness'}</span>
                             </div>
-                            <h3 class="text-[11px] font-bold text-gray-800 uppercase h-8 line-clamp-2 leading-tight mt-2">${p.nome}</h3>
-                            <div class="mt-4">
-                                <p class="text-[9px] text-gray-400 font-bold uppercase tracking-tighter">Por ${p.tipo_estoque}:</p>
-                                <p class="text-xl font-extrabold text-rose-600 leading-none mb-4">R$ ${parseFloat(p.preco).toFixed(2)}</p>
-                                <button onclick='window.actions.abrirCheckout(${JSON.stringify(p)})' 
-                                        class="w-full py-3 btn-buy ${p.quantidade <= 0 ? 'btn-off' : ''}">
-                                    ${p.quantidade <= 0 ? 'Indisponível' : 'Comprar'}
-                                </button>
+                            <div class="p-5">
+                                <h3 class="font-black text-gray-800 uppercase text-lg leading-tight mb-4">${p.nome}</h3>
+                                <div class="flex justify-between items-end">
+                                    <div><p class="text-[10px] text-gray-400 font-black">PREÇO CAIXA</p><p class="text-2xl font-black text-rose-600">R$ ${p.preco.toFixed(2)}</p></div>
+                                    <button onclick='window.state.checkoutItem=${JSON.stringify(p)}; window.render()' class="btn-gradient text-white px-6 py-3 rounded-2xl font-black text-[10px] uppercase shadow-lg shadow-rose-200">Comprar</button>
+                                </div>
                             </div>
                         </div>
                     `).join('')}
-                </main>
+                </div>
 
                 ${window.state.checkoutItem ? `
-                    <div class="modal-bg">
-                        <div class="bg-white p-6 rounded-2xl w-full max-w-sm shadow-2xl animate-bounce-short">
-                            <div class="text-center mb-6">
-                                <h2 class="font-black text-gray-800 uppercase italic text-xl">Pagamento</h2>
-                                <p class="text-xs text-gray-400 font-bold uppercase">Selecione como deseja pagar</p>
+                    <div class="fixed inset-0 bg-black/60 flex items-end z-50">
+                        <div class="bg-white w-full rounded-t-[40px] p-8 animate-slide-up">
+                            <h2 class="text-xl font-black text-center mb-6 uppercase">${window.state.checkoutItem.nome}</h2>
+                            <div class="flex gap-2 mb-6 text-[10px] font-black">
+                                <button onclick="window.state.tipoCompra='unica'; window.render()" class="flex-1 py-3 border-2 rounded-xl ${window.state.tipoCompra==='unica'?'border-rose-600 text-rose-600 bg-rose-50':'border-gray-100'}">COMPRA ÚNICA</button>
+                                <button onclick="window.state.tipoCompra='assinatura'; window.render()" class="flex-1 py-3 border-2 rounded-xl ${window.state.tipoCompra==='assinatura'?'border-rose-600 text-rose-600 bg-rose-50':'border-gray-100'}">CLUBE (PROGRAMAR)</button>
                             </div>
-                            <div class="space-y-3">
-                                <button onclick="window.actions.finalizarPedido('PIX')" class="w-full p-4 border-2 border-gray-100 rounded-xl font-bold flex justify-between items-center hover:border-rose-200 transition-all">
-                                    <span>💎 PIX</span>
-                                    <span class="text-green-500 text-[10px] font-black bg-green-50 px-2 py-1 rounded italic">10% OFF</span>
-                                </button>
-                                <button onclick="window.actions.finalizarPedido('CARTÃO CRÉDITO')" class="w-full p-4 border-2 border-gray-100 rounded-xl font-bold flex justify-between items-center hover:border-rose-200">
-                                    <span>💳 CRÉDITO</span>
-                                    <span class="text-[9px] text-gray-300 uppercase">Até 3x</span>
-                                </button>
-                                <button onclick="window.actions.finalizarPedido('CARTÃO DÉBITO')" class="w-full p-4 border-2 border-gray-100 rounded-xl font-bold flex justify-between items-center hover:border-rose-200">
-                                    <span>💵 DÉBITO</span>
-                                </button>
-                                <button onclick="window.state.checkoutItem=null; window.render()" class="w-full py-4 text-xs font-bold text-gray-300 uppercase mt-4">Voltar para a loja</button>
+                            <div class="grid gap-2">
+                                <button onclick="window.actions.finalizar('PIX')" class="w-full py-4 bg-black text-white rounded-2xl font-black uppercase text-xs">Pagar com PIX</button>
+                                <button onclick="window.actions.finalizar('CARTÃO')" class="w-full py-4 bg-gray-100 text-gray-800 rounded-2xl font-black uppercase text-xs">Cartão de Crédito</button>
+                                <button onclick="window.state.checkoutItem=null; window.render()" class="w-full py-2 text-gray-300 font-bold text-[10px] uppercase mt-2">Cancelar</button>
                             </div>
                         </div>
                     </div>
                 ` : ''}
             `;
         };
-
-        // Inicialização Garantida
-        window.actions.load();
+        fetch(`${API_BASE}/produtos`).then(r => r.json()).then(d => { window.state.produtos = d; window.render(); });
     </script>
 </body>
 </html>

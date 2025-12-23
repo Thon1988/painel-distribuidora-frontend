@@ -3,20 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AppEgg Admin | Gestão de Estoque</title>
+    <title>AppEgg Admin | Gestão de Distribuição</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&display=swap');
-        body { font-family: 'Inter', sans-serif; background: #f9fafb; }
-        .nav-active { color: #e11d48; border-bottom: 2px solid #e11d48; }
-        .card { background: white; border: 1px solid #e5e7eb; border-radius: 12px; }
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&family=Inter:wght@400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background: #f8fafc; color: #1e293b; }
+        .font-title { font-family: 'Montserrat', sans-serif; }
+        .nav-link { font-size: 10px; font-weight: 800; text-transform: uppercase; color: #94a3b8; padding: 10px 5px; border-bottom: 3px solid transparent; }
+        .nav-link.active { color: #e11d48; border-bottom-color: #e11d48; }
+        .card { background: white; border: 1px solid #e2e8f0; border-radius: 16px; }
+        .status-badge { padding: 4px 8px; border-radius: 99px; font-size: 9px; font-weight: 900; text-transform: uppercase; }
+        .status-pendente { background: #fef9c3; color: #854d0e; }
+        .status-finalizado { background: #dcfce7; color: #166534; }
     </style>
 </head>
 <body class="pb-10">
     <div id="app-root"></div>
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, query, orderBy, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, query, orderBy, doc, updateDoc, deleteDoc, addDoc } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyD3Otz9-zdZH-E5Feg9IOGWPzVycoe8gro",
@@ -30,137 +37,125 @@
         const db = getFirestore(app);
         const API_BASE = "https://painel-distribuidora-backend.onrender.com/api";
 
-        window.state = { view: 'estoque', produtos: [], pedidos: [], editingId: null };
-
-        // LISTA QUE VOCÊ ENVIOU
-        const NOVOS_OVOS = [
-            { nome: "Ovo Branco Extra (30 un)", foto: "https://static.paodeacucar.com/img/uploads/1/582/24016582.jpg", tipo: "Caixa" },
-            { nome: "Ovo Branco Grande (20 un)", foto: "https://despensa.com.br/media/catalog/product/o/v/ovo-branco-grande-cartela-com-20-unidades.jpg", tipo: "Cartela" },
-            { nome: "Ovo Branco Jumbo", foto: "https://zonasul.vtexassets.com/arquivos/ids/3013239/Ovo-Branco-Jumbo-Galinha-Caixa-30-unidades.jpg", tipo: "Caixa" },
-            { nome: "Ovo Vermelho Extra", foto: "https://static.paodeacucar.com/img/uploads/1/653/24021653.jpg", tipo: "Caixa" },
-            { nome: "Ovo Vermelho Caipira", foto: "https://static.paodeacucar.com/img/uploads/1/256/20333256.jpg", tipo: "Caixa" },
-            { nome: "Ovo de Codorna (30 un)", foto: "https://static.paodeacucar.com/img/uploads/1/962/24016962.jpg", tipo: "Cartela" },
-            { nome: "Ovo Caipira Mantiqueira", foto: "https://static.paodeacucar.com/img/uploads/1/214/23308214.jpg", tipo: "Caixa" }
-        ];
+        window.state = { view: 'pedidos', produtos: [], logs: [], editingId: null };
 
         window.actions = {
-            load: async () => {
+            loadProdutos: async () => {
                 const res = await fetch(`${API_BASE}/produtos`);
                 window.state.produtos = await res.json();
                 window.render();
             },
-            sincronizar: async () => {
-                if(!confirm("Deseja adicionar os 7 tipos de ovos com 10 unidades cada?")) return;
-                for(const ovo of NOVOS_OVOS) {
-                    await fetch(`${API_BASE}/produtos`, {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({
-                            nome: ovo.nome,
-                            preco: 0, // Você edita o preço depois
-                            quantidade: 10,
-                            tipo_estoque: ovo.tipo,
-                            foto_url: ovo.foto
-                        })
-                    });
-                }
-                alert("Ovos adicionados! Agora basta editar os preços.");
-                window.actions.load();
+            mudarStatus: async (id, status) => {
+                await updateDoc(doc(db, "vendas_logs", id), { status });
             },
-            salvar: async (e) => {
-                e.preventDefault();
-                const f = new FormData(e.target);
-                const dados = {
-                    nome: f.get('nome'),
-                    preco: parseFloat(f.get('preco')),
-                    quantidade: parseInt(f.get('quantidade')),
-                    tipo_estoque: f.get('tipo_estoque'),
-                    foto_url: f.get('foto_url')
-                };
-                const method = window.state.editingId ? 'PUT' : 'POST';
-                const url = window.state.editingId ? `${API_BASE}/produtos/${window.state.editingId}` : `${API_BASE}/produtos`;
-                await fetch(url, { method, headers: {'Content-Type': 'application/json'}, body: JSON.stringify(dados) });
-                window.state.editingId = null;
-                e.target.reset();
-                window.actions.load();
+            deleteLog: async (id) => {
+                if(confirm("Excluir permanentemente?")) await deleteDoc(doc(db, "vendas_logs", id));
             },
-            prepararEdicao: (p) => {
-                window.state.editingId = p.id;
-                const f = document.getElementById('form-p');
-                f.nome.value = p.nome; f.preco.value = p.preco; f.quantidade.value = p.quantidade;
-                f.tipo_estoque.value = p.tipo_estoque; f.foto_url.value = p.foto_url;
-                window.scrollTo(0,0);
+            gerarPDF: (p) => {
+                const { jsPDF } = window.jspdf;
+                const docPdf = new jsPDF();
+                docPdf.setFillColor(225, 29, 72);
+                docPdf.rect(0, 0, 210, 40, 'F');
+                docPdf.setTextColor(255, 255, 255);
+                docPdf.setFontSize(22);
+                docPdf.text("AppEgg - Recibo de Venda", 20, 25);
+                docPdf.setTextColor(0,0,0);
+                docPdf.setFontSize(12);
+                docPdf.text(`Cliente: ${p.clienteNome}`, 20, 60);
+                docPdf.text(`Produto: ${p.produto}`, 20, 70);
+                docPdf.text(`Pagamento: ${p.pagamento}`, 20, 80);
+                docPdf.text(`Total: R$ ${parseFloat(p.precoNoMomento || 0).toFixed(2)}`, 20, 90);
+                docPdf.save(`recibo-${p.clienteNome}.pdf`);
             },
-            excluir: async (id) => { if(confirm("Excluir?")) { await fetch(`${API_BASE}/produtos/${id}`, {method:'DELETE'}); window.actions.load(); } },
-            limparPedido: async (id) => { if(confirm("Remover pedido?")) await deleteDoc(doc(db, "vendas_logs", id)); }
+            gerarRoteiroEntregas: () => {
+                const { jsPDF } = window.jspdf;
+                const docPdf = new jsPDF();
+                const pendentes = window.state.logs.filter(l => l.status !== 'FINALIZADO');
+                docPdf.text("AppEgg | Roteiro de Entregas", 20, 20);
+                let y = 40;
+                pendentes.forEach(p => {
+                    docPdf.text(`${p.clienteNome} - ${p.produto} - ${p.clienteWhatsapp}`, 20, y);
+                    y += 10;
+                });
+                docPdf.save("roteiro-entregas.pdf");
+            }
         };
 
         onSnapshot(query(collection(db, "vendas_logs"), orderBy("criadoEm", "desc")), (snap) => {
-            window.state.pedidos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            window.state.logs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
             window.render();
         });
 
         window.render = () => {
             const root = document.getElementById('app-root');
+            const pedidosUnicos = window.state.logs.filter(l => l.tipo !== 'assinatura');
+            const assinaturas = window.state.logs.filter(l => l.tipo === 'assinatura');
+            
+            const clientesMap = {};
+            window.state.logs.forEach(l => {
+                if (!clientesMap[l.clienteWhatsapp]) clientesMap[l.clienteWhatsapp] = { ...l, total: 0 };
+                clientesMap[l.clienteWhatsapp].total++;
+            });
+
             root.innerHTML = `
-                <nav class="bg-white border-b p-4 mb-6 flex justify-between items-center sticky top-0 z-50">
-                    <h1 class="font-black text-rose-600 italic text-xl">AppEgg Admin</h1>
-                    <div class="flex gap-4 items-center">
-                        <button onclick="window.state.view='estoque';window.render()" class="text-[10px] font-bold uppercase ${window.state.view==='estoque'?'nav-active':''}">Estoque</button>
-                        <button onclick="window.state.view='clientes';window.render()" class="text-[10px] font-bold uppercase ${window.state.view==='clientes'?'nav-active':''}">Pedidos</button>
-                        <button onclick="window.actions.sincronizar()" class="bg-black text-white px-3 py-1 rounded text-[9px] font-bold uppercase">Sincronizar Fotos</button>
+                <nav class="bg-white border-b px-6 sticky top-0 z-50">
+                    <div class="max-w-6xl mx-auto flex justify-between items-center h-20">
+                        <h1 class="font-title font-900 text-rose-600 italic text-2xl tracking-tighter uppercase">AppEgg</h1>
+                        <div class="flex gap-4">
+                            <button onclick="window.state.view='pedidos';window.render()" class="nav-link ${window.state.view==='pedidos'?'active':''}">Pedidos</button>
+                            <button onclick="window.state.view='assinaturas';window.render()" class="nav-link ${window.state.view==='assinaturas'?'active':''}">Clube</button>
+                            <button onclick="window.state.view='clientes';window.render()" class="nav-link ${window.state.view==='clientes'?'active':''}">Clientes</button>
+                        </div>
                     </div>
                 </nav>
-
-                <main class="max-w-5xl mx-auto px-4">
-                    ${window.state.view === 'estoque' ? `
-                        <div class="card p-6 mb-8 border-t-4 border-t-rose-600 shadow-md">
-                            <form id="form-p" onsubmit="window.actions.salvar(event)" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                <input name="nome" placeholder="Nome do Ovo" class="p-3 border rounded-lg font-bold" required>
-                                <input name="preco" type="number" step="0.01" placeholder="Preço R$" class="p-3 border rounded-lg font-bold" required>
-                                <select name="tipo_estoque" class="p-3 border rounded-lg font-bold">
-                                    <option>Caixa</option><option>Cartela</option><option>Dúzia</option>
-                                </select>
-                                <input name="quantidade" type="number" placeholder="Estoque" class="p-3 border rounded-lg font-bold" required>
-                                <input name="foto_url" placeholder="Link da Foto" class="p-3 border rounded-lg font-bold lg:col-span-2">
-                                <button class="bg-rose-600 text-white font-black py-3 rounded-lg uppercase text-sm lg:col-span-3">Salvar Alterações</button>
-                            </form>
+                <main class="max-w-6xl mx-auto p-6">
+                    ${window.state.view === 'pedidos' ? `
+                        <div class="flex justify-between mb-6">
+                            <h2 class="font-title font-900 uppercase">Entregas Pendentes</h2>
+                            <button onclick="window.actions.gerarRoteiroEntregas()" class="bg-black text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase">Imprimir Roteiro</button>
                         </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            ${window.state.produtos.map(p => `
-                                <div class="card p-4 flex justify-between items-center">
-                                    <div class="flex items-center gap-4">
-                                        <img src="${p.foto_url}" class="w-16 h-16 object-contain rounded border bg-white" onerror="this.src='https://via.placeholder.com/150'">
-                                        <div>
-                                            <p class="font-bold text-gray-800 text-sm">${p.nome}</p>
-                                            <p class="text-[10px] font-bold text-rose-500 uppercase">R$ ${parseFloat(p.preco).toFixed(2)} | Qtd: ${p.quantidade}</p>
-                                        </div>
+                        <div class="grid gap-4">
+                            ${pedidosUnicos.map(p => `
+                                <div class="card p-5 border-l-4 ${p.status === 'FINALIZADO' ? 'border-green-500' : 'border-rose-500'} flex justify-between items-center">
+                                    <div>
+                                        <span class="status-badge ${p.status === 'FINALIZADO' ? 'status-finalizado' : 'status-pendente'}">${p.status || 'PENDENTE'}</span>
+                                        <h3 class="font-bold text-gray-800 mt-1">${p.clienteNome}</h3>
+                                        <p class="text-xs text-rose-500 font-black">${p.produto}</p>
                                     </div>
                                     <div class="flex gap-2">
-                                        <button onclick='window.actions.prepararEdicao(${JSON.stringify(p)})' class="bg-gray-100 p-2 rounded text-[10px] font-bold">EDITAR</button>
-                                        <button onclick="window.actions.excluir('${p.id}')" class="text-red-500 font-bold text-[10px]">X</button>
+                                        <button onclick='window.actions.gerarPDF(${JSON.stringify(p)})' class="bg-blue-100 text-blue-600 p-2 rounded-lg text-[10px] font-bold">PDF</button>
+                                        <a href="https://wa.me/55${p.clienteWhatsapp}" target="_blank" class="bg-green-100 text-green-600 p-2 rounded-lg text-[10px] font-bold">ZAP</a>
+                                        ${p.status !== 'FINALIZADO' ? `<button onclick="window.actions.mudarStatus('${p.id}', 'FINALIZADO')" class="bg-rose-600 text-white p-2 rounded-lg text-[10px] font-bold uppercase">Entregue</button>` : ''}
                                     </div>
                                 </div>
                             `).join('')}
                         </div>
-                    ` : `
-                        <div class="grid gap-4">
-                            ${window.state.pedidos.map(o => `
-                                <div class="card p-4 border-l-4 border-rose-600">
-                                    <div class="flex justify-between">
-                                        <h3 class="font-black text-gray-800 uppercase text-xs">${o.clienteNome}</h3>
-                                        <span class="text-[9px] font-bold bg-gray-100 px-2 py-1 rounded uppercase">${o.metodoPagamento}</span>
-                                    </div>
-                                    <p class="text-xs font-bold text-rose-600 mt-2">${o.quantidade}x ${o.produtoNome}</p>
-                                    <button onclick="window.actions.limparPedido('${o.id}')" class="text-[9px] text-gray-300 mt-2 uppercase font-bold">Limpar</button>
-                                </div>
-                            `).join('')}
+                    ` : ''}
+
+                    ${window.state.view === 'clientes' ? `
+                        <h2 class="font-title font-900 uppercase mb-6">Meus Clientes</h2>
+                        <div class="card overflow-hidden">
+                            <table class="w-full text-left">
+                                <thead class="bg-gray-50 text-[10px] font-black text-gray-400 uppercase">
+                                    <tr><th class="p-4">Nome</th><th class="p-4">WhatsApp</th><th class="p-4">Pedidos</th><th class="p-4">Ação</th></tr>
+                                </thead>
+                                <tbody>
+                                    ${Object.values(clientesMap).map(c => `
+                                        <tr class="border-t">
+                                            <td class="p-4 font-bold text-sm">${c.clienteNome}</td>
+                                            <td class="p-4 text-xs font-bold">${c.clienteWhatsapp}</td>
+                                            <td class="p-4 font-black text-rose-500">${c.total}</td>
+                                            <td class="p-4"><a href="https://wa.me/55${c.clienteWhatsapp}" target="_blank" class="text-green-600 font-bold text-[10px] uppercase">Chamar</a></td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
                         </div>
-                    `}
+                    ` : ''}
                 </main>
             `;
         };
-        window.actions.load();
+        window.actions.loadProdutos();
     </script>
 </body>
 </html>

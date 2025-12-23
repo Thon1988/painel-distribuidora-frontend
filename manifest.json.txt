@@ -1,0 +1,15 @@
+{
+  "name": "AppEgg - Ovos Direto da Granja",
+  "short_name": "AppEgg",
+  "start_url": "cliente.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#e11d48",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/2950/2950854.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
