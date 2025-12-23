@@ -20,7 +20,6 @@
 </head>
 <body>
     <div id="app"></div>
-
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
         import { getFirestore, collection, addDoc, onSnapshot, query, where, orderBy, serverTimestamp, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
@@ -45,8 +44,8 @@
             state.user = u;
             if(u) {
                 const d = await getDoc(doc(db, 'config', 'loja'));
-                state.config = d.data() || {};
-                await carregarProdutos();
+                if(d.exists()) state.config = d.data();
+                carregarProdutos();
                 monitorarPedidos();
             }
             render();
@@ -57,7 +56,7 @@
                 const r = await fetch("https://painel-distribuidora-backend.onrender.com/api/produtos");
                 state.produtos = await r.json();
                 render();
-            } catch(e) { console.error("Erro catálogo", e); }
+            } catch(e) { console.error(e); }
         }
 
         function monitorarPedidos() {
@@ -72,49 +71,42 @@
                 app.innerHTML = `<div class="p-10 text-center mt-20"><div class="logo text-5xl mb-12">AppEgg</div><form onsubmit="login(event)" class="space-y-4"><input name="email" type="email" placeholder="E-mail" class="w-full p-4 rounded-2xl bg-gray-100 font-bold border-none outline-none"><input name="senha" type="password" placeholder="Senha" class="w-full p-4 rounded-2xl bg-gray-100 font-bold border-none outline-none"><button class="w-full p-4 bg-rose-600 text-white rounded-2xl font-black uppercase">Entrar</button></form></div>`;
                 return;
             }
-            app.innerHTML = `
-                <div class="pb-32 px-5 pt-10">
-                    ${state.tela==='catalogo' ? renderCatalogo() : renderPedidos()}
-                </div>
+            app.innerHTML = `<div class="pb-32 px-5 pt-10">${state.tela==='catalogo' ? renderCatalogo() : renderPedidos()}</div>
                 ${state.comprando ? renderModal() : ''}
                 <nav class="nav-bottom">
                     <button onclick="nav('catalogo')" class="nav-item ${state.tela==='catalogo'?'active':''}">🥚<br>Comprar</button>
                     <button onclick="nav('pedidos')" class="nav-item ${state.tela==='pedidos'?'active':''}">📦<br>Pedidos</button>
                     <button onclick="logout()" class="nav-item">🚪<br>Sair</button>
                 </nav>`;
-        }
+        };
 
         function renderCatalogo() {
-            return `<h1 class="logo text-3xl mb-8">AppEgg</h1>
+            return `<h1 class="logo text-3xl mb-8 text-center">AppEgg</h1>
                 <div class="grid grid-cols-2 gap-4">
-                    ${state.produtos.length > 0 ? state.produtos.map(p => `
-                        <div class="card text-center bg-white shadow-sm border-gray-100">
-                            <img src="${p.foto_url}" class="h-20 mx-auto mb-3 object-contain">
-                            <p class="font-black text-[10px] uppercase h-8 leading-tight mb-2">${p.nome}</p>
-                            <button onclick="abrirCompra(${JSON.stringify(p).replace(/"/g,'&quot;')})" class="w-full bg-rose-600 text-white py-2 rounded-xl text-[10px] font-black uppercase">Pedir</button>
-                        </div>`).join('') : '<p class="col-span-2 text-center text-gray-400 py-10">Carregando catálogo...</p>'}
-                </div>`;
+                ${state.produtos.map(p => `
+                <div class="card text-center bg-white">
+                    <img src="${p.foto_url}" class="h-20 mx-auto mb-3 object-contain">
+                    <p class="font-black text-[10px] uppercase mb-2 h-8 leading-tight">${p.nome}</p>
+                    <button onclick="abrirCompra(${JSON.stringify(p).replace(/"/g,'&quot;')})" class="w-full bg-rose-600 text-white py-2 rounded-xl text-[9px] font-black uppercase">Pedir</button>
+                </div>`).join('') || '<p class="col-span-2 text-center py-20 text-gray-400 font-bold uppercase text-xs">Carregando ovos...</p>'}</div>`;
         }
 
         function renderModal() {
-            const p = state.comprando;
             return `<div class="modal"><div class="modal-content">
                 <h3 class="text-xl font-black uppercase italic mb-6">Finalizar Pedido</h3>
                 <form onsubmit="finalizarPedido(event)" class="space-y-4">
-                    <p class="text-[10px] font-black uppercase text-gray-400">Plano de Entrega</p>
-                    <select name="frequencia" class="w-full p-4 bg-gray-100 rounded-2xl font-bold border-none outline-none">
-                        <option value="AVULSA">Compra Única (Avulsa)</option>
+                    <select name="frequencia" class="w-full p-4 bg-gray-100 rounded-2xl font-bold outline-none border-none">
+                        <option value="AVULSA">Compra Avulsa</option>
                         <option value="SEMANAL">Plano Semanal</option>
                         <option value="QUINZENAL">Plano Quinzenal</option>
                         <option value="MENSAL">Plano Mensal</option>
                     </select>
-                    <p class="text-[10px] font-black uppercase text-gray-400">Forma de Recebimento</p>
-                    <select name="pagamento" class="w-full p-4 bg-gray-100 rounded-2xl font-bold border-none outline-none">
-                        <option value="PIX NA RETIRADA">PIX na Retirada</option>
+                    <select name="pagamento" class="w-full p-4 bg-gray-100 rounded-2xl font-bold outline-none border-none">
                         <option value="PIX NA ENTREGA">PIX na Entrega</option>
-                        <option value="DINHEIRO NA RETIRADA">Dinheiro na Retirada</option>
+                        <option value="PIX NA RETIRADA">PIX na Retirada</option>
+                        <option value="DINHEIRO">Dinheiro</option>
                     </select>
-                    <button class="w-full bg-rose-600 text-white py-5 rounded-2xl font-black uppercase mt-4">Confirmar Pedido</button>
+                    <button class="w-full bg-rose-600 text-white py-5 rounded-2xl font-black uppercase mt-4">Confirmar</button>
                     <button type="button" onclick="state.comprando=null;render()" class="w-full text-gray-400 font-bold text-xs uppercase py-2">Cancelar</button>
                 </form>
             </div></div>`;
@@ -123,21 +115,20 @@
         function renderPedidos() {
             return `<h2 class="text-2xl font-black mb-6 italic uppercase">Meus Pedidos</h2>
                 ${state.pedidos.map(p => `
-                    <div class="card bg-white">
-                        <div class="flex justify-between mb-2"><span class="font-black text-rose-600 text-[9px] uppercase italic">${p.status}</span><span class="font-black text-xs">R$ ${p.precoNoMomento?.toFixed(2)}</span></div>
-                        <p class="font-black text-[11px] uppercase">${p.produto}</p>
-                        <p class="text-[9px] font-bold text-gray-400 uppercase mt-1">Plano: ${p.frequencia || 'AVULSA'}</p>
-                        ${p.status === 'PENDENTE' && state.config.pixChave ? `<div class="mt-3 p-3 bg-blue-50 rounded-xl text-[9px] font-bold text-blue-600">PIX: ${state.config.pixChave}</div>` : ''}
-                    </div>`).join('') || '<p class="text-gray-400 font-bold uppercase text-center mt-20 text-xs">Nenhum pedido</p>'}';
+                <div class="card bg-white">
+                    <div class="flex justify-between mb-2"><span class="font-black text-rose-600 text-[9px] uppercase italic">${p.status}</span><span class="font-black text-xs">R$ ${p.precoNoMomento?.toFixed(2)}</span></div>
+                    <p class="font-black text-[11px] uppercase">${p.produto}</p>
+                    <p class="text-[9px] font-bold text-gray-400 uppercase">Plano: ${p.frequencia || 'AVULSA'}</p>
+                    ${p.status === 'PENDENTE' && state.config.pixChave ? `<div class="mt-3 p-3 bg-blue-50 rounded-xl text-[9px] font-bold text-blue-600">PIX: ${state.config.pixChave}</div>` : ''}
+                </div>`).join('') || '<p class="text-center py-20 text-gray-400 font-black uppercase text-[10px]">Sem pedidos</p>'}';
         }
 
-        window.nav = t => { state.tela = t; render(); };
-        window.abrirCompra = p => { state.comprando = p; render(); };
-        window.login = async e => { e.preventDefault(); await signInWithEmailAndPassword(auth, e.target.email.value, e.target.senha.value); };
-        window.logout = () => signOut(auth);
-        window.finalizarPedido = async e => {
-            e.preventDefault();
-            const f = new FormData(e.target);
+        window.nav=t=>{ state.tela=t; render(); };
+        window.abrirCompra=p=>{ state.comprando=p; render(); };
+        window.login=async e=>{ e.preventDefault(); await signInWithEmailAndPassword(auth,e.target.email.value,e.target.senha.value); };
+        window.logout=()=>signOut(auth);
+        window.finalizarPedido=async e=>{
+            e.preventDefault(); const f=new FormData(e.target);
             await addDoc(collection(db,"vendas_logs"), {
                 clienteNome: state.user.email.split('@')[0].toUpperCase(),
                 clienteWhatsapp: state.user.email,
@@ -145,7 +136,7 @@
                 pagamento: f.get('pagamento'), frequencia: f.get('frequencia'),
                 status: "PENDENTE", criadoEm: serverTimestamp()
             });
-            state.comprando = null; state.tela = 'pedidos'; render();
+            state.comprando=null; state.tela='pedidos'; render();
         };
     </script>
 </body>
