@@ -1,182 +1,187 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-br">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AppEgg • Admin</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700;900&display=swap" rel="stylesheet">
+    <title>AppEgg - Admin</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        body { font-family:'DM Sans',sans-serif; background:#f4f4f5; display: flex; justify-content: center; }
-        #app { width: 100%; max-width: 450px; background: #f9fafb; min-height: 100vh; position: relative; box-shadow: 0 0 50px rgba(0,0,0,0.05); }
-        .card { background:#fff; border-radius:28px; padding:24px; margin-bottom: 16px; border: 1px solid #eee; }
-        .nav { background:#fff; border-bottom:1px solid #eee; position:sticky; top:0; z-index:50; display: flex; justify-content: space-around; align-items: center; height: 70px; }
-        .nav button { font-size:9px; font-weight:900; text-transform:uppercase; color:#9ca3af; }
-        .nav button.active { color:#e11d48; }
-        .btn-filtro { padding: 8px 12px; border-radius: 12px; font-size: 9px; font-weight: 900; text-transform: uppercase; border: 1px solid #eee; }
-        .btn-filtro.active { background: #e11d48; color: #fff; border-color: #e11d48; }
+        :root { --primary: #ffce00; --dark: #333; --bg: #f4f4f4; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+        body { background: #222; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; padding: 20px; }
+        
+        /* Container Formato Celular */
+        .phone-container { 
+            width: 100%; max-width: 400px; background: var(--bg); height: 850px; 
+            border-radius: 30px; position: relative; overflow: hidden; 
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5); border: 8px solid #444;
+        }
+
+        header { background: var(--primary); padding: 20px; text-align: center; font-weight: bold; font-size: 1.2rem; color: var(--dark); }
+        
+        .content { padding: 15px; height: calc(100% - 130px); overflow-y: auto; }
+        
+        /* Tabs */
+        .tabs { display: flex; background: #ddd; }
+        .tab-btn { flex: 1; padding: 12px; border: none; cursor: pointer; font-size: 0.8rem; font-weight: bold; transition: 0.3s; }
+        .tab-btn.active { background: var(--primary); color: var(--dark); }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* Cards e Listas */
+        .card { background: white; padding: 15px; border-radius: 10px; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .item-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #eee; }
+        
+        .badge { background: #eee; padding: 5px 10px; border-radius: 15px; font-size: 0.8rem; }
+        .btn-history { background: var(--dark); color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 0.7rem; }
+        
+        /* Formulários */
+        input, select { width: 100%; padding: 10px; margin: 5px 0 15px; border: 1px solid #ccc; border-radius: 5px; }
+        .btn-main { background: var(--dark); color: white; width: 100%; padding: 12px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; }
+
+        footer { position: absolute; bottom: 0; width: 100%; background: white; padding: 15px; text-align: center; border-top: 1px solid #ddd; font-size: 0.8rem; color: #888; }
     </style>
 </head>
 <body>
-    <div id="app"></div>
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, query, orderBy, doc, updateDoc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
-        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyD3Otz9-zdZH-E5Feg9IOGWPzVycoe8gro",
-            authDomain: "distribuidora-de-ovos-aline.firebaseapp.com",
-            projectId: "distribuidora-de-ovos-aline",
-            storageBucket: "distribuidora-de-ovos-aline.firebasestorage.app",
-            messagingSenderId: "92187548716",
-            appId: "1:92187548716:web:d61d18a29aa76aead7c589"
-        };
+<div class="phone-container">
+    <header>AppEgg Admin</header>
+    
+    <div class="tabs">
+        <button class="tab-btn active" onclick="openTab('estoque')">Estoque</button>
+        <button class="tab-btn" onclick="openTab('clientes')">Clientes</button>
+        <button class="tab-btn" onclick="openTab('relatorios')">Relatórios</button>
+    </div>
 
-        const appFB = initializeApp(firebaseConfig);
-        const db = getFirestore(appFB);
-        const auth = getAuth(appFB);
-
-        window.state = { user: null, view: 'pedidos', pedidos: [], produtos: [], filtro: 'dia', config: {}, clientesView: null };
-
-        onAuthStateChanged(auth, u => {
-            state.user = u;
-            if(u) { 
-                initRealtime(); 
-                loadEstoque();
-                getDoc(doc(db, 'config', 'loja')).then(d => { if(d.exists()) state.config = d.data(); render(); });
-            }
-            render();
-        });
-
-        function initRealtime() {
-            onSnapshot(query(collection(db,'vendas_logs'), orderBy('criadoEm','desc')), s => {
-                state.pedidos = s.docs.map(d => ({id:d.id, ...d.data()}));
-                render();
-            });
-        }
-
-        async function loadEstoque() {
-            const r = await fetch("https://painel-distribuidora-backend.onrender.com/api/produtos");
-            state.produtos = await r.json();
-            render();
-        }
-
-        window.render = () => {
-            const app = document.getElementById('app');
-            if(!state.user) {
-                app.innerHTML = `<div class="p-10 mt-20 text-center"><h1 class="text-4xl font-black text-rose-600 mb-10 italic">AppEgg</h1><form onsubmit="login(event)" class="space-y-4"><input name="email" placeholder="Email" class="w-full p-4 bg-white rounded-2xl font-bold shadow-sm outline-none"><input name="pass" type="password" placeholder="Senha" class="w-full p-4 bg-white rounded-2xl font-bold shadow-sm outline-none"><button class="w-full bg-rose-600 text-white py-4 rounded-2xl font-black uppercase">Entrar</button></form></div>`;
-                return;
-            }
-            app.innerHTML = `
-            <div class="nav shadow-sm">
-                ${['pedidos','relatorios','clientes','estoque','pix'].map(v => `<button onclick="nav('${v}')" class="${state.view===v?'active':''}">${v}</button>`).join('')}
-                <button onclick="logout()" class="text-gray-300">Sair</button>
+    <div class="content">
+        <div id="estoque" class="tab-content active">
+            <div class="card">
+                <input type="text" id="prodNome" placeholder="Nome do Produto">
+                <input type="number" id="prodPreco" placeholder="Preço (R$)">
+                <button class="btn-main" onclick="adicionarProduto()">Cadastrar Produto</button>
             </div>
-            <div class="p-4">
-                ${state.view==='pedidos' ? renderPedidos() : ''}
-                ${state.view==='relatorios' ? renderRelatorios() : ''}
-                ${state.view==='clientes' ? renderClientes() : ''}
-                ${state.view==='estoque' ? renderEstoque() : ''}
-                ${state.view==='pix' ? renderPix() : ''}
-            </div>`;
-        };
+            <div id="listaEstoque"></div>
+        </div>
 
-        function renderPedidos() {
-            return state.pedidos.filter(p=>p.status!=='FINALIZADO'&&p.status!=='CANCELADO').map(p=>`
-            <div class="card border-l-8 border-rose-500">
-                <div class="flex justify-between mb-2">
-                    <div><p class="font-black text-sm uppercase">${p.clienteNome}</p><p class="text-[10px] text-gray-400 font-bold">${p.clienteWhatsapp}</p></div>
-                    <span class="text-[9px] font-black bg-rose-50 text-rose-600 px-2 py-1 rounded-full uppercase">${p.status}</span>
-                </div>
-                <p class="text-xs font-bold mb-1 uppercase">${p.produto} <span class="text-rose-500">(${p.frequencia || 'AVULSA'})</span></p>
-                <div class="grid grid-cols-2 gap-2 mt-4">
-                    <button onclick="updateStatus('${p.id}','EMBALANDO')" class="bg-blue-600 text-white py-3 rounded-xl text-[9px] font-black uppercase">Embalar</button>
-                    <button onclick="updatePronto('${p.id}','${p.pagamento}')" class="bg-orange-500 text-white py-3 rounded-xl text-[9px] font-black uppercase">Pronto</button>
-                    <button onclick="updateStatus('${p.id}','FINALIZADO')" class="bg-emerald-600 text-white py-3 rounded-xl text-[9px] font-black uppercase col-span-2">Concluir</button>
-                </div>
-            </div>`).join('') || '<p class="text-center text-gray-400 font-black uppercase text-[10px] mt-20">Sem novos pedidos</p>';
-        }
+        <div id="clientes" class="tab-content">
+            <div id="listaClientes"></div>
+        </div>
 
-        function renderRelatorios() {
-            const agora = new Date();
-            const filtrados = state.pedidos.filter(p => {
-                if(p.status !== 'FINALIZADO') return false;
-                const dataPed = p.criadoEm?.toDate ? p.criadoEm.toDate() : new Date();
-                const diffDias = (agora - dataPed) / (1000 * 60 * 60 * 24);
-                if(state.filtro === 'dia') return diffDias <= 1;
-                if(state.filtro === 'semana') return diffDias <= 7;
-                if(state.filtro === 'quinzenal') return diffDias <= 15;
-                if(state.filtro === 'mensal') return diffDias <= 30;
-                return true;
-            });
-            const total = filtrados.reduce((a,b) => a + (b.precoNoMomento || 0), 0);
-
-            return `
-            <div class="flex gap-2 mb-6 overflow-x-auto pb-2">
-                ${['dia','semana','quinzenal','mensal'].map(f => `<button onclick="state.filtro='${f}';render()" class="btn-filtro ${state.filtro===f?'active':'bg-white text-gray-400'}">${f}</button>`).join('')}
-            </div>
-            <div class="card bg-rose-600 text-white border-none text-center">
-                <p class="text-[10px] font-bold uppercase opacity-80 mb-1">Faturamento ${state.filtro}</p>
-                <h2 class="text-4xl font-black">R$ ${total.toFixed(2)}</h2>
-            </div>
-            <div class="space-y-2">
-                ${filtrados.map(f => `<div class="card !p-4 flex justify-between items-center"><span class="text-[10px] font-black uppercase">${f.produto}</span><span class="text-rose-600 font-black text-xs">R$ ${f.precoNoMomento.toFixed(2)}</span></div>`).join('')}
-            </div>`;
-        }
-
-        function renderClientes() {
-            const map={};
-            state.pedidos.forEach(p=>{ if(!map[p.clienteWhatsapp]) map[p.clienteWhatsapp]=[]; map[p.clienteWhatsapp].push(p); });
-            
-            if(state.clientesView){
-                return `
-                <button onclick="state.clientesView=null;render()" class="mb-4 text-rose-600 font-black text-xs uppercase">← Voltar</button>
-                ${map[state.clientesView].map(p=>`
-                    <div class="card">
-                        <p class="font-black text-xs uppercase">${p.produto}</p>
-                        <p class="text-[10px] text-gray-400 font-bold uppercase">Status: ${p.status}</p>
-                    </div>
-                `).join('')}`;
-            }
-
-            return Object.keys(map).map(c=>`
-                <div class="card flex justify-between items-center py-4">
-                    <p class="font-black text-xs uppercase">${c}</p>
-                    <button onclick="state.clientesView='${c}';render()" class="text-rose-600 font-black text-xs uppercase italic">Histórico</button>
-                </div>`).join('');
-        }
-
-        function renderEstoque() {
-            return `
-            <div class="card"><h3 class="font-black text-[10px] uppercase mb-4">Novo Produto</h3>
-            <form onsubmit="addProd(event)" class="space-y-2">
-                <input name="n" placeholder="Nome" class="w-full p-4 bg-gray-50 rounded-xl text-xs font-bold outline-none">
-                <input name="p" type="number" step="0.01" placeholder="Preço" class="w-full p-4 bg-gray-50 rounded-xl text-xs font-bold outline-none">
-                <input name="f" placeholder="URL da Foto" class="w-full p-4 bg-gray-50 rounded-xl text-xs font-bold outline-none">
-                <button class="w-full bg-rose-600 text-white py-4 rounded-xl font-black uppercase text-xs">Salvar</button>
-            </form></div>
-            ${state.produtos.map(p => `<div class="card !py-3 flex justify-between items-center"><div class="flex items-center gap-3"><img src="${p.foto_url}" class="w-8 h-8 object-contain"><span class="font-black text-[10px] uppercase">${p.nome}</span></div><button onclick="delProd('${p.id}')" class="text-gray-300 font-black text-[9px]">EXCLUIR</button></div>`).join('')}`;
-        }
-
-        function renderPix() {
-            return `<div class="card space-y-4"><h3 class="font-black text-[10px] uppercase italic">Configurar PIX</h3>
-                <select id="pixT" class="w-full p-4 bg-gray-50 rounded-xl text-xs font-bold outline-none">
-                    ${["CPF", "CNPJ", "Telefone", "Email", "Aleatória"].map(o => `<option ${state.config.pixTipo===o?'selected':''}>${o}</option>`).join('')}
+        <div id="relatorios" class="tab-content">
+            <div class="card">
+                <select id="filtroRelatorio" onchange="renderizarRelatorios()">
+                    <option value="dia">Hoje</option>
+                    <option value="semana">Esta Semana</option>
+                    <option value="mes">Este Mês</option>
                 </select>
-                <input id="pixC" value="${state.config.pixChave || ''}" placeholder="Chave PIX" class="w-full p-4 bg-gray-50 rounded-xl text-xs font-bold outline-none">
-                <button onclick="savePix()" class="w-full bg-rose-600 text-white py-4 rounded-xl font-black uppercase text-xs">Salvar</button>
-            </div>`;
-        }
+                <h2 id="totalVendas" style="text-align: center; color: green;">R$ 0,00</h2>
+                <p style="text-align: center; font-size: 0.8rem;">Total em Vendas</p>
+            </div>
+            <div id="historicoGeral"></div>
+        </div>
+    </div>
 
-        window.nav=v=>{ state.view=v; state.clientesView=null; render(); };
-        window.login=async e=>{ e.preventDefault(); await signInWithEmailAndPassword(auth,e.target.email.value,e.target.pass.value); };
-        window.logout=()=>signOut(auth);
-        window.updateStatus=(id,s)=>updateDoc(doc(db,'vendas_logs',id),{status:s});
-        window.updatePronto=(id,pag)=>updateDoc(doc(db,'vendas_logs',id),{status:pag.includes('RETIRADA')?'PRONTO PARA RETIRADA':'SAIU PARA ENTREGA'});
-        window.savePix=async()=>{ await setDoc(doc(db,'config','loja'),{pixChave:document.getElementById('pixC').value,pixTipo:document.getElementById('pixT').value}); alert("Salvo!"); };
-        window.addProd=async e=>{ e.preventDefault(); const f=new FormData(e.target); await fetch("https://painel-distribuidora-backend.onrender.com/api/produtos",{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nome:f.get('n'),preco:parseFloat(f.get('p')),foto_url:f.get('f')})}); loadEstoque(); e.target.reset(); };
-        window.delProd=async id=>{ if(confirm("Apagar?")){ await fetch(`https://painel-distribuidora-backend.onrender.com/api/produtos/${id}`,{method:'DELETE'}); loadEstoque(); }};
-    </script>
+    <footer>Status: Conectado ao AppEgg Local</footer>
+</div>
+
+<script>
+    // Inicialização do Banco de Dados Local
+    if(!localStorage.getItem('egg_produtos')) localStorage.setItem('egg_produtos', JSON.stringify([]));
+    if(!localStorage.getItem('egg_pedidos')) localStorage.setItem('egg_pedidos', JSON.stringify([]));
+
+    function openTab(tabId) {
+        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(tabId).classList.add('active');
+        event.currentTarget.classList.add('active');
+        if(tabId === 'estoque') renderizarEstoque();
+        if(tabId === 'clientes') renderizarClientes();
+        if(tabId === 'relatorios') renderizarRelatorios();
+    }
+
+    // --- FUNÇÕES DE ESTOQUE ---
+    function adicionarProduto() {
+        const nome = document.getElementById('prodNome').value;
+        const preco = document.getElementById('prodPreco').value;
+        if(!nome || !preco) return alert("Preencha tudo!");
+
+        const produtos = JSON.parse(localStorage.getItem('egg_produtos'));
+        produtos.push({ id: Date.now(), nome, preco: parseFloat(preco) });
+        localStorage.setItem('egg_produtos', JSON.stringify(produtos));
+        
+        document.getElementById('prodNome').value = '';
+        document.getElementById('prodPreco').value = '';
+        renderizarEstoque();
+    }
+
+    function renderizarEstoque() {
+        const produtos = JSON.parse(localStorage.getItem('egg_produtos'));
+        const container = document.getElementById('listaEstoque');
+        container.innerHTML = '<h4>Itens no Catálogo</h4>';
+        produtos.forEach(p => {
+            container.innerHTML += `
+                <div class="item-row card">
+                    <span>${p.nome}</span>
+                    <div>
+                        <b>R$ ${p.preco.toFixed(2)}</b>
+                        <button onclick="removerProduto(${p.id})" style="color:red; margin-left:10px; border:none; background:none; cursor:pointer">X</button>
+                    </div>
+                </div>`;
+        });
+    }
+
+    function removerProduto(id) {
+        let produtos = JSON.parse(localStorage.getItem('egg_produtos'));
+        produtos = produtos.filter(p => p.id !== id);
+        localStorage.setItem('egg_produtos', JSON.stringify(produtos));
+        renderizarEstoque();
+    }
+
+    // --- FUNÇÕES DE CLIENTES ---
+    function renderizarClientes() {
+        const pedidos = JSON.parse(localStorage.getItem('egg_pedidos'));
+        const container = document.getElementById('listaClientes');
+        container.innerHTML = '<h4>Clientes Recentes</h4>';
+        
+        // Pega nomes únicos de quem já pediu
+        const clientesUnicos = [...new Set(pedidos.map(p => p.cliente))];
+        
+        if(clientesUnicos.length === 0) container.innerHTML += "<p>Nenhum cliente cadastrado.</p>";
+
+        clientesUnicos.forEach(c => {
+            container.innerHTML += `
+                <div class="item-row card">
+                    <span><i class="fa fa-user"></i> ${c}</span>
+                    <button class="btn-history" onclick="verHistorico('${c}')">Ver Pedidos</button>
+                </div>`;
+        });
+    }
+
+    function verHistorico(nome) {
+        const pedidos = JSON.parse(localStorage.getItem('egg_pedidos')).filter(p => p.cliente === nome);
+        let msg = `Histórico de ${nome}:\n\n`;
+        pedidos.forEach(p => msg += `${p.data} - ${p.item} (R$ ${p.total.toFixed(2)})\n`);
+        alert(msg);
+    }
+
+    // --- RELATÓRIOS ---
+    function renderizarRelatorios() {
+        const filtro = document.getElementById('filtroRelatorio').value;
+        const pedidos = JSON.parse(localStorage.getItem('egg_pedidos'));
+        let total = 0;
+        
+        // Lógica simplificada de filtro por data
+        pedidos.forEach(p => total += p.total);
+        
+        document.getElementById('totalVendas').innerText = `R$ ${total.toFixed(2)}`;
+        const histCont = document.getElementById('historicoGeral');
+        histCont.innerHTML = '<h4>Últimas Atividades</h4>';
+        pedidos.reverse().slice(0, 10).forEach(p => {
+            histCont.innerHTML += `<div style="font-size:0.8rem; margin-bottom:5px;">${p.data} - ${p.cliente} comprou ${p.item}</div>`;
+        });
+    }
+
+    renderizarEstoque();
+</script>
 </body>
 </html>
