@@ -3,24 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AppEgg • Admin</title>
+    <title>AppEgg • Admin Profissional</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
         body { font-family:'DM Sans',sans-serif; background:#f9fafb; color:#111 }
-        .card { background:#fff; border-radius:28px; border:1px solid #f1f1f1; padding:24px }
+        .card { background:#fff; border-radius: 24px; border: 1px solid #f1f1f1; padding: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
         .nav { background:#fff; border-bottom:1px solid #eee; position:sticky; top:0; z-index:50 }
-        .nav button { font-size:11px; font-weight:900; text-transform:uppercase; padding:12px 18px; border-radius:14px; color:#9ca3af }
-        .nav button.active { background:#fff1f2; color:#e11d48 }
-        .dot { width:8px; height:8px; background:#e11d48; border-radius:50%; position:absolute; left:-5px; top:5px }
-        .timeline-item { position:relative; padding-left:20px; border-left:2px solid #f3f4f6; margin-left:4px; padding-bottom:15px; }
+        .nav button { font-size:10px; font-weight:900; text-transform:uppercase; padding:10px 14px; border-radius:12px; color:#9ca3af; transition: 0.2s; }
+        .nav button.active { background:#fff1f2; color:#e11d48; }
+        .btn-status { font-size: 9px; font-weight: 900; text-transform: uppercase; padding: 12px; border-radius: 12px; transition: 0.2s; }
     </style>
 </head>
 <body>
     <div id="app"></div>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, query, orderBy, doc, updateDoc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, query, orderBy, doc, updateDoc, setDoc, getDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
         import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
 
         const firebaseConfig = {
@@ -35,12 +34,17 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
+        const API_URL = "https://painel-distribuidora-backend.onrender.com/api/produtos";
 
-        window.state = { user:null, view:'pedidos', pedidos:[], clientes:null, config: { pixChave: '', pixTipo: 'CPF' } };
+        window.state = { 
+            user: null, view: 'pedidos', pedidos: [], produtos: [], 
+            filtroRelatorio: 'dia', config: { pixChave: '', pixTipo: 'CPF' },
+            editandoProduto: null 
+        };
 
         onAuthStateChanged(auth, u => { 
             state.user = u; 
-            if(u) { init(); loadConfig(); } 
+            if(u) { initRealtime(); loadConfig(); loadProdutos(); } 
             render(); 
         });
 
@@ -49,59 +53,89 @@
             if(d.exists()) state.config = d.data();
         }
 
-        function init() {
+        async function loadProdutos() {
+            try {
+                const r = await fetch(API_URL);
+                state.produtos = await r.json();
+                render();
+            } catch (e) { console.error("Erro estoque:", e); }
+        }
+
+        function initRealtime() {
             onSnapshot(query(collection(db,'vendas_logs'), orderBy('criadoEm','desc')), s => {
                 state.pedidos = s.docs.map(d => ({id:d.id, ...d.data()}));
                 render();
             });
         }
 
-        const formatTime = (ts) => ts ? new Date(ts.toDate ? ts.toDate() : ts).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '--:--';
-
         window.render = () => {
             const app = document.getElementById('app');
             if(!state.user) {
-                app.innerHTML = `<div class="min-h-screen flex items-center justify-center"><form onsubmit="login(event)" class="card w-full max-w-sm space-y-4"><h1 class="text-3xl font-black text-rose-600 italic text-center">AppEgg</h1><input name="email" placeholder="Email" class="w-full p-4 bg-gray-50 rounded-xl font-bold"><input name="pass" type="password" placeholder="Senha" class="w-full p-4 bg-gray-50 rounded-xl font-bold"><button class="w-full bg-rose-600 text-white py-4 rounded-xl font-black uppercase">Entrar</button></form></div>`;
+                app.innerHTML = `<div class="min-h-screen flex items-center justify-center p-6"><form onsubmit="login(event)" class="card w-full max-w-sm space-y-4"><h1 class="text-3xl font-black text-rose-600 italic text-center">AppEgg Admin</h1><input name="email" placeholder="Email" class="w-full p-4 bg-gray-50 rounded-xl font-bold border-none outline-none"><input name="pass" type="password" placeholder="Senha" class="w-full p-4 bg-gray-50 rounded-xl font-bold border-none outline-none"><button class="w-full bg-rose-600 text-white py-4 rounded-xl font-black uppercase">Entrar</button></form></div>`;
                 return;
             }
             app.innerHTML = `
-            <div class="nav flex justify-between items-center px-6 h-20">
-                <div class="text-2xl font-black italic text-rose-600">AppEgg</div>
-                <div class="flex gap-2">
+            <div class="nav flex justify-between items-center px-6 h-20 shadow-sm">
+                <div class="text-xl font-black italic text-rose-600">AppEgg</div>
+                <div class="flex gap-1">
                     ${['pedidos','relatorios','clientes','estoque','pix'].map(v => `<button onclick="nav('${v}')" class="${state.view===v?'active':''}">${v}</button>`).join('')}
-                    <button onclick="logout()" class="ml-4 text-gray-400 font-black text-xs uppercase">Sair</button>
+                    <button onclick="logout()" class="ml-2 text-gray-400 font-black">SAIR</button>
                 </div>
             </div>
             <main class="max-w-5xl mx-auto p-6">
                 ${state.view==='pedidos' ? renderPedidos() : ''}
                 ${state.view==='relatorios' ? renderRelatorios() : ''}
                 ${state.view==='clientes' ? renderClientes() : ''}
+                ${state.view==='estoque' ? renderEstoque() : ''}
                 ${state.view==='pix' ? renderPix() : ''}
             </main>`;
         };
 
+        // --- COMPONENTES DE TELA ---
         function renderPedidos() {
-            return state.pedidos.filter(p => p.status !== 'FINALIZADO' && p.status !== 'CANCELADO').map(p => `
-            <div class="card mb-6 border-l-8 border-rose-500">
-                <div class="flex justify-between mb-3">
-                    <div><p class="font-black">${p.clienteNome}</p><p class="text-xs text-gray-400">${p.clienteWhatsapp}</p></div>
-                    <span class="text-xs font-black bg-rose-50 text-rose-600 px-3 py-1 rounded-full uppercase">${p.status}</span>
+            const ativos = state.pedidos.filter(p => p.status !== 'FINALIZADO' && p.status !== 'CANCELADO');
+            return ativos.map(p => `
+            <div class="card mb-4 border-l-8 border-rose-500">
+                <div class="flex justify-between items-start mb-3">
+                    <div><p class="font-black text-sm uppercase">${p.clienteNome}</p><p class="text-[10px] text-gray-400 font-bold">${p.clienteWhatsapp}</p></div>
+                    <span class="text-[9px] font-black bg-rose-50 text-rose-600 px-2 py-1 rounded-full uppercase">${p.status}</span>
                 </div>
-                <p class="font-bold uppercase text-sm mb-2">${p.produto}</p>
-                <p class="text-xs">Pagamento: <b>${p.pagamento}</b></p>
-                <div class="grid grid-cols-2 gap-2 mt-4">
-                    <button onclick="status('${p.id}','EMBALANDO')" class="bg-blue-500 text-white py-3 rounded-xl text-xs font-black uppercase">Embalar</button>
-                    <button onclick="pronto('${p.id}','${p.pagamento}')" class="bg-orange-500 text-white py-3 rounded-xl text-xs font-black uppercase">Pronto</button>
-                    <button onclick="status('${p.id}','FINALIZADO')" class="bg-emerald-600 text-white py-3 rounded-xl text-xs font-black uppercase">Concluir</button>
-                    <button onclick="status('${p.id}','CANCELADO')" class="bg-gray-100 text-gray-400 py-3 rounded-xl text-xs font-black uppercase">Cancelar</button>
+                <div class="bg-gray-50 p-3 rounded-xl mb-4 text-xs font-bold uppercase">📦 ${p.produto} <span class="text-rose-600 ml-2">(${p.frequencia || 'AVULSA'})</span></div>
+                <div class="grid grid-cols-2 gap-2">
+                    <button onclick="updateStatus('${p.id}','EMBALANDO')" class="btn-status bg-blue-600 text-white">Embalar</button>
+                    <button onclick="updatePronto('${p.id}','${p.pagamento}')" class="btn-status bg-orange-500 text-white">Pronto</button>
+                    <button onclick="updateStatus('${p.id}','FINALIZADO')" class="btn-status bg-emerald-600 text-white">Concluir</button>
+                    <button onclick="updateStatus('${p.id}','CANCELADO')" class="btn-status bg-gray-100 text-gray-400">Cancelar</button>
                 </div>
-            </div>`).join('') || '<p class="text-center py-10 text-gray-400 font-bold uppercase">Nenhum pedido ativo</p>';
+            </div>`).join('') || '<p class="text-center py-20 text-gray-300 font-black uppercase">Nenhum pedido pendente</p>';
         }
 
         function renderRelatorios() {
-            const concl = state.pedidos.filter(p => p.status === 'FINALIZADO');
-            const total = concl.reduce((a,b) => a + (b.precoNoMomento || 0), 0);
-            return `<div class="card"><p class="text-xs uppercase text-gray-400 font-bold">Faturamento Bruto</p><h2 class="text-4xl font-black text-rose-600 italic">R$ ${total.toFixed(2)}</h2><p class="text-xs mt-2 font-bold">${concl.length} PEDIDOS FINALIZADOS</p></div>`;
+            const agora = new Date();
+            const lista = state.pedidos.filter(p => {
+                if(p.status !== 'FINALIZADO') return false;
+                const dataPed = p.criadoEm?.toDate ? p.criadoEm.toDate() : new Date();
+                const diffDias = (agora - dataPed) / (1000 * 60 * 60 * 24);
+                if(state.filtroRelatorio === 'dia') return diffDias <= 1;
+                if(state.filtroRelatorio === 'semana') return diffDias <= 7;
+                if(state.filtroRelatorio === 'quinzenal') return diffDias <= 15;
+                if(state.filtroRelatorio === 'mensal') return diffDias <= 30;
+                return true;
+            });
+            const faturamento = lista.reduce((a,b) => a + (b.precoNoMomento || 0), 0);
+            
+            return `
+            <div class="flex gap-2 mb-6 overflow-x-auto pb-2">
+                ${['dia','semana','quinzenal','mensal'].map(f => `<button onclick="state.filtroRelatorio='${f}';render()" class="px-4 py-2 rounded-xl text-[10px] font-black uppercase ${state.filtroRelatorio===f?'bg-rose-600 text-white':'bg-white border text-gray-400'}">${f}</button>`).join('')}
+            </div>
+            <div class="card bg-rose-600 text-white border-none mb-6">
+                <p class="text-[10px] font-bold uppercase opacity-80">Faturamento no período</p>
+                <h2 class="text-4xl font-black italic">R$ ${faturamento.toFixed(2)}</h2>
+                <p class="text-[10px] mt-2 font-black uppercase">${lista.length} Vendas Concluídas</p>
+            </div>
+            <div class="space-y-2">
+                ${lista.map(l => `<div class="card flex justify-between items-center py-3 px-4"><span class="text-[10px] font-bold uppercase">${l.produto}</span><span class="font-black text-rose-600">R$ ${l.precoNoMomento.toFixed(2)}</span></div>`).join('')}
+            </div>`;
         }
 
         function renderClientes() {
@@ -109,45 +143,86 @@
             state.pedidos.forEach(p => { if(!map[p.clienteWhatsapp]) map[p.clienteWhatsapp] = []; map[p.clienteWhatsapp].push(p); });
             if(state.clientes) {
                 return `<button onclick="state.clientes=null;render()" class="mb-4 text-rose-600 font-black text-xs uppercase">← Voltar</button>` + 
-                map[state.clientes].map(p => `
-                <div class="card mb-4">
-                    <p class="font-black text-sm uppercase">${p.produto}</p>
-                    <div class="mt-4">
-                        <div class="timeline-item"><div class="dot"></div><p class="text-[10px] font-bold text-gray-400 uppercase">Pedido: ${formatTime(p.criadoEm)}</p></div>
-                        <div class="timeline-item" style="border:none"><div class="dot ${!p.horarioSaiu?'bg-gray-200':''}"></div><p class="text-[10px] font-bold text-gray-400 uppercase">Saiu/Pronto: ${formatTime(p.horarioSaiu)}</p></div>
-                    </div>
-                </div>`).join('');
+                map[state.clientes].map(p => `<div class="card mb-2 flex justify-between"><span class="text-[10px] font-bold uppercase">${p.produto}</span><span class="text-[10px] font-black">${p.status}</span></div>`).join('');
             }
-            return Object.keys(map).map(c => `<div class="card mb-3 flex justify-between items-center"><p class="font-bold text-sm">${c}</p><button onclick="state.clientes='${c}';render()" class="text-rose-600 font-black text-xs uppercase">Ver Detalhes</button></div>`).join('');
+            return Object.keys(map).map(c => `<div class="card mb-3 flex justify-between items-center py-4"><p class="font-bold text-xs uppercase">${c}</p><button onclick="state.clientes='${c}';render()" class="text-rose-600 font-black text-[10px] uppercase">Detalhes</button></div>`).join('');
         }
 
-        function renderPix() {
-            return `<div class="card space-y-4"><h2 class="font-black text-lg italic uppercase">Configurar PIX</h2>
-                <select id="pixTipo" class="w-full p-4 bg-gray-50 rounded-xl font-bold border-none outline-none">
-                    <option ${state.config.pixTipo==='CPF'?'selected':''}>CPF</option>
-                    <option ${state.config.pixTipo==='CNPJ'?'selected':''}>CNPJ</option>
-                    <option ${state.config.pixTipo==='Email'?'selected':''}>Email</option>
-                </select>
-                <input id="pixChave" value="${state.config.pixChave}" placeholder="Chave PIX" class="w-full p-4 bg-gray-50 rounded-xl font-bold border-none outline-none">
-                <button onclick="savePix()" class="w-full bg-rose-600 text-white py-4 rounded-xl font-black uppercase">Salvar Configuração</button>
+        function renderEstoque() {
+            const p = state.editandoProduto || { nome: '', quantidade: '', preco: '', foto_url: '', tipo_estoque: 'Caixa' };
+            return `
+            <div class="card mb-8">
+                <h2 class="font-black mb-4 uppercase text-sm">Gerenciar Produto</h2>
+                <form onsubmit="handleSalvarProduto(event)" class="grid grid-cols-2 gap-3">
+                    <input name="nome" value="${p.nome}" placeholder="Nome" class="col-span-2 p-4 bg-gray-50 rounded-xl font-bold text-xs border-none outline-none" required>
+                    <input name="preco" type="number" step="0.01" value="${p.preco}" placeholder="Preço" class="p-4 bg-gray-50 rounded-xl font-bold text-xs border-none outline-none" required>
+                    <input name="quantidade" type="number" value="${p.quantidade}" placeholder="Qtd" class="p-4 bg-gray-50 rounded-xl font-bold text-xs border-none outline-none" required>
+                    <select name="tipo_estoque" class="p-4 bg-gray-50 rounded-xl font-bold text-xs border-none outline-none">
+                        ${["Unidade", "Dúzia", "Cartela (20)", "Cartela (30)", "Caixa"].map(t => `<option value="${t}" ${p.tipo_estoque===t?'selected':''}>${t}</option>`).join('')}
+                    </select>
+                    <input name="foto_url" value="${p.foto_url}" placeholder="URL da Imagem" class="p-4 bg-gray-50 rounded-xl font-bold text-xs border-none outline-none" required>
+                    <button class="col-span-2 bg-rose-600 text-white py-4 rounded-xl font-black uppercase text-xs shadow-lg">${state.editandoProduto ? 'Atualizar Produto' : 'Cadastrar Produto'}</button>
+                    ${state.editandoProduto ? `<button type="button" onclick="state.editandoProduto=null;render()" class="col-span-2 text-gray-400 font-bold text-[10px] uppercase">Cancelar Edição</button>` : ''}
+                </form>
+            </div>
+            <div class="grid grid-cols-1 gap-3">
+                ${state.produtos.map(prod => `
+                <div class="card flex items-center justify-between py-3">
+                    <div class="flex items-center gap-3"><img src="${prod.foto_url}" class="w-10 h-10 object-contain"><p class="font-black text-[10px] uppercase">${prod.nome}</p></div>
+                    <div class="flex gap-4"><button onclick="editarP(${JSON.stringify(prod).replace(/"/g,'&quot;')})" class="text-blue-600 font-black text-[10px]">EDITAR</button>
+                    <button onclick="deletarP('${prod.id}')" class="text-gray-300 font-black text-[10px]">EXCLUIR</button></div>
+                </div>`).join('')}
             </div>`;
         }
 
+        function renderPix() {
+            const opcoes = ["CPF", "CNPJ", "Telefone", "Email", "Chave Aleatória"];
+            return `<div class="card space-y-4">
+                <h2 class="font-black text-lg italic uppercase">Configurar Pagamento</h2>
+                <select id="pixTipo" class="w-full p-4 bg-gray-50 rounded-xl font-bold border-none outline-none">
+                    ${opcoes.map(o => `<option ${state.config.pixTipo===o?'selected':''}>${o}</option>`).join('')}
+                </select>
+                <input id="pixChave" value="${state.config.pixChave}" placeholder="Insira a Chave PIX" class="w-full p-4 bg-gray-50 rounded-xl font-bold border-none outline-none">
+                <button onclick="savePix()" class="w-full bg-rose-600 text-white py-4 rounded-xl font-black uppercase shadow-lg">Salvar Configuração</button>
+            </div>`;
+        }
+
+        // --- AÇÕES ---
+        window.nav = v => { state.view = v; state.clientes = null; render(); };
+        window.login = async e => { e.preventDefault(); await signInWithEmailAndPassword(auth, e.target.email.value, e.target.pass.value); };
+        window.logout = () => signOut(auth);
+        window.updateStatus = async (id, s) => { await updateDoc(doc(db,'vendas_logs',id), { status: s }); };
+        window.updatePronto = async (id, p) => { 
+            await updateDoc(doc(db,'vendas_logs',id), { 
+                status: p.includes('RETIRADA') ? 'PRONTO PARA RETIRADA' : 'SAIU PARA ENTREGA', 
+                horarioSaiu: new Date() 
+            }); 
+        };
         window.savePix = async () => {
             const chave = document.getElementById('pixChave').value;
             const tipo = document.getElementById('pixTipo').value;
             await setDoc(doc(db, 'config', 'loja'), { pixChave: chave, pixTipo: tipo });
-            alert("PIX Atualizado!");
+            alert("Configurações salvas!");
             loadConfig();
         };
-        window.nav = v => { state.view = v; state.clientes = null; render(); };
-        window.login = async e => { e.preventDefault(); await signInWithEmailAndPassword(auth, e.target.email.value, e.target.pass.value); };
-        window.logout = () => signOut(auth);
-        window.status = (id, s) => updateDoc(doc(db,'vendas_logs',id), { status: s });
-        window.pronto = (id, p) => updateDoc(doc(db,'vendas_logs',id), {
-            status: p.includes('RETIRADA') ? 'PRONTO PARA RETIRADA' : 'SAIU PARA ENTREGA',
-            horarioSaiu: new Date()
-        });
+
+        window.editarP = p => { state.editandoProduto = p; render(); };
+        window.deletarP = async id => { 
+            if(confirm("Excluir produto?")) {
+                await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+                loadProdutos();
+            }
+        };
+        window.handleSalvarProduto = async e => {
+            e.preventDefault();
+            const f = new FormData(e.target);
+            const dados = { nome: f.get('nome'), preco: parseFloat(f.get('preco')), quantidade: parseInt(f.get('quantidade')), tipo_estoque: f.get('tipo_estoque'), foto_url: f.get('foto_url') };
+            const method = state.editandoProduto ? 'PUT' : 'POST';
+            const url = state.editandoProduto ? `${API_URL}/${state.editandoProduto.id}` : API_URL;
+            await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(dados) });
+            state.editandoProduto = null;
+            loadProdutos();
+        };
     </script>
 </body>
 </html>
