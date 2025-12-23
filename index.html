@@ -37,7 +37,7 @@
         const db = getFirestore(appFB);
         const auth = getAuth(appFB);
 
-        window.state = { user: null, view: 'pedidos', pedidos: [], produtos: [], filtro: 'dia', config: {} };
+        window.state = { user: null, view: 'pedidos', pedidos: [], produtos: [], filtro: 'dia', config: {}, clientesView: null };
 
         onAuthStateChanged(auth, u => {
             state.user = u;
@@ -126,12 +126,25 @@
         }
 
         function renderClientes() {
-            const clientes = [...new Set(state.pedidos.map(p => p.clienteWhatsapp))];
-            return clientes.map(c => `
-            <div class="card flex justify-between items-center py-4 px-6">
-                <div><p class="font-black text-xs uppercase">${c.split('@')[0]}</p><p class="text-[9px] text-gray-400 font-bold">${c}</p></div>
-                <div class="w-10 h-10 bg-rose-50 rounded-full flex items-center justify-center text-rose-600 font-black text-xs italic">OK</div>
-            </div>`).join('') || '<p class="text-center text-gray-400 font-black uppercase text-[10px] mt-20">Nenhum cliente cadastrado</p>';
+            const map={};
+            state.pedidos.forEach(p=>{ if(!map[p.clienteWhatsapp]) map[p.clienteWhatsapp]=[]; map[p.clienteWhatsapp].push(p); });
+            
+            if(state.clientesView){
+                return `
+                <button onclick="state.clientesView=null;render()" class="mb-4 text-rose-600 font-black text-xs uppercase">← Voltar</button>
+                ${map[state.clientesView].map(p=>`
+                    <div class="card">
+                        <p class="font-black text-xs uppercase">${p.produto}</p>
+                        <p class="text-[10px] text-gray-400 font-bold uppercase">Status: ${p.status}</p>
+                    </div>
+                `).join('')}`;
+            }
+
+            return Object.keys(map).map(c=>`
+                <div class="card flex justify-between items-center py-4">
+                    <p class="font-black text-xs uppercase">${c}</p>
+                    <button onclick="state.clientesView='${c}';render()" class="text-rose-600 font-black text-xs uppercase italic">Histórico</button>
+                </div>`).join('');
         }
 
         function renderEstoque() {
@@ -156,7 +169,7 @@
             </div>`;
         }
 
-        window.nav=v=>{ state.view=v; render(); };
+        window.nav=v=>{ state.view=v; state.clientesView=null; render(); };
         window.login=async e=>{ e.preventDefault(); await signInWithEmailAndPassword(auth,e.target.email.value,e.target.pass.value); };
         window.logout=()=>signOut(auth);
         window.updateStatus=(id,s)=>updateDoc(doc(db,'vendas_logs',id),{status:s});
