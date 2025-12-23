@@ -7,13 +7,13 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&display=swap');
-        body { font-family: 'Inter', sans-serif; background: #fff; }
+        body { font-family: 'Inter', sans-serif; background: #fff; margin: 0; padding: 0; }
         .product-card { background: #fff; border-radius: 20px; border: 1px solid #f3f4f6; position: relative; }
-        .wa-float { position: fixed; bottom: 120px; right: 20px; background: #25D366; color: white; width: 60px; height: 60px; border-radius: 50%; display: flex; items-center justify-center; z-index: 60; box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
-        .cart-bar { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; padding: 20px; border-top: 1px solid #eee; z-index: 50; }
+        .wa-float { position: fixed; bottom: 120px; right: 20px; background: #25D366; color: white; width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 60; box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
+        .cart-bar { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; padding: 20px; border-top: 1px solid #eee; z-index: 50; display: flex; justify-content: space-between; align-items: center; }
     </style>
 </head>
-<body class="bg-white">
+<body>
     <div id="app-root">Carregando AppEgg...</div>
 
     <script type="module">
@@ -28,34 +28,29 @@
             messagingSenderId: "92187548716",
             appId: "1:92187548716:web:d61d18a29aa76aead7c589"
         };
+
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // ESTADO GLOBAL
         window.state = {
             produtos: [],
             carrinho: {},
-            tela: 'catalogo', // catalogo ou carrinho
+            tela: 'catalogo',
             cliente: JSON.parse(localStorage.getItem('appegg_user')) || null,
             frequencia: 'Compra Única'
         };
 
-        // FUNÇÕES DE AÇÃO
-        window.mudarTela = (novaTela) => {
-            window.state.tela = novaTela;
-            window.render();
-            window.scrollTo(0,0);
+        window.mudarTela = (t) => { window.state.tela = t; window.render(); window.scrollTo(0,0); };
+        
+        window.add = (id) => { 
+            window.state.carrinho[id] = (window.state.carrinho[id] || 0) + 1; 
+            window.render(); 
         };
 
-        window.add = (id) => {
-            window.state.carrinho[id] = (window.state.carrinho[id] || 0) + 1;
-            window.render();
-        };
-
-        window.sub = (id) => {
-            if (window.state.carrinho[id] > 1) window.state.carrinho[id]--;
-            else delete window.state.carrinho[id];
-            window.render();
+        window.sub = (id) => { 
+            if (window.state.carrinho[id] > 1) window.state.carrinho[id]--; 
+            else delete window.state.carrinho[id]; 
+            window.render(); 
         };
 
         window.finalizarPedido = async () => {
@@ -79,43 +74,37 @@
                     status: 'PENDENTE',
                     criadoEm: serverTimestamp()
                 });
-                alert("🥚 Sucesso! Pedido enviado.");
+                alert("🥚 Pedido AppEgg enviado!");
                 window.state.carrinho = {};
                 window.mudarTela('catalogo');
-            } catch (e) { alert("Erro ao enviar"); }
+            } catch (e) { alert("Erro ao conectar com o banco."); }
         };
 
-        // RENDERIZAÇÃO
         window.render = () => {
             const root = document.getElementById('app-root');
-            
             if (!window.state.cliente) {
                 root.innerHTML = `
-                <div class="h-screen flex flex-col justify-center px-10">
-                    <h1 class="text-5xl font-black text-rose-600 italic text-center mb-8 uppercase">AppEgg</h1>
-                    <form onsubmit="event.preventDefault(); window.state.cliente={nome:this.nome.value, whatsapp:this.whatsapp.value}; localStorage.setItem('appegg_user', JSON.stringify(window.state.cliente)); window.render()" class="space-y-4">
+                <div class="h-screen flex flex-col justify-center px-10 text-center">
+                    <h1 class="text-5xl font-black text-rose-600 italic mb-8 uppercase tracking-tighter">AppEgg</h1>
+                    <form onsubmit="event.preventDefault(); window.state.cliente={nome:this.nome.value, whatsapp:this.whatsapp.value}; localStorage.setItem('appegg_user', JSON.stringify(window.state.cliente)); window.render()" class="space-y-4 text-left">
                         <input name="nome" placeholder="Seu Nome" class="w-full p-5 bg-gray-50 rounded-2xl font-bold border-none outline-none" required>
-                        <input name="whatsapp" placeholder="Seu WhatsApp" class="w-full p-5 bg-gray-50 rounded-2xl font-bold border-none outline-none" required>
-                        <button class="w-full py-5 bg-rose-600 text-white rounded-2xl font-black uppercase shadow-lg">Entrar</button>
+                        <input name="whatsapp" placeholder="WhatsApp (DDD)" class="w-full p-5 bg-gray-50 rounded-2xl font-bold border-none outline-none" required>
+                        <button class="w-full py-5 bg-rose-600 text-white rounded-2xl font-black uppercase shadow-lg">Começar Compras</button>
                     </form>
                 </div>`;
                 return;
             }
 
             if (window.state.tela === 'carrinho') {
-                const itensNoCarrinho = Object.entries(window.state.carrinho);
-                const total = itensNoCarrinho.reduce((acc, [id, q]) => {
-                    const p = window.state.produtos.find(x => x.id == id);
-                    return acc + (p.preco * q);
-                }, 0);
+                const itens = Object.entries(window.state.carrinho);
+                const total = itens.reduce((acc, [id, q]) => acc + (window.state.produtos.find(x => x.id == id).preco * q), 0);
 
                 root.innerHTML = `
-                <div class="p-6 pb-40">
+                <div class="p-6 pb-48">
                     <button onclick="window.mudarTela('catalogo')" class="text-rose-600 font-black uppercase text-[10px] mb-8 flex items-center gap-2">← Continuar Comprando</button>
-                    <h2 class="text-3xl font-black uppercase italic mb-8">Meu Carrinho</h2>
-                    
+                    <h2 class="text-3xl font-black uppercase italic mb-8">Meu Pedido</h2>
                     <div class="space-y-4 mb-10">
-                        ${itensNoCarrinho.map(([id, q]) => {
+                        ${itens.map(([id, q]) => {
                             const p = window.state.produtos.find(x => x.id == id);
                             return `
                             <div class="flex items-center gap-4 bg-gray-50 p-4 rounded-2xl">
@@ -123,38 +112,35 @@
                                 <div class="flex-1 font-black text-[10px] uppercase">${p.nome}<br><span class="text-rose-600">R$ ${(p.preco*q).toFixed(2)}</span></div>
                                 <div class="flex items-center gap-2">
                                     <button onclick="window.sub('${id}')" class="w-8 h-8 bg-white rounded-lg shadow font-black text-rose-600">-</button>
-                                    <span class="font-bold">${q}</span>
+                                    <span class="font-bold text-sm">${q}</span>
                                     <button onclick="window.add('${id}')" class="w-8 h-8 bg-white rounded-lg shadow font-black text-rose-600">+</button>
                                 </div>
                             </div>`;
                         }).join('')}
                     </div>
-
-                    <div class="mb-10">
+                    <div class="mb-10 p-6 bg-gray-50 rounded-[32px]">
                         <p class="font-black text-[10px] text-gray-400 uppercase mb-4 text-center tracking-widest">Programar Entrega?</p>
                         <div class="grid grid-cols-2 gap-2">
                             ${['Compra Única', 'Diária', 'Semanal', 'Quinzenal', 'Mensal'].map(f => `
-                                <button onclick="window.state.frequencia='${f}'; window.render()" class="py-4 rounded-2xl border-2 font-black text-[10px] uppercase ${window.state.frequencia === f ? 'border-rose-600 bg-rose-50 text-rose-600' : 'border-gray-100 text-gray-400'}">${f}</button>
+                                <button onclick="window.state.frequencia='${f}'; window.render()" class="py-4 rounded-xl border-2 font-black text-[10px] uppercase ${window.state.frequencia === f ? 'border-rose-600 bg-rose-600 text-white shadow-lg' : 'border-gray-200 bg-white text-gray-400'}">${f}</button>
                             `).join('')}
                         </div>
                     </div>
-
-                    <div class="fixed bottom-0 left-0 right-0 p-6 bg-white border-t">
-                        <div class="flex justify-between items-center mb-4">
-                            <span class="font-bold text-gray-400 uppercase text-[10px]">Total do Pedido</span>
-                            <span class="text-2xl font-black italic">R$ ${total.toFixed(2)}</span>
-                        </div>
-                        <button onclick="window.finalizarPedido()" class="w-full py-5 bg-rose-600 text-white rounded-2xl font-black uppercase shadow-xl italic">Confirmar e Enviar</button>
+                </div>
+                <div class="fixed bottom-0 left-0 right-0 p-6 bg-white border-t z-50">
+                    <div class="flex justify-between items-center mb-4">
+                        <span class="font-bold text-gray-400 uppercase text-[10px]">Total</span>
+                        <span class="text-2xl font-black italic">R$ ${total.toFixed(2)}</span>
                     </div>
+                    <button onclick="window.finalizarPedido()" class="w-full py-5 bg-rose-600 text-white rounded-2xl font-black uppercase shadow-xl italic">Fechar Pedido</button>
                 </div>`;
             } else {
                 root.innerHTML = `
                 <header class="p-6 sticky top-0 bg-white/90 backdrop-blur-md z-40 border-b flex justify-between items-center">
-                    <h1 class="text-2xl font-black text-rose-600 italic uppercase">AppEgg</h1>
+                    <h1 class="text-2xl font-black text-rose-600 italic uppercase tracking-tighter">AppEgg</h1>
                     <span class="text-[9px] font-black text-gray-400 uppercase tracking-widest">Olá, ${window.state.cliente.nome.split(' ')[0]}</span>
                 </header>
-
-                <div class="p-4 grid grid-cols-2 gap-3">
+                <div class="p-4 grid grid-cols-2 gap-3 pb-32">
                     ${window.state.produtos.map(p => {
                         const q = window.state.carrinho[p.id] || 0;
                         return `
@@ -170,23 +156,21 @@
                         </div>`;
                     }).join('')}
                 </div>
-
+                ${Object.keys(window.state.carrinho).length > 0 ? `
+                <div class="cart-bar shadow-2xl">
+                    <p class="font-black italic text-gray-800 text-lg">🛒 Carrinho</p>
+                    <button onclick="window.mudarTela('carrinho')" class="bg-rose-600 px-8 py-4 rounded-2xl text-white font-black text-xs uppercase italic shadow-lg">Ver Carrinho</button>
+                </div>` : ''}
                 <a href="https://wa.me/5511985706243" target="_blank" class="wa-float">
                     <svg width="30" height="30" fill="currentColor" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.588-5.946 0-6.556 5.332-11.888 11.888-11.888 3.176 0 6.161 1.237 8.404 3.48s3.481 5.229 3.481 8.408c0 6.556-5.332 11.888-11.888 11.888-2.003 0-3.96-.503-5.69-1.465l-6.394 1.688zm6.105-4.576c1.559.926 3.447 1.414 5.373 1.414 5.617 0 10.188-4.571 10.188-10.188 0-2.72-1.057-5.277-2.977-7.197s-4.477-2.977-7.197-2.977c-5.617 0-10.188 4.571-10.188 10.188 0 1.902.521 3.745 1.508 5.389l-1.011 3.693 3.797-.982z"/></svg>
-                </a>
+                </a>`;
+            }
+        };
 
-                ${Object.keys(window.state.carrinho).length > 0 ? `
-                <div class="cart-bar flex justify-between items-center shadow-2xl">
-                    <p class="font-black italic text-gray-800">🛒 AppEgg</p>
-                    <button onclick="window.mudarTela('carrinho')" class="bg-rose-600 px-10 py-4 rounded-2xl text-white font-black text-xs uppercase italic shadow-lg">Ver Carrinho</button>
-                </div>` : ''}
-            `;
-        }
-
-        // CARGA INICIAL
         fetch("https://painel-distribuidora-backend.onrender.com/api/produtos")
             .then(r => r.json())
-            .then(d => { window.state.produtos = d; window.render(); });
+            .then(d => { window.state.produtos = d; window.render(); })
+            .catch(() => { document.getElementById('app-root').innerText = "Erro ao carregar produtos. Tente recarregar."; });
     </script>
 </body>
 </html>
