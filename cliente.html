@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-    <title>AppEgg • Comprar</title>
+    <title>AppEgg</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
@@ -46,16 +46,18 @@
             if(u) {
                 const d = await getDoc(doc(db, 'config', 'loja'));
                 state.config = d.data() || {};
-                carregarProdutos();
+                await carregarProdutos();
                 monitorarPedidos();
             }
             render();
         });
 
         async function carregarProdutos() {
-            const r = await fetch("https://painel-distribuidora-backend.onrender.com/api/produtos");
-            state.produtos = await r.json();
-            render();
+            try {
+                const r = await fetch("https://painel-distribuidora-backend.onrender.com/api/produtos");
+                state.produtos = await r.json();
+                render();
+            } catch(e) { console.error("Erro catálogo", e); }
         }
 
         function monitorarPedidos() {
@@ -85,12 +87,12 @@
         function renderCatalogo() {
             return `<h1 class="logo text-3xl mb-8">AppEgg</h1>
                 <div class="grid grid-cols-2 gap-4">
-                    ${state.produtos.map(p => `
-                        <div class="card text-center bg-white">
+                    ${state.produtos.length > 0 ? state.produtos.map(p => `
+                        <div class="card text-center bg-white shadow-sm border-gray-100">
                             <img src="${p.foto_url}" class="h-20 mx-auto mb-3 object-contain">
                             <p class="font-black text-[10px] uppercase h-8 leading-tight mb-2">${p.nome}</p>
                             <button onclick="abrirCompra(${JSON.stringify(p).replace(/"/g,'&quot;')})" class="w-full bg-rose-600 text-white py-2 rounded-xl text-[10px] font-black uppercase">Pedir</button>
-                        </div>`).join('')}
+                        </div>`).join('') : '<p class="col-span-2 text-center text-gray-400 py-10">Carregando catálogo...</p>'}
                 </div>`;
         }
 
@@ -112,7 +114,7 @@
                         <option value="PIX NA ENTREGA">PIX na Entrega</option>
                         <option value="DINHEIRO NA RETIRADA">Dinheiro na Retirada</option>
                     </select>
-                    <button class="w-full bg-rose-600 text-white py-5 rounded-2xl font-black uppercase mt-4">Confirmar Agora</button>
+                    <button class="w-full bg-rose-600 text-white py-5 rounded-2xl font-black uppercase mt-4">Confirmar Pedido</button>
                     <button type="button" onclick="state.comprando=null;render()" class="w-full text-gray-400 font-bold text-xs uppercase py-2">Cancelar</button>
                 </form>
             </div></div>`;
@@ -121,7 +123,7 @@
         function renderPedidos() {
             return `<h2 class="text-2xl font-black mb-6 italic uppercase">Meus Pedidos</h2>
                 ${state.pedidos.map(p => `
-                    <div class="card">
+                    <div class="card bg-white">
                         <div class="flex justify-between mb-2"><span class="font-black text-rose-600 text-[9px] uppercase italic">${p.status}</span><span class="font-black text-xs">R$ ${p.precoNoMomento?.toFixed(2)}</span></div>
                         <p class="font-black text-[11px] uppercase">${p.produto}</p>
                         <p class="text-[9px] font-bold text-gray-400 uppercase mt-1">Plano: ${p.frequencia || 'AVULSA'}</p>

@@ -3,20 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AppEgg • Admin Profissional</title>
+    <title>AppEgg • Admin</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
-        body { font-family:'DM Sans',sans-serif; background:#f9fafb; color:#111 }
-        .card { background:#fff; border-radius: 24px; border: 1px solid #f1f1f1; padding: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
-        .nav { background:#fff; border-bottom:1px solid #eee; position:sticky; top:0; z-index:50 }
-        .nav button { font-size:10px; font-weight:900; text-transform:uppercase; padding:10px 14px; border-radius:12px; color:#9ca3af; transition: 0.2s; }
-        .nav button.active { background:#fff1f2; color:#e11d48; }
-        .btn-status { font-size: 9px; font-weight: 900; text-transform: uppercase; padding: 12px; border-radius: 12px; transition: 0.2s; }
+        body { font-family:'DM Sans',sans-serif; background:#f4f4f5; color:#111; display: flex; justify-content: center; }
+        #app { width: 100%; max-width: 450px; background: #f9fafb; min-height: 100vh; position: relative; box-shadow: 0 0 50px rgba(0,0,0,0.05); }
+        .card { background:#fff; border-radius:28px; border:1px solid #f1f1f1; padding:24px; margin-bottom: 16px; }
+        .nav { background:#fff; border-bottom:1px solid #eee; position:sticky; top:0; z-index:50; display: flex; justify-content: space-around; align-items: center; height: 70px; }
+        .nav button { font-size:9px; font-weight:900; text-transform:uppercase; color:#9ca3af; }
+        .nav button.active { color:#e11d48; }
+        .dot { width:8px; height:8px; background:#e11d48; border-radius:50%; position:absolute; left:-5px; top:5px }
+        input, select { border: none; outline: none; }
     </style>
 </head>
 <body>
     <div id="app"></div>
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
         import { getFirestore, collection, onSnapshot, query, orderBy, doc, updateDoc, setDoc, getDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
@@ -31,37 +34,36 @@
             appId: "1:92187548716:web:d61d18a29aa76aead7c589"
         };
 
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        const auth = getAuth(app);
-        const API_URL = "https://painel-distribuidora-backend.onrender.com/api/produtos";
+        const appFB = initializeApp(firebaseConfig);
+        const db = getFirestore(appFB);
+        const auth = getAuth(appFB);
 
-        window.state = { 
-            user: null, view: 'pedidos', pedidos: [], produtos: [], 
-            filtroRelatorio: 'dia', config: { pixChave: '', pixTipo: 'CPF' },
-            editandoProduto: null 
+        window.state = {
+            user: null, view: 'pedidos', pedidos: [], produtos: [],
+            filtro: 'dia', clientesView: null, config: { pixChave: '', pixTipo: 'CPF' }
         };
 
-        onAuthStateChanged(auth, u => { 
-            state.user = u; 
-            if(u) { initRealtime(); loadConfig(); loadProdutos(); } 
-            render(); 
+        onAuthStateChanged(auth, u => {
+            state.user = u;
+            if(u) { init(); loadConfig(); loadEstoque(); }
+            render();
         });
 
         async function loadConfig() {
             const d = await getDoc(doc(db, 'config', 'loja'));
             if(d.exists()) state.config = d.data();
+            render();
         }
 
-        async function loadProdutos() {
+        async function loadEstoque() {
             try {
-                const r = await fetch(API_URL);
+                const r = await fetch("https://painel-distribuidora-backend.onrender.com/api/produtos");
                 state.produtos = await r.json();
                 render();
-            } catch (e) { console.error("Erro estoque:", e); }
+            } catch(e) { console.error("Erro estoque", e); }
         }
 
-        function initRealtime() {
+        function init() {
             onSnapshot(query(collection(db,'vendas_logs'), orderBy('criadoEm','desc')), s => {
                 state.pedidos = s.docs.map(d => ({id:d.id, ...d.data()}));
                 render();
@@ -71,158 +73,150 @@
         window.render = () => {
             const app = document.getElementById('app');
             if(!state.user) {
-                app.innerHTML = `<div class="min-h-screen flex items-center justify-center p-6"><form onsubmit="login(event)" class="card w-full max-w-sm space-y-4"><h1 class="text-3xl font-black text-rose-600 italic text-center">AppEgg Admin</h1><input name="email" placeholder="Email" class="w-full p-4 bg-gray-50 rounded-xl font-bold border-none outline-none"><input name="pass" type="password" placeholder="Senha" class="w-full p-4 bg-gray-50 rounded-xl font-bold border-none outline-none"><button class="w-full bg-rose-600 text-white py-4 rounded-xl font-black uppercase">Entrar</button></form></div>`;
+                app.innerHTML = `<div class="p-10 mt-20 text-center"><h1 class="text-4xl font-black text-rose-600 mb-10 italic">AppEgg</h1><form onsubmit="login(event)" class="space-y-4"><input name="email" placeholder="Email" class="w-full p-4 bg-white rounded-2xl font-bold shadow-sm"><input name="pass" type="password" placeholder="Senha" class="w-full p-4 bg-white rounded-2xl font-bold shadow-sm"><button class="w-full bg-rose-600 text-white py-4 rounded-2xl font-black uppercase">Entrar</button></form></div>`;
                 return;
             }
-            app.innerHTML = `
-            <div class="nav flex justify-between items-center px-6 h-20 shadow-sm">
-                <div class="text-xl font-black italic text-rose-600">AppEgg</div>
-                <div class="flex gap-1">
-                    ${['pedidos','relatorios','clientes','estoque','pix'].map(v => `<button onclick="nav('${v}')" class="${state.view===v?'active':''}">${v}</button>`).join('')}
-                    <button onclick="logout()" class="ml-2 text-gray-400 font-black">SAIR</button>
-                </div>
-            </div>
-            <main class="max-w-5xl mx-auto p-6">
-                ${state.view==='pedidos' ? renderPedidos() : ''}
-                ${state.view==='relatorios' ? renderRelatorios() : ''}
-                ${state.view==='clientes' ? renderClientes() : ''}
-                ${state.view==='estoque' ? renderEstoque() : ''}
-                ${state.view==='pix' ? renderPix() : ''}
-            </main>`;
-        };
 
-        // --- COMPONENTES DE TELA ---
+            app.innerHTML = `
+            <div class="nav shadow-sm">
+                <button onclick="nav('pedidos')" class="${state.view==='pedidos'?'active':''}">Pedidos</button>
+                <button onclick="nav('relatorios')" class="${state.view==='relatorios'?'active':''}">Relatórios</button>
+                <button onclick="nav('clientes')" class="${state.view==='clientes'?'active':''}">Clientes</button>
+                <button onclick="nav('estoque')" class="${state.view==='estoque'?'active':''}">Estoque</button>
+                <button onclick="nav('pix')" class="${state.view==='pix'?'active':''}">PIX</button>
+                <button onclick="logout()" class="text-gray-300">Sair</button>
+            </div>
+            <div class="p-4">
+                ${state.view==='pedidos'?renderPedidos():''}
+                ${state.view==='relatorios'?renderRelatorios():''}
+                ${state.view==='clientes'?renderClientes():''}
+                ${state.view==='estoque'?renderEstoque():''}
+                ${state.view==='pix'?renderPix():''}
+            </div>`;
+        }
+
+        window.nav = v => { state.view=v; state.clientesView=null; render(); };
+
         function renderPedidos() {
-            const ativos = state.pedidos.filter(p => p.status !== 'FINALIZADO' && p.status !== 'CANCELADO');
-            return ativos.map(p => `
-            <div class="card mb-4 border-l-8 border-rose-500">
-                <div class="flex justify-between items-start mb-3">
-                    <div><p class="font-black text-sm uppercase">${p.clienteNome}</p><p class="text-[10px] text-gray-400 font-bold">${p.clienteWhatsapp}</p></div>
+            return state.pedidos.filter(p=>p.status!=='FINALIZADO'&&p.status!=='CANCELADO').map(p=>`
+            <div class="card border-l-8 border-rose-500">
+                <div class="flex justify-between mb-2">
+                    <div><p class="font-black text-sm uppercase">${p.clienteNome}</p><p class="text-[10px] text-gray-400">${p.clienteWhatsapp}</p></div>
                     <span class="text-[9px] font-black bg-rose-50 text-rose-600 px-2 py-1 rounded-full uppercase">${p.status}</span>
                 </div>
-                <div class="bg-gray-50 p-3 rounded-xl mb-4 text-xs font-bold uppercase">📦 ${p.produto} <span class="text-rose-600 ml-2">(${p.frequencia || 'AVULSA'})</span></div>
+                <p class="text-xs font-bold mb-1 uppercase">${p.produto}</p>
+                <p class="text-[10px] text-rose-500 font-black mb-3 italic">PLANO: ${p.frequencia || 'AVULSA'}</p>
                 <div class="grid grid-cols-2 gap-2">
-                    <button onclick="updateStatus('${p.id}','EMBALANDO')" class="btn-status bg-blue-600 text-white">Embalar</button>
-                    <button onclick="updatePronto('${p.id}','${p.pagamento}')" class="btn-status bg-orange-500 text-white">Pronto</button>
-                    <button onclick="updateStatus('${p.id}','FINALIZADO')" class="btn-status bg-emerald-600 text-white">Concluir</button>
-                    <button onclick="updateStatus('${p.id}','CANCELADO')" class="btn-status bg-gray-100 text-gray-400">Cancelar</button>
+                    <button onclick="setStatus('${p.id}','EMBALANDO')" class="bg-blue-500 text-white py-3 rounded-xl text-[10px] font-black uppercase">Embalar</button>
+                    <button onclick="setPronto('${p.id}','${p.pagamento}')" class="bg-orange-500 text-white py-3 rounded-xl text-[10px] font-black uppercase">Pronto</button>
+                    <button onclick="setStatus('${p.id}','FINALIZADO')" class="bg-emerald-600 text-white py-3 rounded-xl text-[10px] font-black uppercase col-span-2">Finalizar Pedido</button>
                 </div>
-            </div>`).join('') || '<p class="text-center py-20 text-gray-300 font-black uppercase">Nenhum pedido pendente</p>';
+            </div>`).join('') || '<p class="text-center text-gray-400 mt-10 font-bold uppercase text-xs">Sem pedidos ativos</p>';
         }
 
         function renderRelatorios() {
             const agora = new Date();
             const lista = state.pedidos.filter(p => {
                 if(p.status !== 'FINALIZADO') return false;
-                const dataPed = p.criadoEm?.toDate ? p.criadoEm.toDate() : new Date();
-                const diffDias = (agora - dataPed) / (1000 * 60 * 60 * 24);
-                if(state.filtroRelatorio === 'dia') return diffDias <= 1;
-                if(state.filtroRelatorio === 'semana') return diffDias <= 7;
-                if(state.filtroRelatorio === 'quinzenal') return diffDias <= 15;
-                if(state.filtroRelatorio === 'mensal') return diffDias <= 30;
+                const d = p.criadoEm?.toDate ? p.criadoEm.toDate() : new Date();
+                const diff = (agora - d) / (1000 * 60 * 60 * 24);
+                if(state.filtro === 'dia') return diff <= 1;
+                if(state.filtro === 'semana') return diff <= 7;
+                if(state.filtro === 'quinzenal') return diff <= 15;
+                if(state.filtro === 'mensal') return diff <= 30;
                 return true;
             });
-            const faturamento = lista.reduce((a,b) => a + (b.precoNoMomento || 0), 0);
-            
+            const total = lista.reduce((a,b)=>a+(b.precoNoMomento||0),0);
+
             return `
             <div class="flex gap-2 mb-6 overflow-x-auto pb-2">
-                ${['dia','semana','quinzenal','mensal'].map(f => `<button onclick="state.filtroRelatorio='${f}';render()" class="px-4 py-2 rounded-xl text-[10px] font-black uppercase ${state.filtroRelatorio===f?'bg-rose-600 text-white':'bg-white border text-gray-400'}">${f}</button>`).join('')}
+                ${['dia','semana','quinzenal','mensal'].map(f=>`
+                    <button onclick="state.filtro='${f}';render()" class="px-3 py-2 rounded-xl text-[9px] font-black uppercase border ${state.filtro===f?'bg-rose-600 text-white border-rose-600':'bg-white text-gray-400'}">${f}</button>
+                `).join('')}
             </div>
-            <div class="card bg-rose-600 text-white border-none mb-6">
-                <p class="text-[10px] font-bold uppercase opacity-80">Faturamento no período</p>
-                <h2 class="text-4xl font-black italic">R$ ${faturamento.toFixed(2)}</h2>
-                <p class="text-[10px] mt-2 font-black uppercase">${lista.length} Vendas Concluídas</p>
+            <div class="card bg-rose-600 text-white border-none">
+                <p class="text-[10px] font-bold uppercase opacity-70">Faturamento ${state.filtro}</p>
+                <h2 class="text-4xl font-black">R$ ${total.toFixed(2)}</h2>
+                <p class="text-[10px] mt-1 font-bold">${lista.length} PEDIDOS CONCLUÍDOS</p>
             </div>
-            <div class="space-y-2">
-                ${lista.map(l => `<div class="card flex justify-between items-center py-3 px-4"><span class="text-[10px] font-bold uppercase">${l.produto}</span><span class="font-black text-rose-600">R$ ${l.precoNoMomento.toFixed(2)}</span></div>`).join('')}
+            <div class="mt-4 space-y-2">
+                ${lista.map(p=>`<div class="card py-3 px-4 flex justify-between items-center text-[10px] font-black"><span>${p.produto}</span><span class="text-rose-600 font-black">R$ ${p.precoNoMomento.toFixed(2)}</span></div>`).join('')}
             </div>`;
         }
 
         function renderClientes() {
-            const map = {};
-            state.pedidos.forEach(p => { if(!map[p.clienteWhatsapp]) map[p.clienteWhatsapp] = []; map[p.clienteWhatsapp].push(p); });
-            if(state.clientes) {
-                return `<button onclick="state.clientes=null;render()" class="mb-4 text-rose-600 font-black text-xs uppercase">← Voltar</button>` + 
-                map[state.clientes].map(p => `<div class="card mb-2 flex justify-between"><span class="text-[10px] font-bold uppercase">${p.produto}</span><span class="text-[10px] font-black">${p.status}</span></div>`).join('');
+            const map={};
+            state.pedidos.forEach(p=>{ if(!map[p.clienteWhatsapp]) map[p.clienteWhatsapp]=[]; map[p.clienteWhatsapp].push(p); });
+            
+            if(state.clientesView){
+                return `
+                <button onclick="state.clientesView=null;render()" class="mb-4 text-rose-600 font-black text-xs uppercase">← Voltar</button>
+                ${map[state.clientesView].map(p=>`
+                    <div class="card">
+                        <p class="font-black text-xs uppercase">${p.produto}</p>
+                        <p class="text-[10px] text-gray-400 font-bold uppercase">Status: ${p.status}</p>
+                    </div>
+                `).join('')}`;
             }
-            return Object.keys(map).map(c => `<div class="card mb-3 flex justify-between items-center py-4"><p class="font-bold text-xs uppercase">${c}</p><button onclick="state.clientes='${c}';render()" class="text-rose-600 font-black text-[10px] uppercase">Detalhes</button></div>`).join('');
+
+            return Object.keys(map).map(c=>`
+                <div class="card flex justify-between items-center py-4">
+                    <p class="font-black text-xs uppercase">${c}</p>
+                    <button onclick="state.clientesView='${c}';render()" class="text-rose-600 font-black text-xs uppercase italic">Histórico</button>
+                </div>`).join('');
         }
 
         function renderEstoque() {
-            const p = state.editandoProduto || { nome: '', quantidade: '', preco: '', foto_url: '', tipo_estoque: 'Caixa' };
             return `
-            <div class="card mb-8">
-                <h2 class="font-black mb-4 uppercase text-sm">Gerenciar Produto</h2>
-                <form onsubmit="handleSalvarProduto(event)" class="grid grid-cols-2 gap-3">
-                    <input name="nome" value="${p.nome}" placeholder="Nome" class="col-span-2 p-4 bg-gray-50 rounded-xl font-bold text-xs border-none outline-none" required>
-                    <input name="preco" type="number" step="0.01" value="${p.preco}" placeholder="Preço" class="p-4 bg-gray-50 rounded-xl font-bold text-xs border-none outline-none" required>
-                    <input name="quantidade" type="number" value="${p.quantidade}" placeholder="Qtd" class="p-4 bg-gray-50 rounded-xl font-bold text-xs border-none outline-none" required>
-                    <select name="tipo_estoque" class="p-4 bg-gray-50 rounded-xl font-bold text-xs border-none outline-none">
-                        ${["Unidade", "Dúzia", "Cartela (20)", "Cartela (30)", "Caixa"].map(t => `<option value="${t}" ${p.tipo_estoque===t?'selected':''}>${t}</option>`).join('')}
-                    </select>
-                    <input name="foto_url" value="${p.foto_url}" placeholder="URL da Imagem" class="p-4 bg-gray-50 rounded-xl font-bold text-xs border-none outline-none" required>
-                    <button class="col-span-2 bg-rose-600 text-white py-4 rounded-xl font-black uppercase text-xs shadow-lg">${state.editandoProduto ? 'Atualizar Produto' : 'Cadastrar Produto'}</button>
-                    ${state.editandoProduto ? `<button type="button" onclick="state.editandoProduto=null;render()" class="col-span-2 text-gray-400 font-bold text-[10px] uppercase">Cancelar Edição</button>` : ''}
+            <div class="card">
+                <h3 class="font-black text-xs uppercase mb-4">Adicionar Produto</h3>
+                <form onsubmit="saveProd(event)" class="space-y-2">
+                    <input name="nome" placeholder="Nome do Produto" class="w-full p-4 bg-gray-50 rounded-xl font-bold text-xs" required>
+                    <input name="preco" type="number" step="0.01" placeholder="Preço R$" class="w-full p-4 bg-gray-50 rounded-xl font-bold text-xs" required>
+                    <input name="foto" placeholder="URL da Foto" class="w-full p-4 bg-gray-50 rounded-xl font-bold text-xs" required>
+                    <button class="w-full bg-rose-600 text-white py-4 rounded-xl font-black uppercase text-xs">Salvar</button>
                 </form>
             </div>
-            <div class="grid grid-cols-1 gap-3">
-                ${state.produtos.map(prod => `
-                <div class="card flex items-center justify-between py-3">
-                    <div class="flex items-center gap-3"><img src="${prod.foto_url}" class="w-10 h-10 object-contain"><p class="font-black text-[10px] uppercase">${prod.nome}</p></div>
-                    <div class="flex gap-4"><button onclick="editarP(${JSON.stringify(prod).replace(/"/g,'&quot;')})" class="text-blue-600 font-black text-[10px]">EDITAR</button>
-                    <button onclick="deletarP('${prod.id}')" class="text-gray-300 font-black text-[10px]">EXCLUIR</button></div>
-                </div>`).join('')}
-            </div>`;
+            ${state.produtos.map(p=>`
+                <div class="card flex justify-between items-center py-3">
+                    <div class="flex items-center gap-3"><img src="${p.foto_url}" class="w-8 h-8 object-contain"><p class="font-black text-[10px] uppercase">${p.nome}</p></div>
+                    <button onclick="delProd('${p.id}')" class="text-gray-300 font-black text-[10px]">EXCLUIR</button>
+                </div>`).join('')}`;
         }
 
         function renderPix() {
-            const opcoes = ["CPF", "CNPJ", "Telefone", "Email", "Chave Aleatória"];
+            const t = ["CPF", "CNPJ", "Telefone", "Email", "Aleatória"];
             return `<div class="card space-y-4">
-                <h2 class="font-black text-lg italic uppercase">Configurar Pagamento</h2>
-                <select id="pixTipo" class="w-full p-4 bg-gray-50 rounded-xl font-bold border-none outline-none">
-                    ${opcoes.map(o => `<option ${state.config.pixTipo===o?'selected':''}>${o}</option>`).join('')}
+                <h3 class="font-black text-xs uppercase italic">Configuração PIX</h3>
+                <select id="pixTipo" class="w-full p-4 bg-gray-50 rounded-xl font-bold text-xs">
+                    ${t.map(o=>`<option ${state.config.pixTipo===o?'selected':''}>${o}</option>`).join('')}
                 </select>
-                <input id="pixChave" value="${state.config.pixChave}" placeholder="Insira a Chave PIX" class="w-full p-4 bg-gray-50 rounded-xl font-bold border-none outline-none">
-                <button onclick="savePix()" class="w-full bg-rose-600 text-white py-4 rounded-xl font-black uppercase shadow-lg">Salvar Configuração</button>
+                <input id="pixChave" value="${state.config.pixChave || ''}" placeholder="Chave PIX" class="w-full p-4 bg-gray-50 rounded-xl font-bold text-xs">
+                <button onclick="savePix()" class="w-full bg-rose-600 text-white py-4 rounded-xl font-black uppercase text-xs">Salvar Chave</button>
             </div>`;
         }
 
-        // --- AÇÕES ---
-        window.nav = v => { state.view = v; state.clientes = null; render(); };
-        window.login = async e => { e.preventDefault(); await signInWithEmailAndPassword(auth, e.target.email.value, e.target.pass.value); };
-        window.logout = () => signOut(auth);
-        window.updateStatus = async (id, s) => { await updateDoc(doc(db,'vendas_logs',id), { status: s }); };
-        window.updatePronto = async (id, p) => { 
-            await updateDoc(doc(db,'vendas_logs',id), { 
-                status: p.includes('RETIRADA') ? 'PRONTO PARA RETIRADA' : 'SAIU PARA ENTREGA', 
-                horarioSaiu: new Date() 
-            }); 
+        window.login=async e=>{ e.preventDefault(); await signInWithEmailAndPassword(auth,e.target.email.value,e.target.pass.value); };
+        window.logout=()=>signOut(auth);
+        window.setStatus=(id,s)=>updateDoc(doc(db,'vendas_logs',id),{status:s});
+        window.setPronto=(id,pag)=>updateDoc(doc(db,'vendas_logs',id),{
+            status: pag.includes('RETIRADA')?'PRONTO PARA RETIRADA':'SAIU PARA ENTREGA',
+            horarioSaiu: new Date()
+        });
+        window.savePix=async()=>{
+            await setDoc(doc(db,'config','loja'),{pixChave:document.getElementById('pixChave').value,pixTipo:document.getElementById('pixTipo').value});
+            alert("Salvo!"); loadConfig();
         };
-        window.savePix = async () => {
-            const chave = document.getElementById('pixChave').value;
-            const tipo = document.getElementById('pixTipo').value;
-            await setDoc(doc(db, 'config', 'loja'), { pixChave: chave, pixTipo: tipo });
-            alert("Configurações salvas!");
-            loadConfig();
-        };
-
-        window.editarP = p => { state.editandoProduto = p; render(); };
-        window.deletarP = async id => { 
-            if(confirm("Excluir produto?")) {
-                await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
-                loadProdutos();
-            }
-        };
-        window.handleSalvarProduto = async e => {
+        window.saveProd=async e=>{
             e.preventDefault();
             const f = new FormData(e.target);
-            const dados = { nome: f.get('nome'), preco: parseFloat(f.get('preco')), quantidade: parseInt(f.get('quantidade')), tipo_estoque: f.get('tipo_estoque'), foto_url: f.get('foto_url') };
-            const method = state.editandoProduto ? 'PUT' : 'POST';
-            const url = state.editandoProduto ? `${API_URL}/${state.editandoProduto.id}` : API_URL;
-            await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(dados) });
-            state.editandoProduto = null;
-            loadProdutos();
+            await fetch("https://painel-distribuidora-backend.onrender.com/api/produtos", {
+                method: 'POST', headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({nome:f.get('nome'), preco:parseFloat(f.get('preco')), foto_url:f.get('foto')})
+            });
+            loadEstoque(); e.target.reset();
         };
+        window.delProd=async id=>{ if(confirm("Apagar?")){ await fetch(`https://painel-distribuidora-backend.onrender.com/api/produtos/${id}`,{method:'DELETE'}); loadEstoque(); }};
     </script>
 </body>
 </html>
