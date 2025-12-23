@@ -8,11 +8,11 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&display=swap');
         body { font-family: 'Inter', sans-serif; background: #fff; }
-        .btn-main { background: #e11d48; color: white; font-weight: 800; text-transform: uppercase; border-radius: 24px; padding: 20px; width: 100%; border: none; }
         .logo-text { font-weight: 800; color: #e11d48; letter-spacing: -0.05em; }
-        .nav-bottom { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid #f3f4f6; display: flex; justify-content: space-around; padding: 15px; z-index: 100; }
-        .nav-item { font-size: 10px; font-weight: 800; text-transform: uppercase; color: #9ca3af; }
-        .nav-item.active { color: #e11d48; }
+        .nav-bottom { position: fixed; bottom: 20px; left: 15px; right: 15px; background: #111827; border-radius: 24px; display: flex; justify-content: space-around; padding: 10px; z-index: 100; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 12px; border-radius: 18px; color: #9ca3af; }
+        .nav-item.active { background: #e11d48; color: white; }
+        .nav-text { font-size: 10px; font-weight: 800; text-transform: uppercase; }
         .timeline-dot { width: 6px; height: 6px; border-radius: 50%; background: #e11d48; position: relative; z-index: 10; }
         .timeline-step { position: relative; padding-left: 15px; border-left: 2px solid #f3f4f6; margin-left: 2px; padding-bottom: 12px; }
         .timeline-step:last-child { border-left: 2px solid transparent; }
@@ -47,6 +47,12 @@
             window.render();
         });
 
+        const formatTime = (ts) => {
+            if (!ts) return "Aguardando...";
+            const date = ts.toDate ? ts.toDate() : new Date(ts);
+            return date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        };
+
         window.render = () => {
             const root = document.getElementById('app-root');
             if (!window.state.user) {
@@ -55,18 +61,24 @@
                     <form onsubmit="window.actions.login(event)" class="space-y-4">
                         <input name="email" type="email" placeholder="E-mail" class="w-full p-5 bg-gray-50 rounded-2xl font-bold border outline-none">
                         <input name="pass" type="password" placeholder="Senha" class="w-full p-5 bg-gray-50 rounded-2xl font-bold border outline-none">
-                        <button class="btn-main mt-4 shadow-xl">Entrar</button>
+                        <button class="w-full py-5 bg-rose-600 text-white rounded-2xl font-black uppercase shadow-xl mt-4">Entrar</button>
                     </form>
                 </div>`;
                 return;
             }
 
             let content = window.state.tela === 'catalogo' ? renderCatalogo() : renderPedidos();
-            root.innerHTML = `<div class="pb-32">${content}</div>
+            root.innerHTML = `<div class="pb-40">${content}</div>
                 <nav class="nav-bottom">
-                    <button onclick="window.state.tela='catalogo';window.render()" class="nav-item ${window.state.tela==='catalogo'?'active':''}">Comprar</button>
-                    <button onclick="window.state.tela='notificacoes';window.render()" class="nav-item ${window.state.tela==='notificacoes'?'active':''}">Meus Pedidos</button>
-                    <button onclick="signOut(auth)" class="nav-item">Sair</button>
+                    <button onclick="window.state.tela='catalogo';window.render()" class="nav-item ${window.state.tela==='catalogo'?'active':''}">
+                        <span class="text-xl">🥚</span><span class="nav-text">Comprar</span>
+                    </button>
+                    <button onclick="window.state.tela='notificacoes';window.render()" class="nav-item ${window.state.tela==='notificacoes'?'active':''}">
+                        <span class="text-xl">📦</span><span class="nav-text">Pedidos</span>
+                    </button>
+                    <button onclick="window.actions.logout()" class="nav-item">
+                        <span class="text-xl">🚪</span><span class="nav-text">Sair</span>
+                    </button>
                 </nav>`;
         };
 
@@ -76,29 +88,27 @@
                     ${window.state.produtos.map(p => `<div class="p-4 bg-white border rounded-[32px] flex flex-col items-center shadow-sm">
                         <img src="${p.foto_url}" class="h-20 mb-3 object-contain"><h3 class="font-black text-[10px] uppercase text-center h-8 leading-tight">${p.nome}</h3>
                         <p class="text-rose-600 font-black text-sm mb-4">R$ ${parseFloat(p.preco).toFixed(2)}</p>
-                        <button onclick="window.actions.add('${p.id}')" class="w-full bg-gray-900 text-white py-3 rounded-2xl text-[9px] font-black uppercase">Adicionar</button>
+                        <button onclick="window.actions.add('${p.id}')" class="w-full bg-gray-900 text-white py-3 rounded-2xl text-[9px] font-black uppercase">Pedir</button>
                     </div>`).join('')}
-                </div>`;
-        }
-
-        function renderTimeline(p) {
-            const formatTime = (ts) => ts ? (ts.toDate ? ts.toDate() : new Date(ts)).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "--:--";
-            return `
-                <div class="mt-4 border-t pt-4">
-                    <div class="timeline-step"><div class="absolute left-[-4px] timeline-dot"></div><p class="text-[9px] font-black uppercase text-gray-400">Pedido: <span class="text-gray-900">${formatTime(p.criadoEm)}</span></p></div>
-                    <div class="timeline-step"><div class="absolute left-[-4px] timeline-dot ${!p.horarioEmbalando ? 'bg-gray-100' : ''}"></div><p class="text-[9px] font-black uppercase text-gray-400">Embalando: <span class="text-gray-900">${formatTime(p.horarioEmbalando)}</span></p></div>
-                    <div class="timeline-step"><div class="absolute left-[-4px] timeline-dot ${!p.horarioSaiu ? 'bg-gray-100' : ''}"></div><p class="text-[9px] font-black uppercase text-gray-400">Logística: <span class="text-gray-900">${formatTime(p.horarioSaiu)}</span></p></div>
-                    <div class="timeline-step"><div class="absolute left-[-4px] timeline-dot ${!p.horarioConcluido ? 'bg-gray-100' : ''}"></div><p class="text-[9px] font-black uppercase text-gray-400">Finalizado: <span class="text-gray-900">${formatTime(p.horarioConcluido)}</span></p></div>
                 </div>`;
         }
 
         function renderPedidos() {
             return `<div class="p-6"><h2 class="text-3xl font-black uppercase mb-8">Meus Pedidos</h2><div class="space-y-6">
-                ${window.state.meusPedidos.map(p => `<div class="bg-white border rounded-[32px] p-6 shadow-sm">
-                    <div class="flex justify-between items-center mb-2"><span class="text-[10px] font-black text-rose-600 uppercase tracking-widest">${p.status}</span><span class="text-lg font-black">R$ ${(p.precoNoMomento||0).toFixed(2)}</span></div>
-                    <p class="text-[11px] font-bold text-gray-800 leading-tight uppercase">${p.produto}</p>
-                    ${renderTimeline(p)}
-                </div>`).join('') || '<p class="text-center font-black py-20 text-gray-300 uppercase">Nenhum pedido</p>'}
+                ${window.state.meusPedidos.map(p => `
+                    <div class="bg-white border rounded-[32px] p-6 shadow-sm">
+                        <div class="flex justify-between items-center mb-4">
+                            <span class="text-[10px] font-black text-rose-600 uppercase tracking-widest">${p.status}</span>
+                            <span class="text-lg font-black text-gray-900">R$ ${(p.precoNoMomento||0).toFixed(2)}</span>
+                        </div>
+                        <p class="text-[11px] font-bold text-gray-800 leading-tight uppercase mb-4 border-b pb-2">${p.produto}</p>
+                        <div class="space-y-0">
+                            <div class="timeline-step"><div class="absolute left-[-4px] timeline-dot"></div><p class="text-[9px] font-black uppercase text-gray-400">Pedido: <span class="text-gray-900">${formatTime(p.criadoEm)}</span></p></div>
+                            <div class="timeline-step"><div class="absolute left-[-4px] timeline-dot ${!p.horarioEmbalando?'bg-gray-100':''}"></div><p class="text-[9px] font-black uppercase text-gray-400">Embalando: <span class="text-gray-900">${formatTime(p.horarioEmbalando)}</span></p></div>
+                            <div class="timeline-step"><div class="absolute left-[-4px] timeline-dot ${!p.horarioSaiu?'bg-gray-100':''}"></div><p class="text-[9px] font-black uppercase text-gray-400">Logística: <span class="text-gray-900">${formatTime(p.horarioSaiu)}</span></p></div>
+                            <div class="timeline-step"><div class="absolute left-[-4px] timeline-dot ${!p.horarioConcluido?'bg-gray-100':''}"></div><p class="text-[9px] font-black uppercase text-gray-400">Finalizado: <span class="text-gray-900">${formatTime(p.horarioConcluido)}</span></p></div>
+                        </div>
+                    </div>`).join('') || '<p class="text-center font-black py-20 text-gray-300 uppercase">Nenhum pedido</p>'}
             </div></div>`;
         }
 
@@ -106,6 +116,9 @@
             login: async (e) => {
                 e.preventDefault();
                 try { await signInWithEmailAndPassword(auth, e.target.email.value, e.target.pass.value); } catch (err) { alert("Erro ao entrar."); }
+            },
+            logout: async () => {
+                await signOut(auth);
             },
             add: (id) => { 
                 const p = window.state.produtos.find(x => x.id == id);
