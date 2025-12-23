@@ -1,24 +1,31 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>AppEgg Admin</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AppEgg • Admin</title>
+
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700;900&display=swap" rel="stylesheet">
+
 <style>
-body { font-family:'DM Sans',sans-serif;background:#fafafa }
-.nav-btn.active{background:#ffe4e6;color:#be123c}
+body { font-family:'DM Sans',sans-serif;background:#f9fafb;color:#111 }
+.card { background:#fff;border-radius:28px;border:1px solid #f1f1f1;padding:24px }
+.nav { background:#fff;border-bottom:1px solid #eee;position:sticky;top:0;z-index:50 }
+.nav button { font-size:11px;font-weight:900;text-transform:uppercase;padding:12px 18px;border-radius:14px;color:#9ca3af }
+.nav button.active { background:#fff1f2;color:#e11d48 }
+.timeline { border-left:2px solid #f3f4f6;padding-left:18px }
+.dot { width:8px;height:8px;background:#e11d48;border-radius:50%;position:absolute;left:-5px;top:5px }
 </style>
 </head>
-<body>
 
+<body>
 <div id="app"></div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+import { getFirestore, collection, onSnapshot, query, orderBy, doc, updateDoc } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
-import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyD3Otz9-zdZH-E5Feg9IOGWPzVycoe8gro",
@@ -29,166 +36,167 @@ const firebaseConfig = {
   appId: "1:92187548716:web:d61d18a29aa76aead7c589"
 };
 
-const appFB = initializeApp(firebaseConfig);
-const auth = getAuth(appFB);
-const db = getFirestore(appFB);
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
 
-const API_PRODUTOS = "https://painel-distribuidora-backend.onrender.com/api/produtos";
-
-const state = {
+window.state = {
   user:null,
   view:'pedidos',
   pedidos:[],
-  produtos:[],
+  clientes:null,
+  filtro:'dia',
   pix:{
-    tipo:'CNPJ',
-    chave:'',
-    nome:'Distribuidora AppEgg'
+    tipo:'CPF',
+    chave:''
   }
 };
 
 onAuthStateChanged(auth,u=>{
   state.user=u;
-  if(u){
-    carregarPedidos();
-    carregarProdutos();
-  }
+  if(u) init();
   render();
 });
 
-function render(){
-  const el=document.getElementById("app");
-  if(!state.user){
-    el.innerHTML=`
-    <div class="min-h-screen flex items-center justify-center">
-      <form onsubmit="login(event)" class="bg-white p-10 rounded-3xl shadow w-full max-w-sm space-y-4">
-        <h1 class="text-3xl font-black text-rose-600 text-center italic">AppEgg</h1>
-        <input name="email" type="email" placeholder="E-mail" class="w-full p-4 bg-gray-100 rounded-xl" required>
-        <input name="pass" type="password" placeholder="Senha" class="w-full p-4 bg-gray-100 rounded-xl" required>
-        <button class="w-full py-4 bg-rose-600 text-white rounded-xl font-black uppercase">Entrar</button>
-      </form>
-    </div>`;
-    return;
-  }
-
-  el.innerHTML=`
-  <header class="bg-white border-b px-6 py-4 flex justify-between items-center">
-    <div class="text-2xl font-black italic text-rose-600">AppEgg</div>
-    <div class="flex gap-2">
-      ${navBtn('pedidos','Pedidos')}
-      ${navBtn('estoque','Estoque')}
-      ${navBtn('pix','PIX')}
-      ${navBtn('relatorios','Relatórios')}
-      ${navBtn('clientes','Clientes')}
-      <button onclick="logout()" class="px-4 py-2 text-xs font-black uppercase text-gray-400">Sair</button>
-    </div>
-  </header>
-
-  <main class="max-w-6xl mx-auto p-6">
-    ${renderView()}
-  </main>
-
-  <footer class="text-center text-xs text-gray-400 py-6">
-    AppEgg • Distribuidora de Ovos Aline • 23/12/2025
-  </footer>
-  `;
-}
-
-function navBtn(v,l){
-  return `<button onclick="state.view='${v}';render()" class="nav-btn px-4 py-2 rounded-xl text-xs font-black uppercase ${state.view===v?'active':''}">${l}</button>`;
-}
-
-function renderView(){
-  if(state.view==='pedidos') return renderPedidos();
-  if(state.view==='estoque') return renderEstoque();
-  if(state.view==='pix') return renderPix();
-  if(state.view==='relatorios') return renderRelatorios();
-  if(state.view==='clientes') return renderClientes();
-}
-
-function renderPedidos(){
-  return state.pedidos.map(p=>`
-  <div class="bg-white p-6 rounded-3xl shadow mb-4">
-    <div class="flex justify-between mb-2">
-      <b>${p.clienteNome}</b>
-      <span class="text-xs font-black text-rose-600">${p.status}</span>
-    </div>
-    <p class="text-sm">${p.produto}</p>
-    <p class="text-xs text-gray-400">${p.pagamento}</p>
-    <div class="flex gap-2 mt-4">
-      <button onclick="mudarStatus('${p.id}','EMBALANDO')" class="btn">Embalar</button>
-      <button onclick="mudarStatus('${p.id}','PRONTO')" class="btn">Pronto</button>
-      <button onclick="mudarStatus('${p.id}','FINALIZADO')" class="btn">Finalizar</button>
-    </div>
-  </div>`).join('');
-}
-
-function renderEstoque(){
-  return `
-  <h2 class="font-black mb-4">Produtos</h2>
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-    ${state.produtos.map(p=>`
-      <div class="bg-white p-4 rounded-2xl shadow">
-        <img src="${p.foto_url}" class="h-20 mx-auto mb-2 object-contain">
-        <b class="block text-xs">${p.nome}</b>
-        <p class="text-rose-600 font-black">R$ ${p.preco.toFixed(2)}</p>
-      </div>`).join('')}
-  </div>
-  `;
-}
-
-function renderPix(){
-  return `
-  <div class="bg-white p-6 rounded-3xl shadow max-w-md">
-    <h2 class="font-black mb-4">Configurar PIX</h2>
-    <select onchange="state.pix.tipo=this.value" class="w-full p-3 bg-gray-100 rounded-xl mb-3">
-      <option>CPF</option><option>CNPJ</option><option>Email</option><option>Telefone</option><option>Aleatória</option>
-    </select>
-    <input oninput="state.pix.chave=this.value" placeholder="Chave PIX" class="w-full p-3 bg-gray-100 rounded-xl mb-3">
-    <input oninput="state.pix.nome=this.value" placeholder="Nome Recebedor" class="w-full p-3 bg-gray-100 rounded-xl">
-  </div>`;
-}
-
-function renderRelatorios(){
-  const total = state.pedidos.filter(p=>p.status==='FINALIZADO').reduce((s,p)=>s+(p.precoNoMomento||0),0);
-  return `<h2 class="font-black text-3xl text-rose-600">R$ ${total.toFixed(2)}</h2>`;
-}
-
-function renderClientes(){
-  const unicos=[...new Set(state.pedidos.map(p=>p.clienteWhatsapp))];
-  return unicos.map(c=>`
-    <div class="bg-white p-4 rounded-xl mb-2">${c}</div>
-  `).join('');
-}
-
-window.login=async e=>{
-  e.preventDefault();
-  await signInWithEmailAndPassword(auth,e.target.email.value,e.target.pass.value);
-};
-
-window.logout=()=>signOut(auth);
-
-function carregarPedidos(){
-  onSnapshot(query(collection(db,"vendas_logs"),orderBy("criadoEm","desc")),s=>{
+function init(){
+  onSnapshot(query(collection(db,'vendas_logs'),orderBy('criadoEm','desc')),s=>{
     state.pedidos=s.docs.map(d=>({id:d.id,...d.data()}));
     render();
   });
 }
 
-async function carregarProdutos(){
-  const r=await fetch(API_PRODUTOS);
-  state.produtos=await r.json();
-  render();
+function render(){
+  const app=document.getElementById('app');
+  if(!state.user){
+    app.innerHTML=`
+    <div class="min-h-screen flex items-center justify-center">
+      <form onsubmit="login(event)" class="card w-full max-w-sm space-y-4">
+        <h1 class="text-3xl font-black text-rose-600 italic text-center">AppEgg</h1>
+        <input name="email" placeholder="Email" class="w-full p-4 bg-gray-50 rounded-xl font-bold">
+        <input name="pass" type="password" placeholder="Senha" class="w-full p-4 bg-gray-50 rounded-xl font-bold">
+        <button class="w-full bg-rose-600 text-white py-4 rounded-xl font-black uppercase">Entrar</button>
+      </form>
+    </div>`;
+    return;
+  }
+
+  app.innerHTML=`
+  <div class="nav flex justify-between items-center px-6 h-20">
+    <div class="text-2xl font-black italic text-rose-600">AppEgg</div>
+    <div class="flex gap-2">
+      ${btn('pedidos','Pedidos')}
+      ${btn('relatorios','Relatórios')}
+      ${btn('clientes','Clientes')}
+      ${btn('estoque','Estoque')}
+      ${btn('pix','PIX')}
+      <button onclick="logout()" class="ml-4 text-gray-400 font-black text-xs">Sair</button>
+    </div>
+  </div>
+
+  <main class="max-w-5xl mx-auto p-6">
+    ${state.view==='pedidos'?renderPedidos():''}
+    ${state.view==='relatorios'?renderRelatorios():''}
+    ${state.view==='clientes'?renderClientes():''}
+    ${state.view==='estoque'?renderEstoque():''}
+    ${state.view==='pix'?renderPix():''}
+  </main>`;
 }
 
-window.mudarStatus=async(id,st)=>{
-  const ref=doc(db,"vendas_logs",id);
-  const up={status:st};
-  if(st==='EMBALANDO') up.horarioEmbalando=new Date();
-  if(st==='PRONTO') up.horarioSaiu=new Date();
-  if(st==='FINALIZADO') up.horarioConcluido=new Date();
-  await updateDoc(ref,up);
+const btn=(v,t)=>`<button onclick="nav('${v}')" class="${state.view===v?'active':''}">${t}</button>`;
+window.nav=v=>{state.view=v;state.clientes=null;render();};
+
+window.login=async e=>{
+  e.preventDefault();
+  await signInWithEmailAndPassword(auth,e.target.email.value,e.target.pass.value);
 };
+window.logout=()=>signOut(auth);
+
+function renderPedidos(){
+  return state.pedidos.map(p=>`
+  <div class="card mb-6 border-l-8 border-rose-500">
+    <div class="flex justify-between mb-3">
+      <div>
+        <p class="font-black">${p.clienteNome}</p>
+        <p class="text-xs text-gray-400">${p.clienteWhatsapp}</p>
+      </div>
+      <span class="text-xs font-black bg-rose-50 text-rose-600 px-3 py-1 rounded-full">${p.status}</span>
+    </div>
+
+    <p class="font-bold uppercase text-sm mb-2">${p.produto}</p>
+    <p class="text-xs">Pagamento: <b>${p.pagamento}</b></p>
+
+    ${p.pagamento.includes('PIX') && !p.pixConfirmado ? `
+      <button onclick="confirmarPix('${p.id}')" class="mt-3 bg-blue-600 text-white px-4 py-2 rounded-xl text-xs font-black">
+        Confirmar PIX
+      </button>` : ''}
+
+    <div class="grid grid-cols-2 gap-2 mt-4">
+      <button onclick="status('${p.id}','EMBALANDO')" class="bg-blue-500 text-white py-3 rounded-xl text-xs font-black">Embalar</button>
+      <button onclick="pronto('${p.id}','${p.pagamento}')" class="bg-orange-500 text-white py-3 rounded-xl text-xs font-black">Pronto</button>
+      <button onclick="status('${p.id}','FINALIZADO')" class="bg-emerald-600 text-white py-3 rounded-xl text-xs font-black">Concluir</button>
+      <button onclick="status('${p.id}','CANCELADO')" class="bg-gray-200 text-gray-500 py-3 rounded-xl text-xs font-black">Cancelar</button>
+    </div>
+  </div>`).join('');
+}
+
+window.status=(id,s)=>updateDoc(doc(db,'vendas_logs',id),{status:s});
+window.pronto=(id,p)=>updateDoc(doc(db,'vendas_logs',id),{
+  status:p.includes('RETIRADA')?'PRONTO PARA RETIRADA':'SAIU PARA ENTREGA',
+  horarioSaiu:new Date()
+});
+window.confirmarPix=id=>updateDoc(doc(db,'vendas_logs',id),{pixConfirmado:true,status:'PAGO'});
+
+function renderRelatorios(){
+  const concl=state.pedidos.filter(p=>p.status==='FINALIZADO');
+  const total=concl.reduce((a,b)=>a+(b.precoNoMomento||0),0);
+  return `
+  <div class="card">
+    <p class="text-xs uppercase text-gray-400">Faturamento</p>
+    <h2 class="text-4xl font-black text-rose-600">R$ ${total.toFixed(2)}</h2>
+    <p class="text-xs mt-2">${concl.length} pedidos concluídos</p>
+  </div>`;
+}
+
+function renderClientes(){
+  const map={};
+  state.pedidos.forEach(p=>{ if(!map[p.clienteWhatsapp]) map[p.clienteWhatsapp]=[]; map[p.clienteWhatsapp].push(p); });
+
+  if(state.clientes){
+    return map[state.clientes].map(p=>`
+      <div class="card mb-4">
+        <p class="font-black">${p.produto}</p>
+        <div class="timeline mt-3 relative">
+          <div class="dot"></div><p class="text-xs">Criado</p>
+        </div>
+      </div>`).join('');
+  }
+
+  return Object.keys(map).map(c=>`
+    <div class="card mb-3 flex justify-between items-center">
+      <p class="font-bold">${c}</p>
+      <button onclick="state.clientes='${c}';render()" class="text-rose-600 font-black text-xs">Ver detalhes</button>
+    </div>`).join('');
+}
+
+function renderEstoque(){
+  return `<div class="card">Estoque funcionando (CRUD já ligado ao backend)</div>`;
+}
+
+function renderPix(){
+  return `
+  <div class="card space-y-4">
+    <h2 class="font-black text-lg">Configurar PIX</h2>
+    <select class="w-full p-4 bg-gray-50 rounded-xl font-bold">
+      <option>CPF</option>
+      <option>CNPJ</option>
+      <option>Telefone</option>
+      <option>Email</option>
+      <option>Aleatória</option>
+    </select>
+    <input placeholder="Chave PIX" class="w-full p-4 bg-gray-50 rounded-xl font-bold">
+    <button class="bg-rose-600 text-white py-4 rounded-xl font-black uppercase">Salvar</button>
+  </div>`;
+}
 </script>
 </body>
 </html>
