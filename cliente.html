@@ -11,7 +11,7 @@
         #app { width: 100%; max-width: 450px; background: #fff; min-height: 100vh; position: relative; }
         .logo { color:#e11d48; font-weight:900; font-style: italic; }
         .nav-bottom { position:fixed; bottom:16px; width: calc(100% - 40px); max-width: 410px; background:#111827; border-radius:22px; display:flex; justify-content:space-around; padding:12px; z-index:50; }
-        .nav-item { color:#9ca3af; font-size:10px; font-weight:800; text-transform: uppercase; text-align: center; background: none; border: none; }
+        .nav-item { color:#9ca3af; font-size:10px; font-weight:800; text-transform: uppercase; text-align: center; }
         .nav-item.active { color:#fff }
         .card { border-radius: 24px; border: 1px solid #f3f4f6; padding: 18px; margin-bottom: 12px; }
         .modal { position:fixed; inset:0; background:rgba(0,0,0,0.8); display:flex; align-items:flex-end; z-index:100; }
@@ -53,11 +53,9 @@
         });
 
         async function carregarProdutos() {
-            try {
-                const r = await fetch("https://painel-distribuidora-backend.onrender.com/api/produtos");
-                state.produtos = await r.json();
-                render();
-            } catch(e) { console.error("Erro ao carregar catálogo"); }
+            const r = await fetch("https://painel-distribuidora-backend.onrender.com/api/produtos");
+            state.produtos = await r.json();
+            render();
         }
 
         function monitorarPedidos() {
@@ -88,12 +86,11 @@
             return `<h1 class="logo text-3xl mb-8">AppEgg</h1>
                 <div class="grid grid-cols-2 gap-4">
                     ${state.produtos.map(p => `
-                        <div class="card text-center bg-white shadow-sm">
+                        <div class="card text-center bg-white">
                             <img src="${p.foto_url}" class="h-20 mx-auto mb-3 object-contain">
                             <p class="font-black text-[10px] uppercase h-8 leading-tight mb-2">${p.nome}</p>
-                            <p class="text-rose-600 font-black text-xs mb-2">R$ ${p.preco.toFixed(2)}</p>
                             <button onclick="abrirCompra(${JSON.stringify(p).replace(/"/g,'&quot;')})" class="w-full bg-rose-600 text-white py-2 rounded-xl text-[10px] font-black uppercase">Pedir</button>
-                        </div>`).join('') || '<p class="col-span-2 text-center text-gray-400 mt-10 uppercase font-bold text-xs">Carregando estoque...</p>'}
+                        </div>`).join('')}
                 </div>`;
         }
 
@@ -124,17 +121,17 @@
         function renderPedidos() {
             return `<h2 class="text-2xl font-black mb-6 italic uppercase">Meus Pedidos</h2>
                 ${state.pedidos.map(p => `
-                    <div class="card bg-white shadow-sm">
+                    <div class="card">
                         <div class="flex justify-between mb-2"><span class="font-black text-rose-600 text-[9px] uppercase italic">${p.status}</span><span class="font-black text-xs">R$ ${p.precoNoMomento?.toFixed(2)}</span></div>
                         <p class="font-black text-[11px] uppercase">${p.produto}</p>
                         <p class="text-[9px] font-bold text-gray-400 uppercase mt-1">Plano: ${p.frequencia || 'AVULSA'}</p>
-                        ${p.status === 'PENDENTE' && state.config.pixChave ? `<div class="mt-3 p-3 bg-blue-50 rounded-xl text-[9px] font-bold text-blue-600">PIX (${state.config.pixTipo}): ${state.config.pixChave}</div>` : ''}
+                        ${p.status === 'PENDENTE' && state.config.pixChave ? `<div class="mt-3 p-3 bg-blue-50 rounded-xl text-[9px] font-bold text-blue-600">PIX: ${state.config.pixChave}</div>` : ''}
                     </div>`).join('') || '<p class="text-gray-400 font-bold uppercase text-center mt-20 text-xs">Nenhum pedido</p>'}';
         }
 
         window.nav = t => { state.tela = t; render(); };
         window.abrirCompra = p => { state.comprando = p; render(); };
-        window.login = async e => { e.preventDefault(); try { await signInWithEmailAndPassword(auth, e.target.email.value, e.target.senha.value); } catch(err){ alert("E-mail ou senha inválidos"); } };
+        window.login = async e => { e.preventDefault(); await signInWithEmailAndPassword(auth, e.target.email.value, e.target.senha.value); };
         window.logout = () => signOut(auth);
         window.finalizarPedido = async e => {
             e.preventDefault();
