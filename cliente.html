@@ -2,23 +2,25 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AppEgg • Cliente</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <title>AppEgg • Comprar</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'DM Sans', sans-serif; background:#fff }
+        body { font-family: 'DM Sans', sans-serif; background:#f4f4f5; display: flex; justify-content: center; }
+        #app { width: 100%; max-width: 450px; background: #fff; min-height: 100vh; position: relative; }
         .logo { color:#e11d48; font-weight:900; font-style: italic; }
-        .nav-bottom { position:fixed; bottom:20px; left:20px; right:20px; background:#111827; border-radius:22px; display:flex; padding:10px; z-index:50; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
-        .nav-item { flex:1; color:#6b7280; font-size:10px; font-weight:800; text-transform: uppercase; text-align: center; }
+        .nav-bottom { position:fixed; bottom:16px; width: calc(100% - 40px); max-width: 410px; background:#111827; border-radius:22px; display:flex; justify-content:space-around; padding:12px; z-index:50; }
+        .nav-item { color:#9ca3af; font-size:10px; font-weight:800; text-transform: uppercase; text-align: center; }
         .nav-item.active { color:#fff }
-        .card { border-radius: 24px; border: 1px solid #f3f4f6; padding: 20px; }
-        .modal { position:fixed; inset:0; background:rgba(0,0,0,0.7); display:flex; align-items:flex-end; z-index:100; }
-        .modal-content { background:#fff; width:100%; padding:30px; border-radius:32px 32px 0 0; }
+        .card { border-radius: 24px; border: 1px solid #f3f4f6; padding: 18px; margin-bottom: 12px; }
+        .modal { position:fixed; inset:0; background:rgba(0,0,0,0.8); display:flex; align-items:flex-end; z-index:100; }
+        .modal-content { background:#fff; width:100%; max-width:450px; padding:30px; border-radius:32px 32px 0 0; margin: 0 auto; }
     </style>
 </head>
 <body>
     <div id="app"></div>
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
         import { getFirestore, collection, addDoc, onSnapshot, query, where, orderBy, serverTimestamp, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
@@ -51,11 +53,9 @@
         });
 
         async function carregarProdutos() {
-            try {
-                const r = await fetch("https://painel-distribuidora-backend.onrender.com/api/produtos");
-                state.produtos = await r.json();
-                render();
-            } catch (e) { console.error("Erro catálogo"); }
+            const r = await fetch("https://painel-distribuidora-backend.onrender.com/api/produtos");
+            state.produtos = await r.json();
+            render();
         }
 
         function monitorarPedidos() {
@@ -67,29 +67,31 @@
         window.render = () => {
             const app = document.getElementById('app');
             if(!state.user) {
-                app.innerHTML = `<div class="min-h-screen flex flex-col justify-center p-10 text-center"><div class="logo text-5xl mb-10 italic">AppEgg</div><form onsubmit="login(event)" class="space-y-4"><input name="email" type="email" placeholder="E-mail" class="w-full p-5 rounded-2xl bg-gray-100 font-bold border-none outline-none"><input name="senha" type="password" placeholder="Senha" class="w-full p-5 rounded-2xl bg-gray-100 font-bold border-none outline-none"><button class="w-full p-5 bg-rose-600 text-white rounded-2xl font-black uppercase shadow-xl mt-4">Entrar</button></form></div>`;
+                app.innerHTML = `<div class="p-10 text-center mt-20"><div class="logo text-5xl mb-12">AppEgg</div><form onsubmit="login(event)" class="space-y-4"><input name="email" type="email" placeholder="E-mail" class="w-full p-4 rounded-2xl bg-gray-100 font-bold border-none outline-none"><input name="senha" type="password" placeholder="Senha" class="w-full p-4 rounded-2xl bg-gray-100 font-bold border-none outline-none"><button class="w-full p-4 bg-rose-600 text-white rounded-2xl font-black uppercase">Entrar</button></form></div>`;
                 return;
             }
             app.innerHTML = `
-                <div class="pb-40">${state.tela==='catalogo' ? renderCatalogo() : renderPedidos()}</div>
+                <div class="pb-32 px-5 pt-10">
+                    ${state.tela==='catalogo' ? renderCatalogo() : renderPedidos()}
+                </div>
                 ${state.comprando ? renderModal() : ''}
                 <nav class="nav-bottom">
                     <button onclick="nav('catalogo')" class="nav-item ${state.tela==='catalogo'?'active':''}">🥚<br>Comprar</button>
                     <button onclick="nav('pedidos')" class="nav-item ${state.tela==='pedidos'?'active':''}">📦<br>Pedidos</button>
                     <button onclick="logout()" class="nav-item">🚪<br>Sair</button>
                 </nav>`;
-        };
+        }
 
         function renderCatalogo() {
-            return `<header class="p-8 text-center"><div class="logo text-3xl italic">AppEgg</div></header>
-                <div class="grid grid-cols-2 gap-4 px-5">
-                ${state.produtos.map(p => `
-                <div class="card text-center bg-white shadow-sm">
-                    <img src="${p.foto_url}" class="h-24 mx-auto mb-4 object-contain">
-                    <p class="font-black text-[10px] uppercase h-8 mb-2">${p.nome}</p>
-                    <p class="text-rose-600 font-black text-sm mb-4">R$ ${p.preco.toFixed(2)}</p>
-                    <button onclick="abrirCompra(${JSON.stringify(p).replace(/"/g,'&quot;')})" class="w-full bg-gray-900 text-white py-3 rounded-xl text-[10px] font-black uppercase">Selecionar</button>
-                </div>`).join('')}</div>`;
+            return `<h1 class="logo text-3xl mb-8">AppEgg</h1>
+                <div class="grid grid-cols-2 gap-4">
+                    ${state.produtos.map(p => `
+                        <div class="card text-center bg-white">
+                            <img src="${p.foto_url}" class="h-20 mx-auto mb-3 object-contain">
+                            <p class="font-black text-[10px] uppercase h-8 leading-tight mb-2">${p.nome}</p>
+                            <button onclick="abrirCompra(${JSON.stringify(p).replace(/"/g,'&quot;')})" class="w-full bg-rose-600 text-white py-2 rounded-xl text-[10px] font-black uppercase">Pedir</button>
+                        </div>`).join('')}
+                </div>`;
         }
 
         function renderModal() {
@@ -97,59 +99,51 @@
             return `<div class="modal"><div class="modal-content">
                 <h3 class="text-xl font-black uppercase italic mb-6">Finalizar Pedido</h3>
                 <form onsubmit="finalizarPedido(event)" class="space-y-4">
-                    <div class="bg-gray-50 p-4 rounded-2xl mb-4 border"><p class="text-[10px] font-bold text-gray-400 uppercase">Produto</p><p class="font-black text-xs uppercase">${p.nome}</p></div>
-                    
-                    <p class="text-[10px] font-black uppercase text-gray-400 ml-1">Frequência de Compra</p>
+                    <p class="text-[10px] font-black uppercase text-gray-400">Plano de Entrega</p>
                     <select name="frequencia" class="w-full p-4 bg-gray-100 rounded-2xl font-bold border-none outline-none">
-                        <option value="AVULSA">Compra Avulsa</option>
+                        <option value="AVULSA">Compra Única (Avulsa)</option>
                         <option value="SEMANAL">Plano Semanal</option>
                         <option value="QUINZENAL">Plano Quinzenal</option>
                         <option value="MENSAL">Plano Mensal</option>
                     </select>
-
-                    <p class="text-[10px] font-black uppercase text-gray-400 ml-1">Forma de Pagamento</p>
-                    <select name="pagamento" class="w-full p-4 bg-gray-100 rounded-2xl font-bold border-none outline-none" required>
-                        <option value="PIX NA ENTREGA">PIX na Entrega</option>
+                    <p class="text-[10px] font-black uppercase text-gray-400">Forma de Recebimento</p>
+                    <select name="pagamento" class="w-full p-4 bg-gray-100 rounded-2xl font-bold border-none outline-none">
                         <option value="PIX NA RETIRADA">PIX na Retirada</option>
-                        <option value="DINHEIRO NA ENTREGA">Dinheiro na Entrega</option>
+                        <option value="PIX NA ENTREGA">PIX na Entrega</option>
                         <option value="DINHEIRO NA RETIRADA">Dinheiro na Retirada</option>
                     </select>
-
-                    <button class="w-full bg-rose-600 text-white py-5 rounded-2xl font-black uppercase shadow-lg shadow-rose-100 mt-4">Confirmar Pedido</button>
-                    <button type="button" onclick="state.comprando=null;render()" class="w-full text-gray-400 font-bold text-[10px] uppercase py-2">Cancelar</button>
+                    <button class="w-full bg-rose-600 text-white py-5 rounded-2xl font-black uppercase mt-4">Confirmar Agora</button>
+                    <button type="button" onclick="state.comprando=null;render()" class="w-full text-gray-400 font-bold text-xs uppercase py-2">Cancelar</button>
                 </form>
             </div></div>`;
         }
 
         function renderPedidos() {
-            return `<div class="p-6"><h2 class="text-2xl font-black mb-8 italic uppercase">Meus Pedidos</h2>
+            return `<h2 class="text-2xl font-black mb-6 italic uppercase">Meus Pedidos</h2>
                 ${state.pedidos.map(p => `
-                <div class="card mb-4 bg-white">
-                    <div class="flex justify-between mb-4"><span class="font-black text-rose-600 text-[9px] uppercase bg-rose-50 px-2 py-1 rounded-md italic">${p.status}</span><span class="font-black text-sm">R$ ${p.precoNoMomento.toFixed(2)}</span></div>
-                    <p class="font-bold text-[11px] uppercase text-gray-500 mb-4">${p.produto} (${p.frequencia || 'AVULSA'})</p>
-                    ${p.status === 'PENDENTE' && state.config.pixChave ? `<div class="bg-blue-50 p-4 rounded-2xl mb-4 border border-blue-100 text-[10px] font-bold"><p class="text-blue-600 uppercase mb-1">PIX: ${state.config.pixTipo}</p><p class="font-mono break-all">${state.config.pixChave}</p></div>` : ''}
-                </div>`).join('') || '<p class="text-gray-400 font-bold uppercase text-center py-20">Nenhum histórico</p>'}</div>`;
+                    <div class="card">
+                        <div class="flex justify-between mb-2"><span class="font-black text-rose-600 text-[9px] uppercase italic">${p.status}</span><span class="font-black text-xs">R$ ${p.precoNoMomento?.toFixed(2)}</span></div>
+                        <p class="font-black text-[11px] uppercase">${p.produto}</p>
+                        <p class="text-[9px] font-bold text-gray-400 uppercase mt-1">Plano: ${p.frequencia || 'AVULSA'}</p>
+                        ${p.status === 'PENDENTE' && state.config.pixChave ? `<div class="mt-3 p-3 bg-blue-50 rounded-xl text-[9px] font-bold text-blue-600">PIX: ${state.config.pixChave}</div>` : ''}
+                    </div>`).join('') || '<p class="text-gray-400 font-bold uppercase text-center mt-20 text-xs">Nenhum pedido</p>'}';
         }
 
         window.nav = t => { state.tela = t; render(); };
         window.abrirCompra = p => { state.comprando = p; render(); };
         window.login = async e => { e.preventDefault(); await signInWithEmailAndPassword(auth, e.target.email.value, e.target.senha.value); };
         window.logout = () => signOut(auth);
-        
         window.finalizarPedido = async e => {
             e.preventDefault();
             const f = new FormData(e.target);
-            const p = state.comprando;
             await addDoc(collection(db,"vendas_logs"), {
                 clienteNome: state.user.email.split('@')[0].toUpperCase(),
                 clienteWhatsapp: state.user.email,
-                produto: p.nome, precoNoMomento: p.preco, 
+                produto: state.comprando.nome, precoNoMomento: state.comprando.preco,
                 pagamento: f.get('pagamento'), frequencia: f.get('frequencia'),
                 status: "PENDENTE", criadoEm: serverTimestamp()
             });
-            state.comprando = null;
-            state.tela = 'pedidos';
-            render();
+            state.comprando = null; state.tela = 'pedidos'; render();
         };
     </script>
 </body>
