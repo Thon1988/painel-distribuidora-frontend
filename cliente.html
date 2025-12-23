@@ -3,21 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AppEgg | Ovos Direto da Granja</title>
+    <title>AppEgg | Loja</title>
     <link rel="manifest" href="manifest.json">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@900&family=Inter:wght@400;600;800&display=swap');
-        body { font-family: 'Inter', sans-serif; background: #fff; }
-        .font-title { font-family: 'Montserrat', sans-serif; }
-        .product-card { border-radius: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.03); border: 1px solid #f3f4f6; }
-        .btn-gradient { background: linear-gradient(90deg, #e11d48 0%, #fb7185 100%); }
-        .tag { position: absolute; top: 15px; left: 15px; padding: 4px 10px; border-radius: 99px; font-size: 8px; font-weight: 900; text-transform: uppercase; }
-        .tag-fitness { background: #dcfce7; color: #166534; }
-        .tag-bolos { background: #fef9c3; color: #854d0e; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        body { font-family: 'Inter', sans-serif; background: #ffffff; color: #1f2937; }
+        .product-card { background: #ffffff; border-radius: 20px; border: 1px solid #f3f4f6; overflow: hidden; }
+        .btn-buy { background: #e11d48; color: white; border-radius: 12px; font-weight: 800; text-transform: uppercase; font-size: 11px; padding: 14px; width: 100%; transition: 0.2s; }
+        .btn-buy:active { transform: scale(0.96); }
     </style>
 </head>
-<body class="pb-24">
+<body class="pb-20">
     <div id="app-root"></div>
 
     <script type="module">
@@ -36,13 +33,7 @@
         const db = getFirestore(app);
         const API_BASE = "https://painel-distribuidora-backend.onrender.com/api";
 
-        window.state = { 
-            produtos: [], 
-            cliente: JSON.parse(localStorage.getItem('appegg_user')),
-            checkoutItem: null,
-            tipoCompra: 'unica',
-            frequencia: 'semanal'
-        };
+        window.state = { produtos: [], cliente: JSON.parse(localStorage.getItem('appegg_user')), checkoutItem: null, tipo: 'unica' };
 
         window.actions = {
             login: (e) => {
@@ -52,6 +43,11 @@
                 window.state.cliente = user;
                 window.render();
             },
+            load: async () => {
+                const res = await fetch(`${API_BASE}/produtos`);
+                window.state.produtos = await res.json();
+                window.render();
+            },
             finalizar: async (metodo) => {
                 const p = window.state.checkoutItem;
                 await addDoc(collection(db, "vendas_logs"), {
@@ -59,13 +55,12 @@
                     clienteWhatsapp: window.state.cliente.whatsapp,
                     produto: p.nome,
                     precoNoMomento: p.preco,
-                    tipo: window.state.tipoCompra,
-                    frequencia: window.state.tipoCompra === 'assinatura' ? window.state.frequencia : 'N/A',
-                    pagamento: metodo,
+                    metodoPagamento: metodo,
+                    tipo: window.state.tipo,
                     status: 'PENDENTE',
                     criadoEm: serverTimestamp()
                 });
-                alert("🛒 Pedido Enviado com Sucesso!");
+                alert("Pedido confirmado!");
                 window.state.checkoutItem = null;
                 window.render();
             }
@@ -75,36 +70,34 @@
             const root = document.getElementById('app-root');
             if(!window.state.cliente) {
                 root.innerHTML = `
-                    <div class="h-screen flex flex-col justify-center p-10">
-                        <h1 class="font-title text-4xl text-rose-600 mb-8 italic text-center">AppEgg</h1>
+                    <div class="h-screen flex flex-col justify-center px-10">
+                        <h1 class="text-4xl font-black text-rose-600 italic text-center mb-8">AppEgg</h1>
                         <form onsubmit="window.actions.login(event)" class="space-y-4">
-                            <input name="nome" placeholder="Seu Nome Completo" class="w-full p-4 border rounded-2xl font-bold" required>
-                            <input name="whatsapp" placeholder="WhatsApp (Apenas números)" class="w-full p-4 border rounded-2xl font-bold" required>
-                            <button class="w-full py-4 btn-gradient text-white rounded-2xl font-black uppercase shadow-lg">Entrar</button>
+                            <input name="nome" placeholder="Seu Nome" class="w-full p-4 border rounded-2xl outline-none" required>
+                            <input name="whatsapp" placeholder="WhatsApp" class="w-full p-4 border rounded-2xl outline-none" required>
+                            <button class="w-full py-4 bg-rose-600 text-white rounded-2xl font-black uppercase">Começar Compra</button>
                         </form>
-                    </div>
-                `;
+                    </div>`;
                 return;
             }
 
             root.innerHTML = `
-                <header class="p-6 flex justify-between items-center">
-                    <h1 class="font-title text-2xl text-rose-600 italic uppercase">AppEgg</h1>
-                    <div class="bg-gray-100 p-2 rounded-full px-4 text-[10px] font-black uppercase">Olá, ${window.state.cliente.nome.split(' ')[0]}</div>
+                <header class="p-6 flex justify-between items-center sticky top-0 bg-white/80 backdrop-blur-md z-40">
+                    <h1 class="text-2xl font-black text-rose-600 italic uppercase">AppEgg</h1>
+                    <div class="text-[10px] font-black uppercase text-gray-400">Olá, ${window.state.cliente.nome.split(' ')[0]}</div>
                 </header>
 
-                <div class="px-6 grid gap-8">
+                <div class="px-6 space-y-8">
                     ${window.state.produtos.map(p => `
-                        <div class="product-card flex flex-col relative overflow-hidden bg-white">
-                            <div class="h-48 bg-gray-50 flex items-center justify-center p-6">
-                                <img src="${p.foto_url}" class="max-h-full object-contain drop-shadow-xl">
-                                <span class="tag ${p.nome.includes('Branco') ? 'tag-bolos' : 'tag-fitness'}">${p.nome.includes('Branco') ? 'Bolos & Massas' : 'Saúde & Fitness'}</span>
+                        <div class="product-card flex flex-col">
+                            <div class="h-56 bg-white flex items-center justify-center p-4">
+                                <img src="${p.foto_url}" class="max-h-full object-contain" onerror="this.src='https://via.placeholder.com/300?text=Ovo'">
                             </div>
-                            <div class="p-5">
-                                <h3 class="font-black text-gray-800 uppercase text-lg leading-tight mb-4">${p.nome}</h3>
-                                <div class="flex justify-between items-end">
-                                    <div><p class="text-[10px] text-gray-400 font-black">PREÇO CAIXA</p><p class="text-2xl font-black text-rose-600">R$ ${p.preco.toFixed(2)}</p></div>
-                                    <button onclick='window.state.checkoutItem=${JSON.stringify(p)}; window.render()' class="btn-gradient text-white px-6 py-3 rounded-2xl font-black text-[10px] uppercase shadow-lg shadow-rose-200">Comprar</button>
+                            <div class="p-6 border-t border-gray-50">
+                                <h3 class="font-black text-gray-800 text-lg uppercase leading-tight mb-2">${p.nome}</h3>
+                                <div class="flex justify-between items-center">
+                                    <div><p class="text-[10px] font-bold text-gray-300 uppercase">Preço</p><p class="text-2xl font-black text-rose-600">R$ ${p.preco.toFixed(2)}</p></div>
+                                    <button onclick='window.state.checkoutItem=${JSON.stringify(p)}; window.render()' class="bg-black text-white px-6 py-3 rounded-xl font-bold text-xs uppercase">Comprar</button>
                                 </div>
                             </div>
                         </div>
@@ -112,24 +105,21 @@
                 </div>
 
                 ${window.state.checkoutItem ? `
-                    <div class="fixed inset-0 bg-black/60 flex items-end z-50">
-                        <div class="bg-white w-full rounded-t-[40px] p-8 animate-slide-up">
+                    <div class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end">
+                        <div class="bg-white w-full rounded-t-[32px] p-8 animate-slide-up">
                             <h2 class="text-xl font-black text-center mb-6 uppercase">${window.state.checkoutItem.nome}</h2>
-                            <div class="flex gap-2 mb-6 text-[10px] font-black">
-                                <button onclick="window.state.tipoCompra='unica'; window.render()" class="flex-1 py-3 border-2 rounded-xl ${window.state.tipoCompra==='unica'?'border-rose-600 text-rose-600 bg-rose-50':'border-gray-100'}">COMPRA ÚNICA</button>
-                                <button onclick="window.state.tipoCompra='assinatura'; window.render()" class="flex-1 py-3 border-2 rounded-xl ${window.state.tipoCompra==='assinatura'?'border-rose-600 text-rose-600 bg-rose-50':'border-gray-100'}">CLUBE (PROGRAMAR)</button>
+                            <div class="flex gap-2 mb-6">
+                                <button onclick="window.state.tipo='unica';window.render()" class="flex-1 py-3 border-2 rounded-xl text-[10px] font-black ${window.state.tipo==='unica'?'border-rose-600 text-rose-600 bg-rose-50':'border-gray-100'}">COMPRA ÚNICA</button>
+                                <button onclick="window.state.tipo='assinatura';window.render()" class="flex-1 py-3 border-2 rounded-xl text-[10px] font-black ${window.state.tipo==='assinatura'?'border-rose-600 text-rose-600 bg-rose-50':'border-gray-100'}">ASSINATURA CLUBE</button>
                             </div>
-                            <div class="grid gap-2">
-                                <button onclick="window.actions.finalizar('PIX')" class="w-full py-4 bg-black text-white rounded-2xl font-black uppercase text-xs">Pagar com PIX</button>
-                                <button onclick="window.actions.finalizar('CARTÃO')" class="w-full py-4 bg-gray-100 text-gray-800 rounded-2xl font-black uppercase text-xs">Cartão de Crédito</button>
-                                <button onclick="window.state.checkoutItem=null; window.render()" class="w-full py-2 text-gray-300 font-bold text-[10px] uppercase mt-2">Cancelar</button>
-                            </div>
+                            <button onclick="window.actions.finalizar('PIX')" class="w-full py-4 bg-rose-600 text-white rounded-2xl font-black uppercase mb-3">Pagar com PIX</button>
+                            <button onclick="window.state.checkoutItem=null; window.render()" class="w-full text-center text-[10px] font-bold text-gray-300 uppercase">Fechar</button>
                         </div>
                     </div>
                 ` : ''}
             `;
         };
-        fetch(`${API_BASE}/produtos`).then(r => r.json()).then(d => { window.state.produtos = d; window.render(); });
+        window.actions.load();
     </script>
 </body>
 </html>
