@@ -3,15 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AppEgg | Distribuidora Aline</title>
+    <title>AppEgg | Loja Oficial</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
-        body { font-family: 'Inter', sans-serif; background: #ffffff; }
-        .btn-gradient { background: linear-gradient(90deg, #e11d48 0%, #fb7185 100%); }
+        body { font-family: 'Inter', sans-serif; background: #ffffff; color: #1f2937; }
+        .product-card { background: #fff; border: 1px solid #f3f4f6; border-radius: 20px; }
+        .qty-btn { background: #f3f4f6; width: 32px; height: 32px; border-radius: 10px; display: flex; items-center; justify-content: center; font-weight: bold; }
+        .cart-bar { position: fixed; bottom: 20px; left: 20px; right: 20px; background: #000; color: #fff; border-radius: 20px; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; z-index: 100; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+        .animate-pop { animation: pop 0.2s ease-out; }
+        @keyframes pop { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
     </style>
 </head>
-<body class="pb-10">
+<body class="pb-32">
     <div id="app-root"></div>
 
     <script type="module">
@@ -30,7 +34,12 @@
         const db = getFirestore(app);
         const API_BASE = "https://painel-distribuidora-backend.onrender.com/api";
 
-        window.state = { produtos: [], cliente: JSON.parse(localStorage.getItem('appegg_user')), checkoutItem: null };
+        window.state = { 
+            produtos: [], 
+            cliente: JSON.parse(localStorage.getItem('appegg_user')), 
+            carrinho: {}, // { id_do_produto: quantidade }
+            checkoutOpen: false 
+        };
 
         window.actions = {
             login: (e) => {
@@ -40,65 +49,104 @@
                 window.state.cliente = user;
                 window.render();
             },
-            comprar: async (p) => {
-                const precoNum = parseFloat(p.preco) || 0;
+            alterarQtd: (id, delta) => {
+                const atual = window.state.carrinho[id] || 0;
+                const nova = atual + delta;
+                if (nova <= 0) delete window.state.carrinho[id];
+                else window.state.carrinho[id] = nova;
+                window.render();
+            },
+            finalizarPedido: async () => {
+                const itens = Object.entries(window.state.carrinho).map(([id, qtd]) => {
+                    const p = window.state.produtos.find(prod => prod.id == id);
+                    return `${qtd}x ${p.nome}`;
+                }).join(', ');
+
+                const total = Object.entries(window.state.carrinho).reduce((acc, [id, qtd]) => {
+                    const p = window.state.produtos.find(prod => prod.id == id);
+                    return acc + (p.preco * qtd);
+                }, 0);
+
                 await addDoc(collection(db, "vendas_logs"), {
                     clienteNome: window.state.cliente.nome,
                     clienteWhatsapp: window.state.cliente.whatsapp,
-                    produto: p.nome,
-                    precoNoMomento: precoNum,
+                    produto: itens,
+                    precoNoMomento: total,
                     status: 'PENDENTE',
                     criadoEm: serverTimestamp()
                 });
-                alert("Pedido realizado com sucesso!");
+                
+                alert("🛒 Pedido enviado para Aline!");
+                window.state.carrinho = {};
+                window.render();
             }
         };
 
         window.render = () => {
             const root = document.getElementById('app-root');
             if(!window.state.cliente) {
-                root.innerHTML = `<div class="h-screen flex flex-col justify-center px-10"><h1 class="text-4xl font-black text-rose-600 italic text-center mb-8">AppEgg</h1><form onsubmit="window.actions.login(event)" class="space-y-4"><input name="nome" placeholder="Nome" class="w-full p-4 border rounded-2xl outline-none" required><input name="whatsapp" placeholder="WhatsApp (Ex: 11985706243)" class="w-full p-4 border rounded-2xl outline-none" required><button class="w-full py-4 btn-gradient text-white rounded-2xl font-black uppercase shadow-lg">Entrar na Loja</button></form></div>`;
+                root.innerHTML = `<div class="h-screen flex flex-col justify-center px-10"><h1 class="text-4xl font-black text-rose-600 italic text-center mb-8 uppercase">AppEgg</h1><form onsubmit="window.actions.login(event)" class="space-y-4"><input name="nome" placeholder="Seu Nome" class="w-full p-4 border rounded-2xl outline-none" required><input name="whatsapp" placeholder="WhatsApp" class="w-full p-4 border rounded-2xl outline-none" required><button class="w-full py-4 bg-rose-600 text-white rounded-2xl font-black uppercase">Entrar</button></form></div>`;
                 return;
             }
 
+            const totalItens = Object.values(window.state.carrinho).reduce((a, b) => a + b, 0);
+            const valorTotal = Object.entries(window.state.carrinho).reduce((acc, [id, qtd]) => {
+                const p = window.state.produtos.find(prod => prod.id == id);
+                return acc + (p.preco * qtd);
+            }, 0);
+
             root.innerHTML = `
-                <header class="p-6 border-b border-gray-50 flex justify-between items-center">
-                    <h1 class="text-2xl font-black text-rose-600 uppercase italic tracking-tighter">AppEgg</h1>
-                    <span class="text-[10px] font-bold text-gray-400 uppercase">Olá, ${window.state.cliente.nome.split(' ')[0]}</span>
+                <header class="p-4 flex justify-between items-center sticky top-0 bg-white/80 backdrop-blur-md z-40 border-b border-gray-50">
+                    <h1 class="text-xl font-black text-rose-600 italic uppercase">AppEgg</h1>
+                    <div class="text-[10px] font-bold text-gray-400">Olá, ${window.state.cliente.nome.split(' ')[0]}</div>
                 </header>
-                <main class="p-6 space-y-6">
+
+                <div class="p-4 grid grid-cols-2 gap-4">
                     ${window.state.produtos.map(p => {
-                        const precoExibicao = (parseFloat(p.preco) || 0).toFixed(2);
+                        const qtd = window.state.carrinho[p.id] || 0;
                         return `
-                            <div class="border rounded-3xl overflow-hidden p-4 bg-white shadow-sm">
-                                <img src="${p.foto_url}" class="h-48 w-full object-cover rounded-2xl mb-4" onerror="this.src='https://images.unsplash.com/photo-1582722872445-44ad5c782967?w=500'">
-                                <h3 class="font-black uppercase text-gray-800 text-sm">${p.nome}</h3>
-                                <div class="flex justify-between items-center mt-3">
-                                    <p class="text-xl font-black text-rose-600">R$ ${precoExibicao}</p>
-                                    <button onclick='window.actions.comprar(${JSON.stringify(p)})' class="btn-gradient text-white px-6 py-3 rounded-xl font-bold text-xs uppercase shadow-md shadow-rose-100">Pedir</button>
+                        <div class="product-card p-3 flex flex-col justify-between shadow-sm">
+                            <div class="h-28 flex items-center justify-center mb-2">
+                                <img src="${p.foto_url}" class="max-h-full object-contain" onerror="this.src='https://images.unsplash.com/photo-1582722872445-44ad5c782967?w=200'">
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-[10px] text-gray-800 uppercase leading-tight h-8 overflow-hidden">${p.nome}</h3>
+                                <p class="text-rose-600 font-black text-sm mt-1">R$ ${(parseFloat(p.preco)||0).toFixed(2)}</p>
+                                
+                                <div class="mt-3">
+                                    ${qtd === 0 ? `
+                                        <button onclick="window.actions.alterarQtd('${p.id}', 1)" class="w-full bg-rose-600 text-white py-2 rounded-xl text-[10px] font-black uppercase">Comprar</button>
+                                    ` : `
+                                        <div class="flex items-center justify-between bg-gray-50 rounded-xl p-1 animate-pop">
+                                            <button onclick="window.actions.alterarQtd('${p.id}', -1)" class="qty-btn text-rose-600">-</button>
+                                            <span class="font-bold text-xs">${qtd}</span>
+                                            <button onclick="window.actions.alterarQtd('${p.id}', 1)" class="qty-btn text-rose-600">+</button>
+                                        </div>
+                                    `}
                                 </div>
                             </div>
-                        `;
-                    }).join('')}
-
-                    <footer class="mt-10 p-8 bg-gray-50 rounded-[32px] text-center border border-gray-100">
-                        <h4 class="font-black text-rose-600 italic uppercase">AppEgg</h4>
-                        <p class="text-[10px] font-bold text-gray-400 uppercase">Distribuidora de Ovos Aline</p>
-                        <div class="text-[11px] text-gray-400 my-4 leading-relaxed">
-                            <p>Rua Antonio Freire da Silva, 67</p>
-                            <p>Jardim das Camélias, São Paulo - SP</p>
-                            <p class="font-bold text-gray-600 mt-2">WhatsApp: 11 98570-6243</p>
                         </div>
-                        <a href="https://wa.me/5511985706243" target="_blank" class="inline-block bg-green-500 text-white px-8 py-3 rounded-2xl font-bold text-xs uppercase shadow-lg shadow-green-100 transition-transform active:scale-95">Falar com Aline</a>
-                    </footer>
-                </main>
+                    `}).join('')}
+                </div>
+
+                <footer class="mt-10 p-6 bg-gray-50 text-center text-gray-400">
+                    <p class="text-[9px] font-bold uppercase tracking-widest">Distribuidora de Ovos Aline</p>
+                    <p class="text-[9px] mt-1 italic">Rua Antonio Freire da Silva, 67 - SP</p>
+                </footer>
+
+                ${totalItens > 0 ? `
+                    <div class="cart-bar animate-slide-up">
+                        <div class="flex flex-col">
+                            <span class="text-[10px] font-bold opacity-60 uppercase">${totalItens} ${totalItens > 1 ? 'itens' : 'item'}</span>
+                            <span class="font-black text-lg">R$ ${valorTotal.toFixed(2)}</span>
+                        </div>
+                        <button onclick="window.actions.finalizarPedido()" class="bg-rose-600 px-6 py-3 rounded-xl font-black text-xs uppercase">Fechar Pedido</button>
+                    </div>
+                ` : ''}
             `;
         };
 
-        fetch(`${API_BASE}/produtos`)
-            .then(r => r.json())
-            .then(d => { window.state.produtos = d; window.render(); })
-            .catch(err => console.error("Erro ao carregar produtos:", err));
+        fetch(`${API_BASE}/produtos`).then(r => r.json()).then(d => { window.state.produtos = d; window.render(); });
     </script>
 </body>
 </html>
