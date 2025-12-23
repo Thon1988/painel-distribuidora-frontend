@@ -42,7 +42,7 @@
             produtos: [], 
             cliente: JSON.parse(localStorage.getItem('appegg_user')), 
             carrinho: {}, 
-            tela: 'catalogo',
+            tela: 'catalogo', // 'catalogo' ou 'carrinho'
             frequencia: 'Compra Única' 
         };
 
@@ -79,13 +79,12 @@
         window.render = () => {
             const root = document.getElementById('app-root');
             
-            // Login
             if(!window.state.cliente) {
-                root.innerHTML = `<div class="h-screen flex flex-col justify-center px-10"><h1 class="text-6xl font-black text-rose-600 italic text-center mb-8 tracking-tighter">AppEgg</h1><form onsubmit="event.preventDefault(); window.state.cliente={nome:this.nome.value, whatsapp:this.whatsapp.value}; localStorage.setItem('appegg_user', JSON.stringify(window.state.cliente)); window.render()" class="space-y-4"><input name="nome" placeholder="Seu Nome" class="w-full p-5 bg-gray-50 rounded-2xl outline-none font-bold" required><input name="whatsapp" placeholder="WhatsApp" class="w-full p-5 bg-gray-50 rounded-2xl outline-none font-bold" required><button class="w-full py-5 bg-rose-600 text-white rounded-2xl font-black uppercase">Entrar</button></form></div>`;
+                root.innerHTML = `<div class="h-screen flex flex-col justify-center px-10"><h1 class="text-6xl font-black text-rose-600 italic text-center mb-8 tracking-tighter">AppEgg</h1><form onsubmit="event.preventDefault(); window.state.cliente={nome:this.nome.value, whatsapp:this.whatsapp.value}; localStorage.setItem('appegg_user', JSON.stringify(window.state.cliente)); window.render()" class="space-y-4"><input name="nome" placeholder="Seu Nome" class="w-full p-5 bg-gray-50 rounded-2xl outline-none font-bold" required><input name="whatsapp" placeholder="WhatsApp" class="w-full p-5 bg-gray-50 rounded-2xl outline-none font-bold" required><button class="w-full py-5 bg-rose-600 text-white rounded-2xl font-black uppercase">Entrar na Loja</button></form></div>`;
                 return;
             }
 
-            // TELA DO CARRINHO
+            // --- TELA DO CARRINHO ---
             if(window.state.tela === 'carrinho') {
                 const total = Object.entries(window.state.carrinho).reduce((acc, [id, q]) => {
                     const p = window.state.produtos.find(prod => prod.id == id);
@@ -93,77 +92,109 @@
                 }, 0);
 
                 root.innerHTML = `
-                <div class="p-6">
-                    <button onclick="window.state.tela='catalogo'; window.render()" class="text-rose-600 font-black uppercase text-[10px] mb-8 tracking-widest flex items-center gap-2">← Voltar para as compras</button>
-                    <h2 class="text-3xl font-black italic uppercase mb-8">Meu Carrinho</h2>
+                <div class="p-6 animate-in fade-in duration-300">
+                    <button onclick="window.state.tela='catalogo'; window.render()" class="text-rose-600 font-black uppercase text-[10px] mb-8 tracking-widest flex items-center gap-2">
+                        <span class="text-lg">←</span> Continuar Comprando
+                    </button>
+                    
+                    <h2 class="text-3xl font-black italic uppercase mb-8">Meu Pedido</h2>
                     
                     <div class="space-y-4 mb-10">
                         ${Object.entries(window.state.carrinho).map(([id, q]) => {
                             const p = window.state.produtos.find(prod => prod.id == id);
-                            return `<div class="flex items-center gap-4 bg-gray-50 p-4 rounded-2xl">
+                            return `
+                            <div class="flex items-center gap-4 bg-gray-50 p-4 rounded-2xl">
                                 <img src="${p.foto_url}" class="w-12 h-12 object-contain">
-                                <div class="flex-1 font-black text-[11px] uppercase">${p.nome}<br><span class="text-rose-600">R$ ${(p.preco*q).toFixed(2)}</span></div>
-                                <div class="flex items-center gap-2"><button onclick="window.actions.updateQtd('${id}',-1)" class="w-8 h-8 bg-white rounded-xl shadow-sm font-bold">-</button><span class="font-bold">${q}</span><button onclick="window.actions.updateQtd('${id}',1)" class="w-8 h-8 bg-white rounded-xl shadow-sm font-bold">+</button></div>
+                                <div class="flex-1">
+                                    <p class="font-black text-[11px] uppercase text-gray-800">${p.nome}</p>
+                                    <p class="text-rose-600 font-bold text-xs italic">R$ ${(p.preco*q).toFixed(2)}</p>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <button onclick="window.actions.updateQtd('${id}',-1)" class="w-8 h-8 bg-white rounded-xl shadow-sm font-black text-rose-600">-</button>
+                                    <span class="font-bold text-sm">${q}</span>
+                                    <button onclick="window.actions.updateQtd('${id}',1)" class="w-8 h-8 bg-white rounded-xl shadow-sm font-black text-rose-600">+</button>
+                                </div>
                             </div>`;
                         }).join('')}
                     </div>
 
-                    <div class="mb-10">
-                        <p class="font-black text-[10px] uppercase text-gray-400 mb-4 italic tracking-widest text-center">Programar Compra?</p>
+                    <div class="mb-10 bg-gray-50 p-6 rounded-[32px]">
+                        <p class="font-black text-[11px] uppercase text-gray-400 mb-6 italic tracking-widest text-center">Programar Compra?</p>
                         <div class="grid grid-cols-2 gap-2">
                             ${['Compra Única', 'Diária', 'Semanal', 'Quinzenal', 'Mensal'].map(f => `
-                                <button onclick="window.state.frequencia='${f}'; window.render()" class="py-4 rounded-2xl border-2 text-[10px] font-black uppercase ${window.state.frequencia === f ? 'border-rose-600 bg-rose-50 text-rose-600' : 'border-gray-100 text-gray-400'}">${f}</button>
+                                <button onclick="window.state.frequencia='${f}'; window.render()" 
+                                    class="py-4 rounded-2xl border-2 text-[10px] font-black uppercase transition-all
+                                    ${window.state.frequencia === f ? 'border-rose-600 bg-rose-600 text-white shadow-lg' : 'border-gray-200 bg-white text-gray-400'}">
+                                    ${f}
+                                </button>
                             `).join('')}
                         </div>
                     </div>
 
-                    <div class="bg-gray-900 p-6 rounded-[32px] text-white">
-                        <div class="flex justify-between items-center mb-6">
-                            <span class="text-xs font-bold uppercase opacity-50">Total</span>
-                            <span class="text-2xl font-black italic">R$ ${total.toFixed(2)}</span>
+                    <div class="bg-gray-900 p-8 rounded-[40px] text-white shadow-2xl">
+                        <div class="flex justify-between items-center mb-8">
+                            <span class="text-xs font-bold uppercase opacity-50 tracking-widest">Total Geral</span>
+                            <span class="text-3xl font-black italic">R$ ${total.toFixed(2)}</span>
                         </div>
-                        <button onclick="window.actions.finalizar()" class="w-full py-5 bg-rose-600 text-white rounded-2xl font-black uppercase shadow-xl italic">Fechar Pedido</button>
+                        <button onclick="window.actions.finalizar()" class="w-full py-5 bg-rose-600 text-white rounded-[24px] font-black uppercase shadow-xl italic tracking-tighter">Fechar Pedido Agora</button>
                     </div>
                 </div>`;
                 return;
             }
 
-            // TELA DO CATÁLOGO (PADRÃO)
+            // --- TELA DO CATÁLOGO ---
             root.innerHTML = `
                 <header class="p-6 sticky top-0 bg-white/90 backdrop-blur-md z-40 border-b border-gray-50 flex justify-between items-center">
-                    <h1 class="text-2xl font-black text-rose-600 italic uppercase">AppEgg</h1>
-                    <span class="text-[9px] font-black text-gray-400 uppercase tracking-widest">Olá, ${window.state.cliente.nome.split(' ')[0]}</span>
+                    <h1 class="text-2xl font-black text-rose-600 italic uppercase tracking-tighter">AppEgg</h1>
+                    <div class="text-right">
+                        <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest">Olá, ${window.state.cliente.nome.split(' ')[0]}</p>
+                    </div>
                 </header>
 
-                <div class="p-4 grid grid-cols-2 gap-3">
+                <div class="p-4 grid grid-cols-2 gap-4 animate-in slide-in-from-bottom duration-500">
                     ${window.state.produtos.map(p => {
                         const q = window.state.carrinho[p.id] || 0;
-                        return `<div class="product-card p-3 flex flex-col">
+                        return `
+                        <div class="product-card p-4 flex flex-col">
                             <span class="badge-medida">${p.tipo_estoque}</span>
-                            <div class="h-28 flex items-center justify-center p-2 mb-2"><img src="${p.foto_url}" class="max-h-full object-contain"></div>
-                            <h3 class="font-black text-[10px] text-gray-700 uppercase h-8 overflow-hidden">${p.nome}</h3>
-                            <p class="text-rose-600 font-black text-sm my-2">R$ ${parseFloat(p.preco).toFixed(2)}</p>
-                            ${q === 0 ? `<button onclick="window.actions.updateQtd('${p.id}', 1)" class="w-full bg-rose-600 text-white py-3 rounded-xl text-[10px] font-black uppercase">Adicionar</button>` : 
-                            `<div class="flex items-center justify-between bg-gray-50 rounded-xl p-1"><button onclick="window.actions.updateQtd('${p.id}', -1)" class="w-8 h-8 font-black text-rose-600">-</button><span class="font-bold text-xs">${q}</span><button onclick="window.actions.updateQtd('${p.id}', 1)" class="w-8 h-8 font-black text-rose-600">+</button></div>`}
+                            <div class="h-28 flex items-center justify-center p-2 mb-4">
+                                <img src="${p.foto_url}" class="max-h-full object-contain">
+                            </div>
+                            <h3 class="font-black text-[10px] text-gray-800 uppercase h-8 overflow-hidden mb-1">${p.nome}</h3>
+                            <p class="text-rose-600 font-black text-base mb-4">R$ ${parseFloat(p.preco).toFixed(2)}</p>
+                            
+                            ${q === 0 ? 
+                                `<button onclick="window.actions.updateQtd('${p.id}', 1)" class="w-full bg-rose-600 text-white py-3 rounded-xl text-[10px] font-black uppercase shadow-md active:scale-95 transition-transform">Adicionar</button>` : 
+                                `<div class="flex items-center justify-between bg-gray-50 rounded-xl p-1 border border-rose-100">
+                                    <button onclick="window.actions.updateQtd('${p.id}', -1)" class="w-8 h-8 font-black text-rose-600">-</button>
+                                    <span class="font-bold text-xs">${q}</span>
+                                    <button onclick="window.actions.updateQtd('${p.id}', 1)" class="w-8 h-8 font-black text-rose-600">+</button>
+                                </div>`
+                            }
                         </div>`;
                     }).join('')}
                 </div>
 
                 <footer class="mt-12 p-10 bg-gray-50 text-center border-t border-gray-100 rounded-t-[40px]">
-                    <h2 class="text-2xl font-black text-rose-600 italic mb-1 uppercase tracking-tighter">AppEgg</h2>
-                    <p class="text-[11px] text-gray-400 space-y-1 font-bold">
-                        <p>Rua Antonio Freire da Silva, 67</p>
-                        <p>Jardim das Camélias, São Paulo - SP</p>
-                        <p class="text-gray-800">11 98570-6243</p>
-                    </div>
+                    <h2 class="text-2xl font-black text-rose-600 italic mb-2 uppercase tracking-tighter">AppEgg</h2>
+                    <p class="text-[11px] text-gray-400 font-bold leading-relaxed">
+                        Rua Antonio Freire da Silva, 67<br>
+                        Jardim das Camélias, São Paulo - SP<br>
+                        <span class="text-rose-500">11 98570-6243</span>
+                    </p>
                 </footer>
 
-                ${Object.values(window.state.carrinho).length > 0 ? `<div class="cart-bar">
-                    <p class="text-xl font-black italic">🛒 AppEgg</p>
-                    <button onclick="window.state.tela='carrinho'; window.render()" class="bg-rose-600 px-10 py-4 rounded-2xl text-white font-black text-xs uppercase shadow-lg italic">Ver Carrinho</button>
-                </div>` : ''}
+                ${Object.values(window.state.carrinho).length > 0 ? `
+                    <div class="cart-bar animate-in slide-in-from-bottom duration-300">
+                        <div class="flex flex-col">
+                            <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest">Itens no carrinho</p>
+                            <p class="text-xl font-black italic text-gray-800">Pronto para fechar?</p>
+                        </div>
+                        <button onclick="window.state.tela='carrinho'; window.render()" class="bg-rose-600 px-8 py-4 rounded-2xl text-white font-black text-xs uppercase shadow-lg shadow-rose-200 italic active:scale-95 transition-transform">Ver Carrinho</button>
+                    </div>` : ''}
             `;
         };
+
         fetch(`${API_BASE}/produtos`).then(r => r.json()).then(d => { window.state.produtos = d; window.render(); });
     </script>
 </body>
