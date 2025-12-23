@@ -3,14 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AppEgg Admin</title>
+    <title>AppEgg Admin - Ovos Aline</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
         body { font-family: 'Inter', sans-serif; background: #f9fafb; color: #1f2937; }
         .card { background: #ffffff; border: 1px solid #f3f4f6; border-radius: 24px; box-shadow: 0 4px 15px rgba(0,0,0,0.02); }
-        .nav-link { font-size: 10px; font-weight: 800; text-transform: uppercase; color: #9ca3af; padding: 12px 14px; border-radius: 12px; cursor: pointer; transition: all 0.2s; }
+        .nav-link { font-size: 10px; font-weight: 800; text-transform: uppercase; color: #9ca3af; padding: 12px 14px; border-radius: 12px; cursor: pointer; }
         .nav-link.active { color: #e11d48; background: #fff1f2; }
+        .timeline-dot { width: 8px; height: 8px; border-radius: 50%; background: #e11d48; }
+        .timeline-line { width: 2px; flex-grow: 1; background: #f3f4f6; margin-left: 3px; }
     </style>
 </head>
 <body>
@@ -19,7 +21,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, query, orderBy, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, query, orderBy, doc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
         import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
 
         const firebaseConfig = {
@@ -37,12 +39,9 @@
         const API_BASE = "https://painel-distribuidora-backend.onrender.com/api";
 
         window.state = { 
-            user: null, 
-            view: 'pedidos', 
-            produtos: [], 
-            logs: [], 
-            editando: null,
-            tipos: ["Unidade", "Dúzia", "Cartela (20)", "Cartela (30)", "Caixa"]
+            user: null, view: 'pedidos', produtos: [], logs: [], editando: null, clienteSelecionado: null,
+            tiposEmbalagem: ["Unidade", "Dúzia", "Cartela (20)", "Cartela (30)", "Caixa"],
+            listaPadrao: ["Ovo Branco Grande", "Ovo Branco Extra", "Ovo Vermelho Grande", "Ovo Vermelho Extra", "Ovo Caipira", "Ovo de Codorna"]
         };
 
         onAuthStateChanged(auth, (user) => {
@@ -74,9 +73,7 @@
                         <button onclick="window.state.view='pedidos';window.render()" class="nav-link ${window.state.view==='pedidos'?'active':''}">Pedidos</button>
                         <button onclick="window.state.view='clientes';window.render()" class="nav-link ${window.state.view==='clientes'?'active':''}">Clientes</button>
                         <button onclick="window.state.view='estoque';window.render()" class="nav-link ${window.state.view==='estoque'?'active':''}">Estoque</button>
-                        <button onclick="signOut(auth)" class="p-3 text-gray-300">
-                            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
-                        </button>
+                        <button onclick="signOut(auth)" class="p-3 text-gray-300">Sair</button>
                     </div>
                 </nav>
                 <main class="max-w-5xl mx-auto p-6">
@@ -95,9 +92,6 @@
                         <span class="bg-amber-50 text-amber-600 text-[10px] font-black px-3 py-1 rounded-full">${l.status}</span>
                     </div>
                     <div class="bg-gray-50 p-4 rounded-2xl mb-4 text-xs font-bold">${l.produto}</div>
-                    <div class="flex justify-between items-center mb-4">
-                        <div><p class="text-[9px] font-black text-gray-400 uppercase italic">${l.pagamento}</p><p class="text-2xl font-black">R$ ${(l.precoNoMomento||0).toFixed(2)}</p></div>
-                    </div>
                     <div class="grid grid-cols-2 gap-2">
                         <button onclick="window.actions.mudarStatus('${l.id}', 'EMBALANDO')" class="bg-blue-500 text-white py-3 rounded-xl text-[9px] font-black uppercase">Embalando</button>
                         ${isRetirada ? 
@@ -112,51 +106,87 @@
 
         function renderClientes() {
             const clientesUnicos = [...new Set(window.state.logs.map(l => l.clienteWhatsapp))];
-            return `<div class="card overflow-hidden">
-                <table class="w-full text-left">
-                    <thead class="bg-gray-50 border-b"><tr class="text-[10px] font-black uppercase text-gray-400"><th class="p-4">Cliente</th><th class="p-4">WhatsApp</th><th class="p-4">Pedidos</th></tr></thead>
-                    <tbody class="divide-y">
-                        ${clientesUnicos.map(zap => {
-                            const peds = window.state.logs.filter(l => l.clienteWhatsapp === zap);
-                            return `<tr class="text-xs font-bold"><td class="p-4 uppercase">${peds[0].clienteNome}</td><td class="p-4">${zap}</td><td class="p-4">${peds.length}</td></tr>`
-                        }).join('')}
-                    </tbody>
-                </table>
-            </div>`;
+            
+            if (window.state.clienteSelecionado) {
+                const zap = window.state.clienteSelecionado;
+                const peds = window.state.logs.filter(l => l.clienteWhatsapp === zap);
+                return `
+                    <button onclick="window.state.clienteSelecionado=null;window.render()" class="mb-6 font-black text-rose-600 uppercase text-[10px]">← Voltar para Lista</button>
+                    <h2 class="text-2xl font-black italic mb-6 uppercase">Histórico: ${peds[0].clienteNome}</h2>
+                    <div class="space-y-6">
+                        ${peds.map(p => `
+                            <div class="card p-6 border-l-4 ${p.status === 'CANCELADO' ? 'border-gray-300' : 'border-emerald-500'}">
+                                <div class="flex justify-between items-start mb-4">
+                                    <span class="text-[10px] font-black uppercase px-2 py-1 rounded bg-gray-100">${p.status}</span>
+                                    <span class="text-lg font-black italic text-rose-600">R$ ${(p.precoNoMomento||0).toFixed(2)}</span>
+                                </div>
+                                <p class="text-sm font-bold mb-4">${p.produto}</p>
+                                <div class="space-y-3 border-t pt-4">
+                                    ${renderTimeLineItem("Pedido Realizado", p.criadoEm)}
+                                    ${renderTimeLineItem("Embalando", p.horarioEmbalando)}
+                                    ${renderTimeLineItem(p.pagamento.includes('RETIRAR') ? "Disponível Retirada" : "Saiu para Entrega", p.horarioSaiu)}
+                                    ${renderTimeLineItem("Concluído", p.horarioConcluido)}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+
+            return `
+                <div class="card overflow-hidden">
+                    <table class="w-full text-left">
+                        <thead class="bg-gray-50 border-b"><tr class="text-[10px] font-black uppercase text-gray-400"><th class="p-4">Cliente</th><th class="p-4">WhatsApp</th><th class="p-4">Pedidos</th><th class="p-4">Ação</th></tr></thead>
+                        <tbody class="divide-y">
+                            ${clientesUnicos.map(zap => {
+                                const peds = window.state.logs.filter(l => l.clienteWhatsapp === zap);
+                                return `<tr class="text-xs font-bold"><td class="p-4 uppercase">${peds[0].clienteNome}</td><td class="p-4">${zap}</td><td class="p-4">${peds.length}</td><td class="p-4"><button onclick="window.state.clienteSelecionado='${zap}';window.render()" class="text-rose-600 font-black uppercase text-[10px]">Ver Detalhes</button></td></tr>`
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>`;
+        }
+
+        function renderTimeLineItem(label, timestamp) {
+            if (!timestamp) return `<div class="flex items-center gap-3 opacity-20"><div class="timeline-dot bg-gray-300"></div><span class="text-[9px] font-black uppercase">${label}: --:--</span></div>`;
+            const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+            return `
+                <div class="flex items-center gap-3">
+                    <div class="timeline-dot"></div>
+                    <span class="text-[9px] font-black uppercase text-gray-500">${label}: <span class="text-gray-900">${date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span></span>
+                </div>
+            `;
         }
 
         function renderEstoque() {
             const p = window.state.editando || { nome: '', quantidade: '', preco: '', foto_url: '', tipo_estoque: 'Caixa' };
             return `
                 <div class="card p-8 mb-10">
-                    <h3 class="font-black text-xs uppercase mb-6 text-rose-600 italic">${window.state.editando ? 'Editar Produto' : 'Novo Produto'}</h3>
+                    <h3 class="font-black text-xs uppercase mb-6 text-rose-600 italic">Gestão de Estoque - Ovos Aline</h3>
                     <form onsubmit="window.actions.salvarProduto(event)" class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <input name="nome" value="${p.nome}" placeholder="Nome" class="p-4 bg-gray-50 rounded-2xl font-bold text-sm outline-none" required>
-                        <input name="quantidade" type="number" value="${p.quantidade}" placeholder="Qtd" class="p-4 bg-gray-50 rounded-2xl font-bold text-sm outline-none" required>
-                        <input name="preco" type="number" step="0.01" value="${p.preco}" placeholder="Preço" class="p-4 bg-gray-50 rounded-2xl font-bold text-sm outline-none" required>
-                        <select name="tipo_estoque" class="p-4 bg-gray-50 rounded-2xl font-bold text-sm outline-none">
-                            ${window.state.tipos.map(t => `<option value="${t}" ${p.tipo_estoque === t ? 'selected' : ''}>${t}</option>`).join('')}
-                        </select>
-                        <input name="foto_url" value="${p.foto_url}" placeholder="URL da Foto" class="md:col-span-3 p-4 bg-gray-50 rounded-2xl font-bold text-sm outline-none" required>
-                        <div class="flex gap-2">
-                            <button class="flex-1 bg-rose-600 text-white font-black py-4 rounded-2xl uppercase italic shadow-lg">${window.state.editando ? 'Atualizar' : 'Salvar'}</button>
-                            ${window.state.editando ? `<button type="button" onclick="window.state.editando=null;window.render()" class="bg-gray-100 px-6 rounded-2xl font-black text-xs uppercase">Cancelar</button>` : ''}
+                        <div class="flex flex-col gap-1">
+                            <label class="text-[9px] font-black text-gray-400 uppercase ml-2">Escolha ou Digite</label>
+                            <input name="nome" value="${p.nome}" list="ovos-lista" placeholder="Nome do Ovo" class="p-4 bg-gray-50 rounded-2xl font-bold text-sm outline-none" required>
+                            <datalist id="ovos-lista">${window.state.listaPadrao.map(o => `<option value="${o}">`).join('')}</datalist>
                         </div>
+                        <input name="quantidade" type="number" value="${p.quantidade}" placeholder="Qtd" class="p-4 bg-gray-50 rounded-2xl font-bold text-sm outline-none mt-5" required>
+                        <input name="preco" type="number" step="0.01" value="${p.preco}" placeholder="Preço" class="p-4 bg-gray-50 rounded-2xl font-bold text-sm outline-none mt-5" required>
+                        <select name="tipo_estoque" class="p-4 bg-gray-50 rounded-2xl font-bold text-sm outline-none mt-5">
+                            ${window.state.tiposEmbalagem.map(t => `<option value="${t}" ${p.tipo_estoque === t ? 'selected' : ''}>${t}</option>`).join('')}
+                        </select>
+                        <input name="foto_url" value="${p.foto_url}" placeholder="Link da Imagem" class="md:col-span-3 p-4 bg-gray-50 rounded-2xl font-bold text-sm outline-none" required>
+                        <button class="bg-rose-600 text-white font-black py-4 rounded-2xl uppercase italic shadow-lg">${window.state.editando ? 'Atualizar' : 'Adicionar ao Catálogo'}</button>
                     </form>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     ${window.state.produtos.map(prod => `
                         <div class="card p-5 flex items-center gap-4">
-                            <img src="${prod.foto_url}" class="w-12 h-12 object-contain bg-gray-50 rounded-lg">
+                            <img src="${prod.foto_url}" class="w-12 h-12 object-contain">
                             <div class="flex-1">
                                 <p class="font-black text-xs uppercase italic">${prod.nome}</p>
-                                <p class="text-[10px] font-bold text-gray-400 italic">${prod.tipo_estoque}</p>
                                 <p class="text-rose-600 font-black text-sm">R$ ${parseFloat(prod.preco).toFixed(2)}</p>
                             </div>
-                            <div class="flex flex-col gap-1">
-                                <button onclick="window.state.editando=${JSON.stringify(prod).replace(/"/g, '&quot;')};window.render()" class="text-blue-500 font-black text-[9px] uppercase">Editar</button>
-                                <button onclick="window.actions.excluirProduto('${prod.id}')" class="text-rose-500 font-black text-[9px] uppercase">Excluir</button>
-                            </div>
+                            <button onclick="window.state.editando=${JSON.stringify(prod).replace(/"/g, '&quot;')};window.render()" class="text-blue-500 font-black text-[9px] uppercase">Editar</button>
                         </div>`).join('')}
                 </div>`;
         }
@@ -164,7 +194,7 @@
         window.actions = {
             login: async (e) => {
                 e.preventDefault();
-                try { await signInWithEmailAndPassword(auth, e.target.email.value, e.target.pass.value); } catch (err) { alert("Login falhou."); }
+                try { await signInWithEmailAndPassword(auth, e.target.email.value, e.target.pass.value); } catch (err) { alert("Erro."); }
             },
             load: async () => {
                 const r = await fetch(`${API_BASE}/produtos`);
@@ -182,22 +212,16 @@
                     foto_url: f.get('foto_url')
                 };
                 const url = window.state.editando ? `${API_BASE}/produtos/${window.state.editando.id}` : `${API_BASE}/produtos`;
-                await fetch(url, {
-                    method: window.state.editando ? 'PUT' : 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(payload)
-                });
+                await fetch(url, { method: window.state.editando ? 'PUT' : 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
                 window.state.editando = null;
                 window.actions.load();
             },
-            excluirProduto: async (id) => {
-                if(confirm("Excluir produto?")) {
-                    await fetch(`${API_BASE}/produtos/${id}`, {method:'DELETE'});
-                    window.actions.load();
-                }
-            },
             mudarStatus: async (id, status) => {
-                await updateDoc(doc(db, "vendas_logs", id), { status });
+                const update = { status };
+                if (status === 'EMBALANDO') update.horarioEmbalando = new Date();
+                if (status === 'SAIU PARA ENTREGA' || status === 'DISPONÍVEL PARA RETIRAR') update.horarioSaiu = new Date();
+                if (status === 'FINALIZADO') update.horarioConcluido = new Date();
+                await updateDoc(doc(db, "vendas_logs", id), update);
             }
         };
 

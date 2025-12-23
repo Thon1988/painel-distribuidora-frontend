@@ -3,18 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AppEgg - Cliente</title>
+    <title>AppEgg Cliente</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&display=swap');
-        body { font-family: 'Inter', sans-serif; background: #fff; margin: 0; -webkit-tap-highlight-color: transparent; }
-        .product-card { background: #fff; border-radius: 24px; border: 1px solid #f3f4f6; padding: 16px; }
+        body { font-family: 'Inter', sans-serif; background: #fff; }
         .btn-main { background: #e11d48; color: white; font-weight: 800; text-transform: uppercase; border-radius: 20px; padding: 18px; width: 100%; font-style: italic; }
         .nav-bottom { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid #f3f4f6; display: flex; justify-content: space-around; padding: 15px; z-index: 100; }
         .nav-item { font-size: 10px; font-weight: 800; text-transform: uppercase; color: #9ca3af; }
         .nav-item.active { color: #e11d48; }
-        .notif-banner { position: fixed; top: 20px; left: 20px; right: 20px; background: #e11d48; color: white; padding: 20px; border-radius: 24px; z-index: 1000; font-weight: 800; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.2); animation: slideIn 0.5s ease; }
-        @keyframes slideIn { from { transform: translateY(-100px); } to { transform: translateY(0); } }
+        .notif-banner { position: fixed; top: 20px; left: 20px; right: 20px; background: #1f2937; color: white; padding: 20px; border-radius: 24px; z-index: 1000; font-weight: 800; text-align: center; }
     </style>
 </head>
 <body>
@@ -22,7 +20,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-        import { getFirestore, collection, addDoc, serverTimestamp, onSnapshot, query, where, orderBy, doc } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, serverTimestamp, onSnapshot, query, where, orderBy } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
         import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
 
         const firebaseConfig = {
@@ -38,15 +36,7 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
 
-        window.state = { 
-            user: null, 
-            produtos: [], 
-            carrinho: {}, 
-            tela: 'catalogo', 
-            logistica: 'ENTREGAR', 
-            pagamento: 'PIX_CHAVE', 
-            meusPedidos: [] 
-        };
+        window.state = { user: null, produtos: [], carrinho: {}, tela: 'catalogo', meusPedidos: [] };
 
         onAuthStateChanged(auth, (user) => {
             window.state.user = user;
@@ -62,7 +52,7 @@
                     <form onsubmit="window.actions.login(event)" class="space-y-4">
                         <input name="email" type="email" placeholder="E-mail" class="w-full p-5 bg-gray-50 rounded-2xl font-bold outline-none border" required>
                         <input name="pass" type="password" placeholder="Senha" class="w-full p-5 bg-gray-50 rounded-2xl font-bold outline-none border" required>
-                        <button class="btn-main mt-4">Acessar Loja</button>
+                        <button class="btn-main mt-4 shadow-xl">Entrar</button>
                     </form>
                 </div>`;
                 return;
@@ -70,14 +60,13 @@
 
             let content = '';
             if (window.state.tela === 'catalogo') content = renderCatalogo();
-            if (window.state.tela === 'carrinho') content = renderCarrinho();
-            if (window.state.tela === 'notificacoes') content = renderNotificacoes();
+            if (window.state.tela === 'notificacoes') content = renderPedidos();
 
             root.innerHTML = `
                 <div class="pb-32">${content}</div>
                 <nav class="nav-bottom">
-                    <button onclick="window.state.tela='catalogo';window.render()" class="nav-item ${window.state.tela==='catalogo'?'active':''}">Loja</button>
-                    <button onclick="window.state.tela='notificacoes';window.render()" class="nav-item ${window.state.tela==='notificacoes'?'active':''}">Pedidos</button>
+                    <button onclick="window.state.tela='catalogo';window.render()" class="nav-item ${window.state.tela==='catalogo'?'active':''}">Ovos</button>
+                    <button onclick="window.state.tela='notificacoes';window.render()" class="nav-item ${window.state.tela==='notificacoes'?'active':''}">Meus Pedidos</button>
                     <button onclick="signOut(auth)" class="nav-item">Sair</button>
                 </nav>`;
         };
@@ -86,82 +75,37 @@
             return `
                 <header class="p-6 border-b sticky top-0 bg-white z-40 flex justify-between items-center">
                     <h1 class="text-2xl font-black text-rose-600 italic uppercase">AppEgg</h1>
-                    ${Object.keys(window.state.carrinho).length > 0 ? `<button onclick="window.state.tela='carrinho';window.render()" class="bg-rose-600 text-white px-4 py-2 rounded-full font-black text-[10px] uppercase italic">Carrinho</button>` : ''}
+                    <span class="text-[10px] font-black bg-rose-50 text-rose-600 px-3 py-1 rounded-full">ALINE OVOS</span>
                 </header>
-                <div class="p-4 grid grid-cols-2 gap-3">
-                    ${window.state.produtos.map(p => {
-                        const q = window.state.carrinho[p.id] || 0;
-                        return `<div class="product-card flex flex-col items-center">
-                            <img src="${p.foto_url}" class="h-24 object-contain mb-2">
-                            <h3 class="font-black text-[9px] uppercase text-center h-8 leading-tight">${p.nome}</h3>
-                            <p class="text-rose-600 font-black text-xs italic mb-3">R$ ${parseFloat(p.preco).toFixed(2)}</p>
-                            ${q === 0 ? `<button onclick="window.actions.add('${p.id}')" class="w-full bg-gray-900 text-white py-3 rounded-xl text-[9px] font-black uppercase italic">Add</button>` : 
-                            `<div class="flex items-center gap-4 bg-rose-50 px-3 py-1 rounded-xl"><button onclick="window.actions.sub('${p.id}')" class="text-rose-600 font-black">-</button><span class="font-bold text-sm">${q}</span><button onclick="window.actions.add('${p.id}')" class="text-rose-600 font-black">+</button></div>`}
-                        </div>`;
-                    }).join('')}
+                <div class="p-4 grid grid-cols-2 gap-4">
+                    ${window.state.produtos.map(p => `
+                        <div class="p-4 bg-white border rounded-[30px] flex flex-col items-center shadow-sm">
+                            <img src="${p.foto_url}" class="h-20 mb-3">
+                            <h3 class="font-black text-[9px] uppercase text-center h-8">${p.nome}</h3>
+                            <p class="text-rose-600 font-black text-sm italic mb-4">R$ ${parseFloat(p.preco).toFixed(2)}</p>
+                            <button onclick="window.actions.add('${p.id}')" class="w-full bg-gray-900 text-white py-3 rounded-2xl text-[9px] font-black uppercase">Adicionar</button>
+                        </div>
+                    `).join('')}
                 </div>`;
         }
 
-        function renderCarrinho() {
-            const itens = Object.entries(window.state.carrinho);
-            const total = itens.reduce((acc, [id, q]) => acc + (window.state.produtos.find(x => x.id == id)?.preco * q || 0), 0);
+        function renderPedidos() {
             return `
                 <div class="p-6">
-                    <h2 class="text-3xl font-black uppercase italic mb-8">Checkout</h2>
-                    <div class="space-y-4 mb-10">
-                        ${itens.map(([id, q]) => {
-                            const p = window.state.produtos.find(x => x.id == id);
-                            return `<div class="flex justify-between items-center bg-gray-50 p-4 rounded-2xl">
-                                <div><p class="font-black text-[10px] uppercase">${p.nome}</p><p class="text-rose-600 font-bold">R$ ${(p.preco*q).toFixed(2)}</p></div>
-                                <div class="flex items-center gap-3"><button onclick="window.actions.sub('${id}')" class="w-8 h-8 font-black">-</button><span class="font-bold">${q}</span><button onclick="window.actions.add('${id}')" class="w-8 h-8 font-black">+</button></div>
-                            </div>`;
-                        }).join('')}
-                    </div>
-                    
+                    <h2 class="text-3xl font-black uppercase italic mb-8">Meus Pedidos</h2>
                     <div class="space-y-6">
-                        <div>
-                            <p class="text-[10px] font-black text-gray-400 uppercase mb-3 italic">Entrega ou Retirada?</p>
-                            <div class="grid grid-cols-2 gap-2">
-                                <button onclick="window.state.logistica='ENTREGAR';window.render()" class="p-4 rounded-xl border-2 font-black text-[10px] ${window.state.logistica==='ENTREGAR'?'border-rose-600 bg-rose-50 text-rose-600':'border-gray-100'}">ENTREGAR</button>
-                                <button onclick="window.state.logistica='RETIRAR';window.render()" class="p-4 rounded-xl border-2 font-black text-[10px] ${window.state.logistica==='RETIRAR'?'border-rose-600 bg-rose-50 text-rose-600':'border-gray-100'}">RETIRAR NA LOJA</button>
-                            </div>
-                        </div>
-
-                        <div>
-                            <p class="text-[10px] font-black text-gray-400 uppercase mb-3 italic">Forma de Pagamento</p>
-                            <div class="grid grid-cols-1 gap-2">
-                                ${[{id: 'PIX_CHAVE', n: 'PIX (Chave Celular)'}, {id: 'PIX_QR', n: 'PIX (QR Code)'}, {id: 'CARTAO_CREDITO', n: 'Cartão de Crédito'}, {id: 'CARTAO_DEBITO', n: 'Cartão de Débito'}, {id: 'DINHEIRO', n: 'Dinheiro'}].map(p => `
-                                    <button onclick="window.state.pagamento='${p.id}';window.render()" class="p-4 text-left rounded-xl border-2 font-black text-[10px] ${window.state.pagamento===p.id?'border-rose-600 bg-rose-50 text-rose-600':'border-gray-100'}">${p.n}</button>
-                                `).join('')}
-                            </div>
-                        </div>
-
-                        <div class="border-t pt-6">
-                            <div class="flex justify-between items-center mb-6"><span class="font-bold text-gray-400 uppercase text-[11px]">Total</span><span class="text-3xl font-black italic">R$ ${total.toFixed(2)}</span></div>
-                            <button onclick="window.actions.finalizar()" class="btn-main shadow-xl shadow-rose-100">Confirmar Pedido</button>
-                        </div>
-                    </div>
-                </div>`;
-        }
-
-        function renderNotificacoes() {
-            return `
-                <div class="p-6">
-                    <h2 class="text-3xl font-black uppercase italic mb-8">Histórico</h2>
-                    <div class="space-y-4">
                         ${window.state.meusPedidos.map(p => `
-                            <div class="bg-white border rounded-3xl p-5 shadow-sm">
-                                <div class="flex justify-between items-start mb-3">
-                                    <span class="text-[10px] font-black text-rose-600 uppercase tracking-widest">${p.status}</span>
-                                    <span class="text-[9px] text-gray-400 font-bold">${p.criadoEm?.toDate().toLocaleDateString()}</span>
+                            <div class="bg-white border-2 rounded-[32px] p-6 ${p.status === 'FINALIZADO' ? 'border-emerald-100' : 'border-gray-50'} shadow-sm">
+                                <div class="flex justify-between items-center mb-4">
+                                    <span class="text-[10px] font-black text-rose-600 uppercase italic tracking-widest">${p.status}</span>
+                                    <span class="text-[9px] font-bold text-gray-400">${p.criadoEm?.toDate().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
                                 </div>
-                                <p class="text-[10px] font-bold text-gray-800 mb-2">${p.produto}</p>
-                                <div class="flex justify-between items-center border-t pt-3">
-                                    <span class="text-[9px] text-gray-400 uppercase font-black">${p.pagamento}</span>
-                                    <span class="font-black text-gray-900">R$ ${(p.precoNoMomento||0).toFixed(2)}</span>
+                                <p class="text-[11px] font-bold text-gray-800 leading-tight mb-4 uppercase italic">${p.produto}</p>
+                                <div class="flex justify-between items-end">
+                                    <div class="text-[9px] font-black text-gray-400 uppercase">Total: <span class="text-gray-900 text-lg">R$ ${(p.precoNoMomento||0).toFixed(2)}</span></div>
                                 </div>
                             </div>
-                        `).join('') || '<p class="text-center py-20 text-gray-400 font-black uppercase italic">Nenhum pedido</p>'}
+                        `).join('') || '<p class="text-center font-black py-20 text-gray-300 italic uppercase">Nenhum pedido ainda</p>'}
                     </div>
                 </div>`;
         }
@@ -169,28 +113,22 @@
         window.actions = {
             login: async (e) => {
                 e.preventDefault();
-                try { await signInWithEmailAndPassword(auth, e.target.email.value, e.target.pass.value); } catch (err) { alert("Login falhou."); }
+                try { await signInWithEmailAndPassword(auth, e.target.email.value, e.target.pass.value); } catch (err) { alert("Erro."); }
             },
-            add: (id) => { window.state.carrinho[id] = (window.state.carrinho[id] || 0) + 1; window.render(); },
-            sub: (id) => { if (window.state.carrinho[id] > 1) window.state.carrinho[id]--; else delete window.state.carrinho[id]; window.render(); },
-            finalizar: async () => {
-                const itens = Object.entries(window.state.carrinho).map(([id, q]) => `${q}x ${window.state.produtos.find(x => x.id == id).nome}`).join(', ');
-                const total = Object.entries(window.state.carrinho).reduce((acc, [id, q]) => acc + (window.state.produtos.find(x => x.id == id).preco * q), 0);
-                try {
-                    await addDoc(collection(db, "vendas_logs"), {
-                        clienteNome: "Cliente VIP",
-                        clienteWhatsapp: window.state.user.email,
-                        produto: itens,
-                        precoNoMomento: total,
-                        pagamento: `${window.state.pagamento} (${window.state.logistica})`,
-                        status: 'PENDENTE',
-                        criadoEm: serverTimestamp()
-                    });
-                    alert("Pedido enviado! Acompanhe em 'Pedidos'.");
-                    window.state.carrinho = {};
-                    window.state.tela = 'notificacoes';
-                    window.render();
-                } catch (e) { alert("Erro: " + e.message); }
+            add: (id) => { 
+                const p = window.state.produtos.find(x => x.id == id);
+                addDoc(collection(db, "vendas_logs"), {
+                    clienteNome: "Thon Cliente",
+                    clienteWhatsapp: window.state.user.email,
+                    produto: p.nome,
+                    precoNoMomento: p.preco,
+                    pagamento: 'PIX (RETIRAR)',
+                    status: 'PENDENTE',
+                    criadoEm: serverTimestamp()
+                });
+                alert("🥚 Pedido feito com sucesso!");
+                window.state.tela = 'notificacoes';
+                window.render();
             }
         };
 
@@ -203,15 +141,6 @@
         function monitorarPedidos() {
             const q = query(collection(db, "vendas_logs"), where("clienteWhatsapp", "==", window.state.user.email), orderBy("criadoEm", "desc"));
             onSnapshot(q, (s) => {
-                s.docChanges().forEach(change => {
-                    if (change.type === "modified") {
-                        const b = document.createElement('div');
-                        b.className = "notif-banner";
-                        b.innerText = `STATUS: ${change.doc.data().status}`;
-                        document.body.appendChild(b);
-                        setTimeout(() => b.remove(), 5000);
-                    }
-                });
                 window.state.meusPedidos = s.docs.map(d => d.data());
                 window.render();
             });
