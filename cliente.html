@@ -38,35 +38,65 @@
         const db = getFirestore(app);
         const API_BASE = "https://painel-distribuidora-backend.onrender.com/api";
 
-        window.state = { produtos: [], cliente: JSON.parse(localStorage.getItem('appegg_user')), carrinho: {}, tela: 'catalogo', frequencia: 'Compra Única' };
+        window.state = { 
+            produtos: [], 
+            cliente: JSON.parse(localStorage.getItem('appegg_user')), 
+            carrinho: {}, 
+            tela: 'catalogo',
+            frequencia: 'Compra Única' 
+        };
 
         window.actions = {
-            updateQtd: (id, d) => { const q = (window.state.carrinho[id]||0)+d; if(q<=0) delete window.state.carrinho[id]; else window.state.carrinho[id]=q; window.render(); },
+            updateQtd: (id, d) => { 
+                const q = (window.state.carrinho[id]||0)+d; 
+                if(q<=0) delete window.state.carrinho[id]; 
+                else window.state.carrinho[id]=q; 
+                window.render(); 
+            },
             finalizar: async () => {
                 const itens = Object.entries(window.state.carrinho).map(([id, q]) => {
                     const p = window.state.produtos.find(prod => prod.id == id);
                     return `${q}x ${p.nome}`;
                 }).join(', ');
                 const total = Object.entries(window.state.carrinho).reduce((acc, [id, q]) => acc + (window.state.produtos.find(p => p.id == id).preco * q), 0);
-                await addDoc(collection(db, "vendas_logs"), { clienteNome: window.state.cliente.nome, clienteWhatsapp: window.state.cliente.whatsapp, produto: itens, precoNoMomento: total, entrega: window.state.frequencia, status: 'PENDENTE', criadoEm: serverTimestamp() });
+                
+                await addDoc(collection(db, "vendas_logs"), { 
+                    clienteNome: window.state.cliente.nome, 
+                    clienteWhatsapp: window.state.cliente.whatsapp, 
+                    produto: itens, 
+                    precoNoMomento: total, 
+                    entrega: window.state.frequencia, 
+                    status: 'PENDENTE', 
+                    criadoEm: serverTimestamp() 
+                });
                 alert("🥚 Pedido AppEgg enviado com sucesso!");
-                window.state.carrinho={}; window.state.tela='catalogo'; window.render();
+                window.state.carrinho={}; 
+                window.state.tela='catalogo'; 
+                window.render();
             }
         };
 
         window.render = () => {
             const root = document.getElementById('app-root');
+            
+            // Login
             if(!window.state.cliente) {
-                root.innerHTML = `<div class="h-screen flex flex-col justify-center px-10"><h1 class="text-6xl font-black text-rose-600 italic text-center mb-8 tracking-tighter">AppEgg</h1><form onsubmit="event.preventDefault(); window.state.cliente={nome:this.nome.value, whatsapp:this.whatsapp.value}; localStorage.setItem('appegg_user', JSON.stringify(window.state.cliente)); window.render()" class="space-y-4"><input name="nome" placeholder="Seu Nome" class="w-full p-5 bg-gray-50 rounded-2xl outline-none font-bold" required><input name="whatsapp" placeholder="Seu WhatsApp" class="w-full p-5 bg-gray-50 rounded-2xl outline-none font-bold" required><button class="w-full py-5 bg-rose-600 text-white rounded-2xl font-black uppercase">Começar</button></form></div>`;
+                root.innerHTML = `<div class="h-screen flex flex-col justify-center px-10"><h1 class="text-6xl font-black text-rose-600 italic text-center mb-8 tracking-tighter">AppEgg</h1><form onsubmit="event.preventDefault(); window.state.cliente={nome:this.nome.value, whatsapp:this.whatsapp.value}; localStorage.setItem('appegg_user', JSON.stringify(window.state.cliente)); window.render()" class="space-y-4"><input name="nome" placeholder="Seu Nome" class="w-full p-5 bg-gray-50 rounded-2xl outline-none font-bold" required><input name="whatsapp" placeholder="WhatsApp" class="w-full p-5 bg-gray-50 rounded-2xl outline-none font-bold" required><button class="w-full py-5 bg-rose-600 text-white rounded-2xl font-black uppercase">Entrar</button></form></div>`;
                 return;
             }
 
+            // TELA DO CARRINHO
             if(window.state.tela === 'carrinho') {
-                const total = Object.entries(window.state.carrinho).reduce((acc, [id, q]) => acc + (window.state.produtos.find(p => p.id == id).preco * q), 0);
+                const total = Object.entries(window.state.carrinho).reduce((acc, [id, q]) => {
+                    const p = window.state.produtos.find(prod => prod.id == id);
+                    return acc + (p ? p.preco * q : 0);
+                }, 0);
+
                 root.innerHTML = `
                 <div class="p-6">
-                    <button onclick="window.state.tela='catalogo'; window.render()" class="text-rose-600 font-black uppercase text-[10px] mb-8 tracking-widest flex items-center gap-2">← Continuar Comprando</button>
-                    <h2 class="text-3xl font-black italic uppercase mb-8">Carrinho</h2>
+                    <button onclick="window.state.tela='catalogo'; window.render()" class="text-rose-600 font-black uppercase text-[10px] mb-8 tracking-widest flex items-center gap-2">← Voltar para as compras</button>
+                    <h2 class="text-3xl font-black italic uppercase mb-8">Meu Carrinho</h2>
+                    
                     <div class="space-y-4 mb-10">
                         ${Object.entries(window.state.carrinho).map(([id, q]) => {
                             const p = window.state.produtos.find(prod => prod.id == id);
@@ -77,24 +107,34 @@
                             </div>`;
                         }).join('')}
                     </div>
-                    <div class="mb-10 text-center">
-                        <p class="font-black text-[10px] uppercase text-gray-400 mb-4 italic tracking-widest">Programar Compra?</p>
+
+                    <div class="mb-10">
+                        <p class="font-black text-[10px] uppercase text-gray-400 mb-4 italic tracking-widest text-center">Programar Compra?</p>
                         <div class="grid grid-cols-2 gap-2">
                             ${['Compra Única', 'Diária', 'Semanal', 'Quinzenal', 'Mensal'].map(f => `
                                 <button onclick="window.state.frequencia='${f}'; window.render()" class="py-4 rounded-2xl border-2 text-[10px] font-black uppercase ${window.state.frequencia === f ? 'border-rose-600 bg-rose-50 text-rose-600' : 'border-gray-100 text-gray-400'}">${f}</button>
                             `).join('')}
                         </div>
                     </div>
-                    <button onclick="window.actions.finalizar()" class="w-full py-6 bg-rose-600 text-white rounded-[32px] font-black uppercase shadow-xl shadow-rose-200">Finalizar Pedido • R$ ${total.toFixed(2)}</button>
+
+                    <div class="bg-gray-900 p-6 rounded-[32px] text-white">
+                        <div class="flex justify-between items-center mb-6">
+                            <span class="text-xs font-bold uppercase opacity-50">Total</span>
+                            <span class="text-2xl font-black italic">R$ ${total.toFixed(2)}</span>
+                        </div>
+                        <button onclick="window.actions.finalizar()" class="w-full py-5 bg-rose-600 text-white rounded-2xl font-black uppercase shadow-xl italic">Fechar Pedido</button>
+                    </div>
                 </div>`;
                 return;
             }
 
+            // TELA DO CATÁLOGO (PADRÃO)
             root.innerHTML = `
                 <header class="p-6 sticky top-0 bg-white/90 backdrop-blur-md z-40 border-b border-gray-50 flex justify-between items-center">
                     <h1 class="text-2xl font-black text-rose-600 italic uppercase">AppEgg</h1>
                     <span class="text-[9px] font-black text-gray-400 uppercase tracking-widest">Olá, ${window.state.cliente.nome.split(' ')[0]}</span>
                 </header>
+
                 <div class="p-4 grid grid-cols-2 gap-3">
                     ${window.state.produtos.map(p => {
                         const q = window.state.carrinho[p.id] || 0;
@@ -108,18 +148,19 @@
                         </div>`;
                     }).join('')}
                 </div>
+
                 <footer class="mt-12 p-10 bg-gray-50 text-center border-t border-gray-100 rounded-t-[40px]">
                     <h2 class="text-2xl font-black text-rose-600 italic mb-1 uppercase tracking-tighter">AppEgg</h2>
-                    <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-6">Sua Distribuidora Especializada</p>
-                    <div class="text-[11px] text-gray-400 space-y-1 font-bold">
+                    <p class="text-[11px] text-gray-400 space-y-1 font-bold">
                         <p>Rua Antonio Freire da Silva, 67</p>
                         <p>Jardim das Camélias, São Paulo - SP</p>
                         <p class="text-gray-800">11 98570-6243</p>
                     </div>
                 </footer>
+
                 ${Object.values(window.state.carrinho).length > 0 ? `<div class="cart-bar">
                     <p class="text-xl font-black italic">🛒 AppEgg</p>
-                    <button onclick="window.state.tela='carrinho'; window.render()" class="bg-rose-600 px-10 py-4 rounded-2xl text-white font-black text-xs uppercase shadow-lg italic">Ver Pedido</button>
+                    <button onclick="window.state.tela='carrinho'; window.render()" class="bg-rose-600 px-10 py-4 rounded-2xl text-white font-black text-xs uppercase shadow-lg italic">Ver Carrinho</button>
                 </div>` : ''}
             `;
         };
