@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AppEgg Admin | Gestão Aline</title>
+    <title>AppEgg Admin | Distribuidora Aline</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
         body { font-family: 'Inter', sans-serif; background: #ffffff; color: #1f2937; }
-        .nav-link { font-size: 11px; font-weight: 800; text-transform: uppercase; color: #9ca3af; padding: 12px 4px; border-bottom: 3px solid transparent; }
+        .nav-link { font-size: 11px; font-weight: 800; text-transform: uppercase; color: #9ca3af; padding: 12px 4px; border-bottom: 3px solid transparent; cursor: pointer; }
         .nav-link.active { color: #e11d48; border-bottom-color: #e11d48; }
         .card { background: #ffffff; border: 1px solid #f3f4f6; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
     </style>
@@ -37,9 +37,11 @@
 
         window.actions = {
             load: async () => {
-                const res = await fetch(`${API_BASE}/produtos`);
-                window.state.produtos = await res.json();
-                window.render();
+                try {
+                    const res = await fetch(`${API_BASE}/produtos`);
+                    window.state.produtos = await res.json();
+                    window.render();
+                } catch (e) { console.error("Erro ao carregar produtos", e); }
             },
             salvarProduto: async (e) => {
                 e.preventDefault();
@@ -58,28 +60,8 @@
                 e.target.reset();
                 window.actions.load();
             },
-            prepararEdicao: (p) => {
-                window.state.editingId = p.id;
-                window.state.view = 'estoque';
-                window.render();
-                setTimeout(() => {
-                    const f = document.getElementById('form-p');
-                    f.nome.value = p.nome; f.preco.value = p.preco; f.quantidade.value = p.quantidade;
-                    f.tipo_estoque.value = p.tipo_estoque; f.foto_url.value = p.foto_url;
-                }, 100);
-            },
-            excluirProduto: async (id) => { if(confirm("Excluir?")) { await fetch(`${API_BASE}/produtos/${id}`, {method:'DELETE'}); window.actions.load(); } },
-            mudarStatus: async (id, status) => { await updateDoc(doc(db, "vendas_logs", id), { status }); },
-            gerarRoteiro: () => {
-                const { jsPDF } = window.jspdf;
-                const docPdf = new jsPDF();
-                docPdf.text("Roteiro de Entregas AppEgg", 20, 20);
-                let y = 30;
-                window.state.logs.filter(l => l.status !== 'FINALIZADO').forEach(l => {
-                    docPdf.text(`${l.clienteNome} - ${l.produto} - R$ ${l.precoNoMomento}`, 20, y);
-                    y += 10;
-                });
-                docPdf.save("entregas.pdf");
+            mudarStatus: async (id, status) => {
+                await updateDoc(doc(db, "vendas_logs", id), { status });
             }
         };
 
@@ -90,79 +72,74 @@
 
         window.render = () => {
             const root = document.getElementById('app-root');
+            const logs = window.state.logs || [];
+            
+            // Garantir que a lista de clientes não quebre se os dados estiverem incompletos
+            const clientesUnicos = Array.from(new Set(logs.map(l => l.clienteWhatsapp))).map(whatsapp => {
+                return logs.find(l => l.clienteWhatsapp === whatsapp);
+            }).filter(c => c && c.clienteNome);
+
             root.innerHTML = `
                 <nav class="bg-white border-b px-6 sticky top-0 z-50">
                     <div class="max-w-6xl mx-auto flex justify-between items-center h-16">
                         <h1 class="font-black text-rose-600 text-xl italic uppercase">AppEgg Admin</h1>
                         <div class="flex gap-6">
-                            <button onclick="window.state.view='pedidos';window.render()" class="nav-link ${window.state.view==='pedidos'?'active':''}">Pedidos</button>
-                            <button onclick="window.state.view='estoque';window.render()" class="nav-link ${window.state.view==='estoque'?'active':''}">Estoque</button>
-                            <button onclick="window.state.view='clientes';window.render()" class="nav-link ${window.state.view==='clientes'?'active':''}">Clientes</button>
+                            <div onclick="window.state.view='pedidos';window.render()" class="nav-link ${window.state.view==='pedidos'?'active':''}">Pedidos</div>
+                            <div onclick="window.state.view='estoque';window.render()" class="nav-link ${window.state.view==='estoque'?'active':''}">Estoque</div>
+                            <div onclick="window.state.view='clientes';window.render()" class="nav-link ${window.state.view==='clientes'?'active':''}">Clientes</div>
                         </div>
                     </div>
                 </nav>
 
                 <main class="max-w-5xl mx-auto p-6">
                     ${window.state.view === 'pedidos' ? `
-                        <div class="flex justify-between items-center mb-6">
-                            <h2 class="font-bold uppercase text-sm tracking-widest text-gray-400">Pedidos Pendentes</h2>
-                            <button onclick="window.actions.gerarRoteiro()" class="bg-black text-white px-4 py-2 rounded-lg text-xs font-bold uppercase">Roteiro PDF</button>
-                        </div>
+                        <h2 class="font-bold uppercase text-xs text-gray-400 mb-6">Pedidos Recentes</h2>
                         <div class="space-y-3">
-                            ${window.state.logs.filter(l => l.status !== 'FINALIZADO').map(l => `
-                                <div class="card p-4 flex justify-between items-center border-l-4 border-rose-500">
+                            ${logs.length ? logs.map(l => `
+                                <div class="card p-4 flex justify-between items-center">
                                     <div>
-                                        <p class="text-[10px] font-bold text-gray-400 uppercase">${l.tipo || 'Única'}</p>
                                         <h3 class="font-bold">${l.clienteNome}</h3>
                                         <p class="text-xs text-rose-600 font-bold uppercase">${l.produto}</p>
                                     </div>
                                     <div class="flex gap-2">
-                                        <a href="https://wa.me/55${l.clienteWhatsapp}" target="_blank" class="bg-green-100 text-green-600 p-2 rounded-lg text-[10px] font-black uppercase">ZAP</a>
-                                        <button onclick="window.actions.mudarStatus('${l.id}', 'FINALIZADO')" class="bg-gray-100 px-4 py-2 rounded-lg text-[10px] font-black uppercase">Entregue</button>
+                                        <a href="https://wa.me/55${l.clienteWhatsapp}" target="_blank" class="bg-green-100 text-green-600 p-2 rounded-lg text-[10px] font-black">ZAP</a>
+                                        <button onclick="window.actions.mudarStatus('${l.id}', 'FINALIZADO')" class="bg-gray-100 p-2 rounded-lg text-[10px] font-black uppercase">Finalizar</button>
                                     </div>
                                 </div>
-                            `).join('')}
+                            `).join('') : '<p class="text-center text-gray-400 py-10">Nenhum pedido encontrado.</p>'}
                         </div>
                     ` : ''}
 
                     ${window.state.view === 'estoque' ? `
                         <div class="card p-6 mb-8">
-                            <form id="form-p" onsubmit="window.actions.salvarProduto(event)" class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <input name="nome" placeholder="Nome do Produto" class="p-3 border rounded-xl" required>
-                                <input name="preco" type="number" step="0.01" placeholder="Preço R$" class="p-3 border rounded-xl" required>
-                                <input name="quantidade" type="number" placeholder="Estoque" class="p-3 border rounded-xl" required>
+                            <form onsubmit="window.actions.salvarProduto(event)" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <input name="nome" placeholder="Produto" class="p-3 border rounded-xl" required>
+                                <input name="preco" type="number" step="0.01" placeholder="Preço" class="p-3 border rounded-xl" required>
+                                <input name="quantidade" type="number" placeholder="Qtd" class="p-3 border rounded-xl" required>
+                                <input name="foto_url" placeholder="Link da Foto" class="p-3 border rounded-xl md:col-span-2" required>
                                 <select name="tipo_estoque" class="p-3 border rounded-xl"><option>Caixa</option><option>Cartela</option></select>
-                                <input name="foto_url" placeholder="URL da Imagem" class="p-3 border rounded-xl md:col-span-2" required>
-                                <button class="bg-rose-600 text-white font-bold py-3 rounded-xl md:col-span-3 uppercase">Confirmar Produto</button>
+                                <button class="bg-rose-600 text-white font-bold py-3 rounded-xl md:col-span-3">SALVAR PRODUTO</button>
                             </form>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             ${window.state.produtos.map(p => `
-                                <div class="card p-4 flex justify-between items-center">
-                                    <div class="flex items-center gap-4">
-                                        <img src="${p.foto_url}" class="w-12 h-12 object-contain bg-gray-50 rounded-lg">
-                                        <div><p class="font-bold text-sm uppercase">${p.nome}</p><p class="text-xs text-rose-500 font-bold">R$ ${p.preco.toFixed(2)} | Qtd: ${p.quantidade}</p></div>
-                                    </div>
-                                    <div class="flex gap-2">
-                                        <button onclick='window.actions.prepararEdicao(${JSON.stringify(p)})' class="text-[10px] font-bold uppercase text-blue-600">Editar</button>
-                                        <button onclick="window.actions.excluirProduto('${p.id}')" class="text-[10px] font-bold uppercase text-red-600">X</button>
-                                    </div>
+                                <div class="card p-4 flex items-center gap-4">
+                                    <img src="${p.foto_url}" class="w-12 h-12 object-cover rounded-lg">
+                                    <div class="flex-1"><p class="font-bold text-sm">${p.nome}</p><p class="text-xs text-rose-500">R$ ${p.preco}</p></div>
                                 </div>
                             `).join('')}
                         </div>
                     ` : ''}
 
                     ${window.state.view === 'clientes' ? `
-                        <h2 class="font-bold uppercase text-sm tracking-widest text-gray-400 mb-6">Lista de Contatos</h2>
-                        <div class="card overflow-hidden">
-                            <table class="w-full text-left">
-                                <thead class="bg-gray-50 text-[10px] font-bold text-gray-400"><tr><th class="p-4 uppercase">Cliente</th><th class="p-4 uppercase">WhatsApp</th></tr></thead>
-                                <tbody class="divide-y divide-gray-100">
-                                    ${[...new Map(window.state.logs.map(item => [item['clienteWhatsapp'], item])).values()].map(c => `
-                                        <tr><td class="p-4 font-bold text-sm">${c.clienteNome}</td><td class="p-4 text-xs font-bold text-green-600"><a href="https://wa.me/55${c.clienteWhatsapp}" target="_blank">${c.clienteWhatsapp}</a></td></tr>
-                                    `).join('')}
-                                </tbody>
-                            </table>
+                        <h2 class="font-bold uppercase text-xs text-gray-400 mb-6">Base de Clientes</h2>
+                        <div class="card">
+                            ${clientesUnicos.length ? clientesUnicos.map(c => `
+                                <div class="p-4 border-b last:border-0 flex justify-between items-center">
+                                    <div><p class="font-bold">${c.clienteNome}</p><p class="text-xs text-gray-400">${c.clienteWhatsapp}</p></div>
+                                    <a href="https://wa.me/55${c.clienteWhatsapp}" target="_blank" class="text-green-500 font-bold text-xs uppercase underline">Chamar no WhatsApp</a>
+                                </div>
+                            `).join('') : '<p class="text-center text-gray-400 py-10">Nenhum cliente cadastrado ainda.</p>'}
                         </div>
                     ` : ''}
                 </main>

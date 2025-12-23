@@ -4,13 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AppEgg | Distribuidora Aline</title>
-    <link rel="manifest" href="manifest.json">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
-        body { font-family: 'Inter', sans-serif; background: #ffffff; color: #1f2937; }
-        .product-card { background: #ffffff; border-radius: 20px; border: 1px solid #f3f4f6; overflow: hidden; }
-        .tag-info { position: absolute; top: 12px; left: 12px; padding: 4px 10px; border-radius: 99px; font-size: 8px; font-weight: 900; background: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.05); text-transform: uppercase; }
+        body { font-family: 'Inter', sans-serif; background: #ffffff; }
     </style>
 </head>
 <body class="pb-10">
@@ -32,7 +29,42 @@
         const db = getFirestore(app);
         const API_BASE = "https://painel-distribuidora-backend.onrender.com/api";
 
-        window.state = { produtos: [], cliente: JSON.parse(localStorage.getItem('appegg_user')), checkoutItem: null, tipo: 'unica' };
+        window.state = { produtos: [], cliente: JSON.parse(localStorage.getItem('appegg_user')), checkoutItem: null };
+
+        window.render = () => {
+            const root = document.getElementById('app-root');
+            if(!window.state.cliente) {
+                root.innerHTML = `<div class="h-screen flex flex-col justify-center px-10"><h1 class="text-4xl font-black text-rose-600 italic text-center mb-8 italic">AppEgg</h1><form onsubmit="window.actions.login(event)" class="space-y-4"><input name="nome" placeholder="Nome" class="w-full p-4 border rounded-2xl" required><input name="whatsapp" placeholder="WhatsApp" class="w-full p-4 border rounded-2xl" required><button class="w-full py-4 bg-rose-600 text-white rounded-2xl font-black uppercase">Entrar</button></form></div>`;
+                return;
+            }
+
+            root.innerHTML = `
+                <header class="p-6 border-b border-gray-50"><h1 class="text-2xl font-black text-rose-600 uppercase italic">AppEgg</h1></header>
+                <main class="p-6 space-y-6">
+                    ${window.state.produtos.map(p => `
+                        <div class="border rounded-3xl overflow-hidden p-4">
+                            <img src="${p.foto_url}" class="h-48 w-full object-cover rounded-2xl mb-4">
+                            <h3 class="font-black uppercase text-gray-800">${p.nome}</h3>
+                            <div class="flex justify-between items-center mt-2">
+                                <p class="text-xl font-black text-rose-600">R$ ${p.preco.toFixed(2)}</p>
+                                <button onclick='window.actions.comprar(${JSON.stringify(p)})' class="bg-black text-white px-6 py-3 rounded-xl font-bold text-xs uppercase">Pedir</button>
+                            </div>
+                        </div>
+                    `).join('')}
+
+                    <footer class="mt-10 p-8 bg-gray-50 rounded-[32px] text-center">
+                        <h4 class="font-black text-rose-600 italic">AppEgg</h4>
+                        <p class="text-[10px] font-bold text-gray-400 uppercase">Distribuidora de Ovos Aline</p>
+                        <div class="text-[11px] text-gray-400 my-4">
+                            <p>Rua Antonio Freire da Silva, 67</p>
+                            <p>Jardim das Camélias, São Paulo - SP</p>
+                            <p>WhatsApp: 11 98570-6243</p>
+                        </div>
+                        <a href="https://wa.me/5511985706243" target="_blank" class="inline-block bg-green-500 text-white px-6 py-3 rounded-2xl font-bold text-xs uppercase shadow-lg shadow-green-100">Falar no WhatsApp</a>
+                    </footer>
+                </main>
+            `;
+        };
 
         window.actions = {
             login: (e) => {
@@ -42,88 +74,20 @@
                 window.state.cliente = user;
                 window.render();
             },
-            load: async () => {
-                const res = await fetch(`${API_BASE}/produtos`);
-                window.state.produtos = await res.json();
-                window.render();
-            },
-            finalizar: async (metodo) => {
-                const p = window.state.checkoutItem;
+            comprar: async (p) => {
                 await addDoc(collection(db, "vendas_logs"), {
                     clienteNome: window.state.cliente.nome,
                     clienteWhatsapp: window.state.cliente.whatsapp,
                     produto: p.nome,
                     precoNoMomento: p.preco,
-                    metodoPagamento: metodo,
-                    tipo: window.state.tipo,
                     status: 'PENDENTE',
                     criadoEm: serverTimestamp()
                 });
-                alert("🛒 Pedido Enviado com Sucesso!");
-                window.state.checkoutItem = null;
-                window.render();
+                alert("Pedido realizado!");
             }
         };
 
-        window.render = () => {
-            const root = document.getElementById('app-root');
-            if(!window.state.cliente) {
-                root.innerHTML = `<div class="h-screen flex flex-col justify-center px-10"><h1 class="text-4xl font-black text-rose-600 italic text-center mb-8">AppEgg</h1><form onsubmit="window.actions.login(event)" class="space-y-4"><input name="nome" placeholder="Nome Completo" class="w-full p-4 border rounded-2xl" required><input name="whatsapp" placeholder="WhatsApp (DDD + Número)" class="w-full p-4 border rounded-2xl" required><button class="w-full py-4 bg-rose-600 text-white rounded-2xl font-black uppercase">Entrar na Loja</button></form></div>`;
-                return;
-            }
-
-            root.innerHTML = `
-                <header class="p-6 sticky top-0 bg-white/90 backdrop-blur-md z-40 border-b border-gray-50">
-                    <h1 class="text-2xl font-black text-rose-600 italic uppercase tracking-tighter">AppEgg</h1>
-                </header>
-
-                <main class="p-6 space-y-8">
-                    ${window.state.produtos.map(p => `
-                        <div class="product-card relative">
-                            <span class="tag-info text-rose-600">Alta Qualidade</span>
-                            <div class="h-56 bg-white flex items-center justify-center p-4">
-                                <img src="${p.foto_url}" class="max-h-full object-contain" onerror="this.src='https://via.placeholder.com/300?text=Ovo'">
-                            </div>
-                            <div class="p-6 bg-white">
-                                <h3 class="font-black text-gray-800 text-lg uppercase mb-2">${p.nome}</h3>
-                                <div class="flex justify-between items-center">
-                                    <p class="text-2xl font-black text-rose-600">R$ ${p.preco.toFixed(2)}</p>
-                                    <button onclick='window.state.checkoutItem=${JSON.stringify(p)}; window.render()' class="bg-black text-white px-6 py-3 rounded-xl font-bold text-xs uppercase">Comprar</button>
-                                </div>
-                            </div>
-                        </div>
-                    `).join('')}
-
-                    <footer class="mt-12 pt-10 pb-10 bg-gray-50 rounded-[40px] text-center px-6">
-                        <h4 class="font-black text-rose-600 text-lg uppercase italic">AppEgg</h4>
-                        <p class="text-[10px] font-bold text-gray-400 uppercase mb-4">Distribuidora de Ovos Aline</p>
-                        <div class="text-[11px] text-gray-500 space-y-1 mb-8">
-                            <p>Rua Antonio Freire da Silva, 67</p>
-                            <p>Jardim das Camélias, São Paulo - SP</p>
-                            <p>CEP: 08050-300</p>
-                        </div>
-                        <a href="https://wa.me/5511985706243?text=Olá Aline! Gostaria de fazer um pedido." target="_blank" class="inline-flex items-center gap-2 bg-green-500 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase shadow-xl shadow-green-100">
-                           💬 WhatsApp: (11) 98570-6243
-                        </a>
-                    </footer>
-                </main>
-
-                ${window.state.checkoutItem ? `
-                    <div class="fixed inset-0 bg-black/50 z-50 flex items-end">
-                        <div class="bg-white w-full rounded-t-[40px] p-8">
-                            <h2 class="text-xl font-black text-center mb-6 uppercase text-gray-800">${window.state.checkoutItem.nome}</h2>
-                            <div class="flex gap-2 mb-6 text-[10px] font-black">
-                                <button onclick="window.state.tipo='unica';window.render()" class="flex-1 py-4 border-2 rounded-xl ${window.state.tipo==='unica'?'border-rose-600 text-rose-600 bg-rose-50':'border-gray-100'}">PEDIDO ÚNICO</button>
-                                <button onclick="window.state.tipo='assinatura';window.render()" class="flex-1 py-4 border-2 rounded-xl ${window.state.tipo==='assinatura'?'border-rose-600 text-rose-600 bg-rose-50':'border-gray-100'}">CLUBE (SEMANAL)</button>
-                            </div>
-                            <button onclick="window.actions.finalizar('PIX')" class="w-full py-5 bg-rose-600 text-white rounded-2xl font-black uppercase mb-4">Confirmar no PIX</button>
-                            <button onclick="window.state.checkoutItem=null; window.render()" class="w-full text-gray-300 font-bold text-[10px] uppercase">Cancelar</button>
-                        </div>
-                    </div>
-                ` : ''}
-            `;
-        };
-        window.actions.load();
+        fetch(`${API_BASE}/produtos`).then(r => r.json()).then(d => { window.state.produtos = d; window.render(); });
     </script>
 </body>
 </html>
