@@ -2,29 +2,33 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AppEgg | Comprar Ovos</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AppEgg Admin | Dashboard Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
-        :root { --main: #e11d48; }
-        body { font-family: 'Inter', sans-serif; background: #f9fafb; color: #111827; -webkit-tap-highlight-color: transparent; }
-        .card-egg { background: white; border-radius: 28px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05); border: 1px solid #f3f4f6; transition: 0.3s; }
-        .btn-buy { background: var(--main); color: white; border-radius: 20px; font-weight: 900; text-transform: uppercase; padding: 18px; width: 100%; transition: 0.2s; border: none; box-shadow: 0 10px 20px rgba(225, 29, 72, 0.2); }
-        .btn-buy:active { transform: scale(0.96); }
-        .btn-buy:disabled { opacity: 0.5; transform: scale(1); }
-        .input-user { width: 100%; padding: 16px; background: #f3f4f6; border-radius: 16px; border: 2px solid transparent; font-weight: 700; outline: none; transition: 0.2s; }
-        .input-user:focus { border-color: var(--main); background: white; }
-        .cart-badge { position: absolute; top: -4px; right: -4px; background: var(--main); color: white; width: 20px; height: 20px; border-radius: 50%; font-size: 10px; font-weight: 900; display: flex; align-items: center; justify-content: center; border: 2px solid white; }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
+        body { font-family: 'Inter', sans-serif; background: #f0f2f5; color: #1f2937; }
+        
+        .nav-cinema { font-size: 11px; font-weight: 900; text-transform: uppercase; color: #9ca3af; padding: 14px 24px; border-radius: 18px; transition: 0.3s; letter-spacing: 1px; }
+        .nav-cinema.active { color: #e11d48; background: #fff; box-shadow: 0 10px 25px rgba(225,29,72,0.1); }
+        
+        .cinema-card { background: white; border-radius: 36px; box-shadow: 0 15px 50px rgba(0,0,0,0.03); border: 1px solid rgba(0,0,0,0.02); }
+        .stat-value { font-size: 3.5rem; font-weight: 900; line-height: 1; letter-spacing: -3px; }
+        
+        .btn-action { padding: 12px 20px; border-radius: 16px; font-weight: 900; font-size: 11px; text-transform: uppercase; transition: 0.2s; letter-spacing: 0.5px; }
+        .input-cinema { width: 100%; padding: 18px; background: #f8fafc; border-radius: 20px; border: 2px solid transparent; font-weight: 800; outline: none; transition: 0.2s; }
+        .input-cinema:focus { border-color: #e11d48; background: #fff; }
+
+        .modal-blur { position: fixed; inset: 0; background: rgba(0,0,0,0.4); backdrop-filter: blur(15px); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 20px; }
     </style>
 </head>
-<body class="pb-20">
+<body>
     <div id="app-root"></div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-        import { getFirestore, collection, addDoc, onSnapshot, query, where, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, query, orderBy, doc, updateDoc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyD3Otz9-zdZH-E5Feg9IOGWPzVycoe8gro",
@@ -37,201 +41,193 @@
 
         const appFB = initializeApp(firebaseConfig);
         const db = getFirestore(appFB);
+        const auth = getAuth(appFB);
         const API_URL = "https://painel-distribuidora-backend.onrender.com/api";
 
-        window.state = {
-            view: 'vitrine',
-            produtos: [],
-            carrinho: [],
-            meusPedidos: [],
-            perfil: JSON.parse(localStorage.getItem('appegg_perfil')) || { nome: '', fone: '', locais: [] },
-            selecao: { pagamento: '', local: '' }
-        };
+        window.state = { user: null, view: 'dashboard', logs: [], produtos: [], editando: null };
 
-        async function initApp() {
+        onAuthStateChanged(auth, user => {
+            window.state.user = user;
+            if (user) { loadProdutos(); syncLogs(); }
+            window.render();
+        });
+
+        async function loadProdutos() {
             try {
                 const r = await fetch(`${API_URL}/produtos`);
                 const data = await r.json();
                 window.state.produtos = Array.isArray(data) ? data.map(p => ({...p, id: p._id || p.id})) : [];
-            } catch (e) { console.error("Erro API:", e); }
-            
-            if (window.state.perfil.fone) syncOrders();
-            render();
+                window.render();
+            } catch (e) { console.error(e); }
+        }
+
+        function syncLogs() {
+            onSnapshot(query(collection(db, "vendas_logs"), orderBy("criadoEm", "desc")), s => {
+                window.state.logs = s.docs.map(d => ({ id: d.id, ...d.data() }));
+                window.render();
+            });
         }
 
         window.render = () => {
             const root = document.getElementById('app-root');
+            if (!window.state.user) { root.innerHTML = renderLogin(); return; }
+
             root.innerHTML = `
-                <header class="p-6 pt-10 bg-white sticky top-0 z-40 flex justify-between items-center shadow-sm">
-                    <h1 class="text-2xl font-black tracking-tighter uppercase text-rose-600">AppEgg</h1>
-                    <div class="flex gap-4">
-                        <button onclick="setView('vitrine')" class="p-2 ${window.state.view==='vitrine'?'text-rose-600':'text-gray-300'}">
-                            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"></path></svg>
-                        </button>
-                        <button onclick="setView('carrinho')" class="relative p-2 ${window.state.view==='carrinho'?'text-rose-600':'text-gray-300'}">
-                            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path d="M3 1a1 1 0 000 2h1.22l.305 1.222a.997.997 0 00.01.042l1.358 5.43-.893.892C3.74 11.846 4.632 14 6.414 14H15a1 1 0 100-2H6.414l1-1H14a1 1 0 00.894-.553l3-6A1 1 0 0017 3H6.28l-.31-1.243A1 1 0 005 1H3z"></path></svg>
-                            ${window.state.carrinho.length ? `<span class="cart-badge">${window.state.carrinho.length}</span>`:''}
-                        </button>
-                        <button onclick="setView('meus')" class="p-2 ${window.state.view==='meus'?'text-rose-600':'text-gray-300'}">
-                            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"></path><path d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5z"></path></svg>
-                        </button>
+                <nav class="bg-transparent px-8 h-28 flex justify-between items-center max-w-6xl mx-auto">
+                    <div class="font-black text-2xl uppercase tracking-tighter text-rose-600">AppEgg Admin</div>
+                    <div class="flex gap-2 bg-gray-200/50 p-2 rounded-[24px]">
+                        <button onclick="window.state.view='dashboard';window.render()" class="nav-cinema ${window.state.view==='dashboard'?'active':''}">Métricas</button>
+                        <button onclick="window.state.view='pedidos';window.render()" class="nav-cinema ${window.state.view==='pedidos'?'active':''}">Pedidos</button>
+                        <button onclick="window.state.view='estoque';window.render()" class="nav-cinema ${window.state.view==='estoque'?'active':''}">Estoque</button>
                     </div>
-                </header>
-                <main class="p-6">${drawCurrentView()}</main>
+                </nav>
+                <main class="p-8 max-w-6xl mx-auto">
+                    ${window.state.view === 'dashboard' ? renderDashboard() : 
+                      window.state.view === 'estoque' ? renderEstoque() : renderPedidos()}
+                </main>
+                ${window.state.editando ? renderModal() : ''}
             `;
         };
 
-        window.setView = (v) => { window.state.view = v; window.render(); };
-
-        function drawCurrentView() {
-            if (window.state.view === 'vitrine') return drawVitrine();
-            if (window.state.view === 'carrinho') return drawCarrinho();
-            if (window.state.view === 'checkout') return drawCheckout();
-            if (window.state.view === 'meus') return drawMeusPedidos();
-        }
-
-        function drawVitrine() {
-            return `<div class="grid gap-6">${window.state.produtos.map(p => `
-                <div class="card-egg overflow-hidden">
-                    <img src="${p.foto_url || 'https://via.placeholder.com/400'}" class="w-full h-48 object-cover">
-                    <div class="p-6 flex justify-between items-center">
-                        <div>
-                            <p class="text-[10px] font-black text-gray-400 uppercase">${p.embalagem}</p>
-                            <h3 class="font-black uppercase text-sm">${p.nome}</h3>
-                            <p class="text-rose-600 font-black text-lg">R$ ${Number(p.preco).toFixed(2)}</p>
-                        </div>
-                        <button onclick='addToCart(${JSON.stringify(p)})' class="bg-gray-900 text-white p-4 rounded-2xl active:scale-90 transition">+</button>
-                    </div>
-                </div>`).join('')}</div>`;
-        }
-
-        window.addToCart = (p) => { window.state.carrinho.push(p); window.render(); };
-
-        function drawCarrinho() {
-            const sum = window.state.carrinho.reduce((a, b) => a + Number(b.preco), 0);
-            if (!window.state.carrinho.length) return `<div class="text-center py-20 font-black text-gray-300 uppercase">Carrinho Vazio</div>`;
+        function renderDashboard() {
+            const abertos = window.state.logs.filter(l => l.status === 'CRIADO').length;
+            const estoque = window.state.produtos.reduce((acc, p) => acc + (p.quantidade || 0), 0);
             return `
-                <div class="card-egg p-6 mb-6">
-                    <h2 class="font-black text-xl mb-4 uppercase">Resumo</h2>
-                    ${window.state.carrinho.map((item, i) => `
-                        <div class="flex justify-between py-3 border-b border-gray-100">
-                            <div><p class="text-xs font-black uppercase">${item.nome}</p></div>
-                            <div class="flex items-center gap-3">
-                                <span class="font-black text-rose-600">R$ ${Number(item.preco).toFixed(2)}</span>
-                                <button onclick="window.state.carrinho.splice(${i},1);window.render()" class="text-gray-300 font-black">REMOVER</button>
-                            </div>
-                        </div>`).join('')}
-                    <div class="mt-6 flex justify-between items-center">
-                        <span class="font-black text-gray-400 text-xs uppercase">Total</span>
-                        <span class="text-2xl font-black text-rose-600">R$ ${sum.toFixed(2)}</span>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div class="cinema-card p-12 bg-rose-600 text-white shadow-rose-200 shadow-2xl">
+                        <p class="text-xs font-black uppercase opacity-60 tracking-[0.2em] mb-4">Pedidos para Preparar</p>
+                        <div class="stat-value">${abertos}</div>
                     </div>
-                </div>
-                <button onclick="setView('checkout')" class="btn-buy">Próximo Passo</button>`;
-        }
-
-        function drawCheckout() {
-            return `
-                <div class="card-egg p-6 mb-6">
-                    <h2 class="font-black text-xl mb-6 uppercase">Finalizar</h2>
-                    <div class="space-y-3 mb-8">
-                        <button onclick="setPay('PIX')" class="input-user text-left border-2 ${window.state.selecao.pagamento==='PIX'?'border-rose-600 bg-white':'border-transparent'}">PIX (Já realizei)</button>
-                        <button onclick="setPay('ENTREGA')" class="input-user text-left border-2 ${window.state.selecao.pagamento==='ENTREGA'?'border-rose-600 bg-white':'border-transparent'}">Pagar na Entrega</button>
+                    <div class="cinema-card p-12 bg-gray-900 text-white">
+                        <p class="text-xs font-black uppercase opacity-40 tracking-[0.2em] mb-4">Ovos em Estoque</p>
+                        <div class="stat-value">${estoque}</div>
                     </div>
-                    <p class="text-[10px] font-black uppercase text-gray-400 mb-2 ml-2">Endereço de Entrega</p>
-                    <div class="space-y-2 mb-6">
-                        ${window.state.perfil.locais.map(l => `
-                            <button onclick="setLoc('${l}')" class="input-user text-xs text-left border-2 ${window.state.selecao.local===l?'border-rose-600 bg-white':'border-transparent'}">${l}</button>
-                        `).join('')}
-                        <div class="flex gap-2">
-                            <input id="newLoc" placeholder="Novo endereço" class="input-user !py-3">
-                            <button onclick="addLoc()" class="bg-gray-900 text-white px-4 rounded-xl font-black">+</button>
-                        </div>
-                    </div>
-                    <input id="uNome" placeholder="Seu Nome" value="${window.state.perfil.nome}" class="input-user mb-2">
-                    <input id="uFone" placeholder="WhatsApp (DDD + Número)" value="${window.state.perfil.fone}" class="input-user">
-                </div>
-                <button onclick="sendOrder()" class="btn-buy" ${!window.state.selecao.pagamento || !window.state.selecao.local ? 'disabled' : ''}>Confirmar Pedido</button>`;
-        }
-
-        window.setPay = (v) => { window.state.selecao.pagamento = v; window.render(); };
-        window.setLoc = (v) => { window.state.selecao.local = v; window.render(); };
-        window.addLoc = () => { 
-            const v = document.getElementById('newLoc').value; 
-            if(v){ window.state.perfil.locais.push(v); window.render(); } 
-        };
-
-        window.sendOrder = async () => {
-            const n = document.getElementById('uNome').value;
-            const f = document.getElementById('uFone').value;
-            if(!n || !f) return alert("Preencha seu nome e telefone!");
-
-            window.state.perfil.nome = n;
-            window.state.perfil.fone = f;
-            localStorage.setItem('appegg_perfil', JSON.stringify(window.state.perfil));
-
-            const total = window.state.carrinho.reduce((a, b) => a + Number(b.preco), 0);
-            
-            // Estrutura de itens preparada para o Admin baixar estoque
-            const itensProcessados = window.state.carrinho.map(item => ({
-                produtoId: item.id,
-                nome: item.nome,
-                embalagem: item.embalagem,
-                preco: item.preco,
-                quantidadeVendida: 1
-            }));
-
-            const orderObj = {
-                clienteNome: n,
-                telefone: f,
-                endereco: window.state.selecao.local,
-                produto: window.state.carrinho.map(i => `${i.nome} (${i.embalagem})`).join(', '),
-                itens: itensProcessados, // Array para o loop de baixa
-                valorTotal: total,
-                metodoPagamento: window.state.selecao.pagamento,
-                statusPagamento: window.state.selecao.pagamento === 'PIX' ? 'PAGO' : 'PENDENTE',
-                status: 'CRIADO',
-                criadoEm: serverTimestamp()
-            };
-
-            try {
-                await addDoc(collection(db, "vendas_logs"), orderObj);
-                alert("🐣 Pedido enviado com sucesso!");
-                window.state.carrinho = [];
-                window.state.selecao = { pagamento: '', local: '' };
-                setView('meus');
-                syncOrders();
-            } catch (e) {
-                alert("Erro ao enviar pedido.");
-            }
-        };
-
-        function syncOrders() {
-            const q = query(collection(db, "vendas_logs"), where("telefone", "==", window.state.perfil.fone), orderBy("criadoEm", "desc"));
-            onSnapshot(q, s => { 
-                window.state.meusPedidos = s.docs.map(d => ({ id: d.id, ...d.data() })); 
-                window.render(); 
-            });
-        }
-
-        function drawMeusPedidos() {
-            return `
-                <div class="space-y-4">
-                    <h2 class="font-black text-xl mb-4 uppercase">Acompanhar Pedidos</h2>
-                    ${window.state.meusPedidos.map(p => `
-                        <div class="card-egg p-5 border-l-8 ${p.status === 'FINALIZADO' ? 'border-green-500' : 'border-rose-600'}">
-                            <div class="flex justify-between items-start">
-                                <p class="font-black text-xs uppercase text-gray-700">${p.produto}</p>
-                                <span class="text-[9px] font-black px-2 py-1 bg-gray-100 rounded uppercase text-gray-500">${p.status}</span>
-                            </div>
-                            <div class="flex justify-between mt-4">
-                                <span class="text-rose-600 font-black">R$ ${Number(p.valorTotal).toFixed(2)}</span>
-                                <span class="text-[9px] font-black uppercase text-gray-400 italic">${p.statusPagamento}</span>
-                            </div>
-                        </div>`).join('') || '<div class="text-center py-10 text-gray-300 font-black">NENHUM PEDIDO ENCONTRADO</div>'}
                 </div>`;
         }
 
-        initApp();
+        function renderPedidos() {
+            const list = window.state.logs.filter(l => l.status !== 'FINALIZADO');
+            return `
+                <h2 class="text-4xl font-black uppercase tracking-tighter mb-10 text-gray-800">Fila de Pedidos</h2>
+                <div class="grid gap-6">
+                    ${list.map(l => `
+                        <div class="cinema-card p-10 border-l-[16px] border-rose-500">
+                            <div class="flex justify-between items-start mb-8">
+                                <div>
+                                    <h3 class="font-black text-2xl uppercase text-gray-900 leading-tight">${l.clienteNome}</h3>
+                                    <p class="text-sm font-bold text-gray-400 mt-1">${l.endereco}</p>
+                                </div>
+                                <span class="bg-gray-100 px-4 py-2 rounded-2xl text-[10px] font-black text-gray-500 uppercase tracking-widest">${l.metodoPagamento}</span>
+                            </div>
+                            <div class="bg-gray-50 p-6 rounded-[28px] mb-8">
+                                <p class="text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Itens do Pedido</p>
+                                <p class="text-lg font-black text-gray-800 uppercase leading-snug">${l.produto}</p>
+                                <p class="text-rose-600 font-black text-2xl mt-4">R$ ${Number(l.valorTotal).toFixed(2)}</p>
+                            </div>
+                            <div class="flex gap-3">
+                                <button onclick="finalizarComBaixa('${l.id}')" class="bg-gray-900 text-white btn-action flex-1 py-5">Finalizar & Baixar Estoque</button>
+                                <a href="https://wa.me/${l.telefone?.replace(/\D/g,'')}" target="_blank" class="bg-white border-2 border-gray-100 btn-action py-5 px-8">Falar no Zap</a>
+                            </div>
+                        </div>`).join('') || '<p class="text-center py-32 font-black text-gray-300 text-2xl uppercase">Tudo em dia!</p>'}
+                </div>`;
+        }
+
+        window.finalizarComBaixa = async (id) => {
+            const snap = await getDoc(doc(db, "vendas_logs", id));
+            const pedido = snap.data();
+            if (pedido.itens && Array.isArray(pedido.itens)) {
+                for (const item of pedido.itens) {
+                    const prodAPI = window.state.produtos.find(p => p.id === item.produtoId);
+                    if (prodAPI) {
+                        const novaQtde = Math.max(0, prodAPI.quantidade - 1);
+                        await fetch(`${API_URL}/produtos/${item.produtoId}`, {
+                            method: 'PUT',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({ ...prodAPI, quantidade: novaQtde })
+                        });
+                    }
+                }
+            }
+            await updateDoc(doc(db, "vendas_logs", id), { status: 'FINALIZADO' });
+            loadProdutos();
+        };
+
+        function renderEstoque() {
+            return `
+                <div class="flex justify-between items-center mb-12">
+                    <h2 class="text-4xl font-black uppercase tracking-tighter text-gray-800">Estoque</h2>
+                    <button onclick="window.state.editando={nome:'',preco:'',quantidade:'',embalagem:''};window.render()" class="bg-rose-600 text-white px-8 py-5 rounded-[24px] font-black text-xs uppercase shadow-xl shadow-rose-100">Adicionar Item</button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    ${window.state.produtos.map(p => `
+                        <div class="cinema-card p-8 flex justify-between items-center border border-transparent hover:border-rose-100 transition">
+                            <div class="flex items-center gap-6">
+                                <img src="${p.foto_url || ''}" class="w-20 h-20 rounded-[28px] object-cover bg-gray-50 shadow-inner">
+                                <div>
+                                    <p class="font-black text-lg uppercase text-gray-900 mb-1 leading-tight">${p.nome}</p>
+                                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest">${p.quantidade} unidades</p>
+                                </div>
+                            </div>
+                            <button onclick='window.state.editando=${JSON.stringify(p).replace(/'/g, "&apos;")};window.render()' class="bg-gray-100 p-4 rounded-2xl font-black text-[10px] uppercase text-gray-500">Editar</button>
+                        </div>
+                    `).join('')}
+                </div>`;
+        }
+
+        window.salvar = async (e) => {
+            e.preventDefault();
+            const f = new FormData(e.target);
+            const id = window.state.editando.id;
+            const payload = {
+                nome: f.get('nome'),
+                preco: parseFloat(f.get('preco')),
+                quantidade: parseInt(f.get('quantidade')),
+                embalagem: f.get('embalagem'),
+                foto_url: f.get('foto_url')
+            };
+            const method = id ? 'PUT' : 'POST';
+            const url = id ? `${API_URL}/produtos/${id}` : `${API_URL}/produtos`;
+            const res = await fetch(url, {
+                method,
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+            if(res.ok) { window.state.editando = null; loadProdutos(); }
+        };
+
+        function renderModal() {
+            const p = window.state.editando;
+            return `
+                <div class="modal-blur">
+                    <div class="cinema-card p-12 w-full max-w-xl">
+                        <form onsubmit="salvar(event)" class="space-y-5">
+                            <h3 class="font-black text-3xl uppercase tracking-tighter mb-8">${p.id ? 'Editar' : 'Novo'} Produto</h3>
+                            <input name="nome" value="${p.nome}" placeholder="Nome do Produto" class="input-cinema" required>
+                            <input name="embalagem" value="${p.embalagem}" placeholder="Tipo Embalagem (ex: 30 un)" class="input-cinema" required>
+                            <div class="grid grid-cols-2 gap-4">
+                                <input name="preco" type="number" step="0.01" value="${p.preco}" placeholder="Preço Venda" class="input-cinema" required>
+                                <input name="quantidade" type="number" value="${p.quantidade}" placeholder="Estoque" class="input-cinema" required>
+                            </div>
+                            <input name="foto_url" value="${p.foto_url || ''}" placeholder="URL da Imagem" class="input-cinema">
+                            <button class="w-full bg-rose-600 text-white py-6 rounded-[24px] font-black uppercase shadow-2xl shadow-rose-200 mt-4">Salvar Alterações</button>
+                            <button type="button" onclick="window.state.editando=null;window.render()" class="w-full text-gray-400 font-black text-[10px] uppercase tracking-widest mt-4">Cancelar</button>
+                        </form>
+                    </div>
+                </div>`;
+        }
+
+        function renderLogin() { 
+            return `<div class="min-h-screen flex items-center justify-center bg-gray-900 p-8"><form onsubmit="handleLogin(event)" class="cinema-card p-16 w-full max-w-md"><h2 class="text-3xl font-black text-rose-600 uppercase tracking-tighter text-center mb-10">AppEgg Admin</h2><input name="email" class="input-cinema mb-4" placeholder="E-mail"><input name="pass" type="password" class="input-cinema mb-10" placeholder="Senha"><button class="w-full bg-rose-600 text-white py-6 rounded-[24px] font-black uppercase">Entrar no Painel</button></form></div>`; 
+        }
+
+        window.handleLogin = async (e) => {
+            e.preventDefault();
+            const f = new FormData(e.target);
+            try { await signInWithEmailAndPassword(auth, f.get('email'), f.get('pass')); } catch { alert("Erro de login"); }
+        };
+
+        window.signOut = () => signOut(auth);
+        init();
     </script>
 </body>
 </html>
