@@ -2,38 +2,57 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AppEgg | Absolute Cinema</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AppEgg Admin | Dashboard Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
-        :root { --brand: #e11d48; }
-        body { font-family: 'Inter', sans-serif; background: #f4f7f6; color: #1f2937; -webkit-tap-highlight-color: transparent; }
         
-        /* Layout Absolute Cinema */
-        .premium-card { background: white; border-radius: 32px; box-shadow: 0 20px 40px rgba(0,0,0,0.04); border: 1px solid rgba(0,0,0,0.02); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-        .premium-card:active { transform: scale(0.97); }
+        body { font-family: 'Inter', sans-serif; background: #f4f7f6; color: #1f2937; }
         
-        .btn-cinema { background: var(--brand); color: white; border-radius: 24px; font-weight: 900; text-transform: uppercase; letter-spacing: -0.5px; transition: 0.3s; box-shadow: 0 15px 30px rgba(225, 29, 72, 0.25); }
-        .btn-cinema:active { transform: translateY(2px); box-shadow: 0 5px 10px rgba(225, 29, 72, 0.2); }
+        /* ABAS E NAVEGAÇÃO */
+        .nav-link { 
+            font-size: 13px; font-weight: 800; text-transform: uppercase; 
+            color: #6b7280; padding: 14px 24px; border-radius: 16px; 
+            cursor: pointer; transition: all 0.3s ease; white-space: nowrap;
+            border: 2px solid transparent;
+        }
         
-        .egg-tag { position: absolute; top: 20px; right: 20px; background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); padding: 8px 16px; border-radius: 18px; font-weight: 900; font-size: 11px; color: var(--brand); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        @media (min-width: 1024px) {
+            .nav-link:hover { background: #fff; color: #e11d48; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        }
         
-        .input-cinema { width: 100%; padding: 20px; background: #f9fafb; border-radius: 24px; border: 2px solid transparent; font-weight: 800; outline: none; transition: 0.2s; }
-        .input-cinema:focus { border-color: var(--brand); background: white; }
+        .nav-link.active { color: #e11d48; background: #fff; border-color: #ffe4e6; box-shadow: 0 4px 12px rgba(225, 29, 72, 0.08); }
+        
+        .logo-text { font-weight: 900; color: #e11d48; font-size: 1.6rem; letter-spacing: -1px; }
+        
+        .card { background: #ffffff; border-radius: 32px; box-shadow: 0 10px 40px rgba(0,0,0,0.03); border: 1px solid rgba(0,0,0,0.02); }
+        .input-egg { width: 100%; padding: 16px; background: #f9fafb; border-radius: 20px; border: 1px solid #eee; font-weight: 700; font-size: 14px; outline: none; transition: 0.2s; }
+        .input-egg:focus { border-color: #e11d48; background: #fff; }
+        
+        .stat-card { padding: 32px; border-radius: 32px; transition: transform 0.3s; }
+        .stat-card:hover { transform: scale(1.02); }
 
-        .cart-dot { position: absolute; top: 0; right: 0; background: var(--brand); color: white; width: 22px; height: 22px; border-radius: 50%; font-size: 11px; font-weight: 900; display: flex; align-items: center; justify-content: center; border: 3px solid white; }
+        .progress-bar { height: 10px; border-radius: 20px; background: #f3f4f6; overflow: hidden; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, #e11d48, #fb7185); transition: 1s cubic-bezier(0.4, 0, 0.2, 1); }
         
-        h1, h2, h3 { letter-spacing: -1.5px; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
+
+        .btn-flow { padding: 8px 12px; border-radius: 12px; font-weight: 800; font-size: 9px; text-transform: uppercase; transition: 0.2s; border: 1px solid #eee; background: #f9fafb; color: #6b7280; }
+        .btn-flow:hover { background: #fff; border-color: #e11d48; color: #e11d48; }
+        .btn-flow.active { background: #e11d48; color: white; border-color: #e11d48; }
+
+        /* MODAL */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); z-index: 100; display: flex; items-center: center; justify-content: center; padding: 20px; }
     </style>
 </head>
-<body class="pb-28">
+<body>
     <div id="app-root"></div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-        import { getFirestore, collection, addDoc, onSnapshot, query, where, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, query, orderBy, doc, updateDoc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyD3Otz9-zdZH-E5Feg9IOGWPzVycoe8gro",
@@ -46,202 +65,346 @@
 
         const appFB = initializeApp(firebaseConfig);
         const db = getFirestore(appFB);
-        const API_URL = "https://painel-distribuidora-backend.onrender.com/api";
+        const auth = getAuth(appFB);
+        const API_BASE = "https://painel-distribuidora-backend.onrender.com/api";
+        const IMG_DEFAULT = "https://via.placeholder.com/300x300?text=AppEgg+Ovos";
 
-        window.state = {
-            view: 'vitrine',
-            produtos: [],
-            carrinho: [],
-            meusPedidos: [],
-            perfil: JSON.parse(localStorage.getItem('appegg_perfil')) || { nome: '', fone: '', locais: [] },
-            selecao: { pagamento: '', local: '' }
+        window.state = { user: null, view: 'dashboard', logs: [], produtos: [], editando: null, filtroData: 'hoje', tempImg: null };
+        const state = window.state;
+
+        window.safeImg = (url) => {
+            if (!url || typeof url !== "string" || url.trim() === "" || !url.startsWith("http")) return IMG_DEFAULT;
+            return url.trim();
         };
 
-        async function init() {
+        onAuthStateChanged(auth, user => {
+            state.user = user;
+            if (user) { loadProdutos(); syncRealtime(); }
+            window.render();
+        });
+
+        async function loadProdutos() {
             try {
-                const r = await fetch(`${API_URL}/produtos`);
+                const r = await fetch(`${API_BASE}/produtos`);
                 const data = await r.json();
-                window.state.produtos = Array.isArray(data) ? data.map(p => ({...p, id: p._id || p.id})) : [];
-            } catch (e) { console.error(e); }
-            if (window.state.perfil.fone) syncOrders();
-            render();
+                state.produtos = Array.isArray(data) ? data : [];
+            } catch { 
+                state.produtos = []; 
+                console.error("Erro ao carregar API");
+            }
+            window.render();
+        }
+
+        function syncRealtime() {
+            onSnapshot(query(collection(db, "vendas_logs"), orderBy("criadoEm", "desc")), s => {
+                state.logs = s.docs.map(d => ({ id: d.id, ...d.data() }));
+                window.render();
+            });
+        }
+
+        function filtrarDados(dados) {
+            const agora = new Date();
+            return dados.filter(l => {
+                if (!l.criadoEm) return false;
+                const dt = new Date(l.criadoEm.seconds * 1000);
+                if (state.filtroData === 'hoje') return dt.toDateString() === agora.toDateString();
+                if (state.filtroData === 'semana') return (agora - dt) / (1000 * 3600 * 24) <= 7;
+                if (state.filtroData === 'mes') return (agora - dt) / (1000 * 3600 * 24) <= 30;
+                return true;
+            });
         }
 
         window.render = () => {
             const root = document.getElementById('app-root');
+            if (!state.user) { root.innerHTML = renderLogin(); return; }
+
             root.innerHTML = `
-                <header class="p-8 pt-12 bg-transparent flex justify-between items-center">
-                    <div>
-                        <p class="text-[10px] font-black uppercase text-rose-600 tracking-[0.2em] mb-1">Qualidade Premium</p>
-                        <h1 class="text-4xl font-black text-gray-900 uppercase">AppEgg</h1>
+                <nav class="bg-white border-b px-8 h-24 flex justify-between items-center sticky top-0 z-50">
+                    <div class="logo-text cursor-pointer" onclick="state.view='dashboard';render()">AppEgg</div>
+                    <div class="flex gap-2 overflow-x-auto no-scrollbar">
+                        <button onclick="state.view='pedidos';render()" class="nav-link ${state.view==='pedidos'?'active':''}">Pedidos</button>
+                        <button onclick="state.view='estoque';render()" class="nav-link ${state.view==='estoque'?'active':''}">Estoque</button>
+                        <button onclick="state.view='financeiro';render()" class="nav-link ${state.view==='financeiro'?'active':''}">Financeiro</button>
+                        <button onclick="signOut(auth)" class="nav-link text-rose-600 hover:bg-rose-50">Sair</button>
                     </div>
-                    <div class="flex gap-3 bg-white p-2 rounded-[24px] shadow-sm border border-gray-100">
-                        <button onclick="setView('vitrine')" class="p-4 rounded-2xl ${window.state.view==='vitrine'?'bg-rose-50 text-rose-600':'text-gray-300'} transition">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M4 6h16M4 12h16m-7 6h7"/></svg>
-                        </button>
-                        <button onclick="setView('carrinho')" class="relative p-4 rounded-2xl ${window.state.view==='carrinho'?'bg-rose-50 text-rose-600':'text-gray-300'} transition">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
-                            ${window.state.carrinho.length ? `<span class="cart-dot">${window.state.carrinho.length}</span>` : ''}
-                        </button>
-                    </div>
-                </header>
-                <main class="px-8">${drawView()}</main>
-                ${window.state.view !== 'vitrine' ? '' : `
-                    <button onclick="setView('meus')" class="fixed bottom-8 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-8 py-5 rounded-[24px] font-black text-xs uppercase tracking-widest shadow-2xl z-50">Meus Pedidos</button>
-                `}
-            `;
+                </nav>
+                <main class="p-8 max-w-6xl mx-auto">
+                    ${renderHeaderContextual()}
+                    ${state.view === 'dashboard' ? renderDashboard() :
+                      state.view === 'financeiro' ? renderFinanceiro() : 
+                      state.view === 'estoque' ? renderEstoque() : renderPedidos()}
+                </main>
+                ${state.editando ? renderModalEdicao() : ''}`;
         };
 
-        window.setView = (v) => { window.state.view = v; window.render(); window.scrollTo(0,0); };
-
-        function drawView() {
-            if (window.state.view === 'vitrine') return drawVitrine();
-            if (window.state.view === 'carrinho') return drawCarrinho();
-            if (window.state.view === 'checkout') return drawCheckout();
-            if (window.state.view === 'meus') return drawMeusPedidos();
-        }
-
-        function drawVitrine() {
-            return `<div class="grid gap-8 pb-10">${window.state.produtos.map(p => `
-                <div class="premium-card overflow-hidden" onclick='addToCart(${JSON.stringify(p)})'>
-                    <div class="relative h-64">
-                        <img src="${p.foto_url || 'https://images.unsplash.com/photo-1582722872445-44ad5c78a1dd?q=80&w=2070&auto=format&fit=crop'}" class="w-full h-full object-cover">
-                        <div class="egg-tag">${p.embalagem}</div>
-                    </div>
-                    <div class="p-8 flex justify-between items-center">
-                        <div>
-                            <h3 class="font-black text-xl uppercase text-gray-800 mb-1">${p.nome}</h3>
-                            <p class="text-rose-600 font-black text-2xl">R$ ${Number(p.preco).toFixed(2)}</p>
-                        </div>
-                        <div class="bg-gray-900 text-white w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M12 4v16m8-8H4"/></svg>
-                        </div>
-                    </div>
-                </div>`).join('')}</div>`;
-        }
-
-        window.addToCart = (p) => { window.state.carrinho.push(p); window.render(); };
-
-        function drawCarrinho() {
-            const sum = window.state.carrinho.reduce((a, b) => a + Number(b.preco), 0);
-            if (!window.state.carrinho.length) return `<div class="py-32 text-center"><p class="font-black text-gray-300 text-xl uppercase">Carrinho Vazio</p><button onclick="setView('vitrine')" class="mt-4 text-rose-600 font-black uppercase text-xs">Voltar para a loja</button></div>`;
+        function renderHeaderContextual() {
+            if (state.view === 'dashboard') return '';
             return `
-                <div class="premium-card p-8 mb-8">
-                    <h2 class="font-black text-2xl mb-8 uppercase tracking-tighter">Seu Carrinho</h2>
-                    <div class="space-y-6">
-                        ${window.state.carrinho.map((item, i) => `
-                            <div class="flex justify-between items-center pb-6 border-b border-gray-50">
-                                <div>
-                                    <p class="text-xs font-black uppercase text-gray-400 mb-1">${item.embalagem}</p>
-                                    <p class="font-black text-gray-800 uppercase">${item.nome}</p>
-                                </div>
-                                <div class="flex items-center gap-4">
-                                    <span class="font-black text-rose-600">R$ ${Number(item.preco).toFixed(2)}</span>
-                                    <button onclick="window.state.carrinho.splice(${i},1);window.render()" class="text-gray-300 font-black">✕</button>
-                                </div>
-                            </div>`).join('')}
-                    </div>
-                    <div class="mt-8 flex justify-between items-end">
-                        <span class="font-black text-gray-400 text-xs uppercase tracking-widest">Total Geral</span>
-                        <span class="text-4xl font-black text-rose-600">R$ ${sum.toFixed(2)}</span>
-                    </div>
-                </div>
-                <button onclick="setView('checkout')" class="btn-cinema w-full py-7 text-sm">Próximo Passo</button>`;
-        }
-
-        function drawCheckout() {
-            return `
-                <div class="premium-card p-8 mb-8">
-                    <h2 class="font-black text-2xl mb-8 uppercase tracking-tighter">Finalizar</h2>
-                    <div class="grid grid-cols-1 gap-3 mb-8">
-                        <button onclick="setPay('PIX')" class="input-cinema text-left !py-6 border-2 ${window.state.selecao.pagamento==='PIX'?'border-rose-600 bg-rose-50/50':'border-transparent'}">PIX (Já realizei)</button>
-                        <button onclick="setPay('ENTREGA')" class="input-cinema text-left !py-6 border-2 ${window.state.selecao.pagamento==='ENTREGA'?'border-rose-600 bg-rose-50/50':'border-transparent'}">Pagar na Entrega</button>
-                    </div>
-                    
-                    <p class="text-[10px] font-black uppercase text-gray-400 mb-3 ml-2 tracking-widest">Local de Entrega</p>
-                    <div class="space-y-2 mb-8">
-                        ${window.state.perfil.locais.map(l => `
-                            <button onclick="setLoc('${l}')" class="input-cinema !py-4 !text-xs text-left border-2 ${window.state.selecao.local===l?'border-rose-600 bg-rose-50/50':'border-transparent'}">${l}</button>
-                        `).join('')}
-                        <div class="flex gap-2">
-                            <input id="newLoc" placeholder="Novo endereço..." class="input-cinema !py-4 !text-xs">
-                            <button onclick="addLoc()" class="bg-gray-900 text-white px-6 rounded-2xl font-black">+</button>
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4">
+                    <h2 class="text-3xl font-black uppercase tracking-tighter text-gray-800">${state.view}</h2>
+                    ${['pedidos', 'financeiro'].includes(state.view) ? `
+                        <div class="flex items-center gap-3 bg-white p-2 rounded-2xl shadow-sm border">
+                            <span class="text-[10px] font-black uppercase text-gray-400 ml-3">Filtrar:</span>
+                            <select onchange="state.filtroData=this.value;render()" class="bg-transparent font-black uppercase text-xs outline-none p-2 cursor-pointer">
+                                <option value="hoje" ${state.filtroData==='hoje'?'selected':''}>Hoje</option>
+                                <option value="semana" ${state.filtroData==='semana'?'selected':''}>7 Dias</option>
+                                <option value="mes" ${state.filtroData==='mes'?'selected':''}>30 Dias</option>
+                                <option value="todos" ${state.filtroData==='todos'?'selected':''}>Tudo</option>
+                            </select>
                         </div>
-                    </div>
-                    <input id="uNome" placeholder="Seu Nome Completo" value="${window.state.perfil.nome}" class="input-cinema mb-3">
-                    <input id="uFone" placeholder="WhatsApp (com DDD)" value="${window.state.perfil.fone}" class="input-cinema">
-                </div>
-                <button onclick="sendOrder()" class="btn-cinema w-full py-7 text-sm" ${!window.state.selecao.pagamento || !window.state.selecao.local ? 'disabled opacity-50' : ''}>Confirmar Pedido</button>`;
-        }
-
-        window.setPay = (v) => { window.state.selecao.pagamento = v; window.render(); };
-        window.setLoc = (v) => { window.state.selecao.local = v; window.render(); };
-        window.addLoc = () => { 
-            const v = document.getElementById('newLoc').value; 
-            if(v){ window.state.perfil.locais.push(v); window.render(); } 
-        };
-
-        window.sendOrder = async () => {
-            const n = document.getElementById('uNome').value;
-            const f = document.getElementById('uFone').value;
-            if(!n || !f) return alert("Preencha nome e telefone!");
-
-            window.state.perfil.nome = n;
-            window.state.perfil.fone = f;
-            localStorage.setItem('appegg_perfil', JSON.stringify(window.state.perfil));
-
-            const total = window.state.carrinho.reduce((a, b) => a + Number(b.preco), 0);
-            
-            const orderObj = {
-                clienteNome: n,
-                telefone: f,
-                endereco: window.state.selecao.local,
-                produto: window.state.carrinho.map(i => `${i.nome} (${i.embalagem})`).join(', '),
-                itens: window.state.carrinho.map(item => ({ produtoId: item.id, nome: item.nome, quantidadeVendida: 1 })),
-                valorTotal: total,
-                metodoPagamento: window.state.selecao.pagamento,
-                statusPagamento: window.state.selecao.pagamento === 'PIX' ? 'PAGO' : 'PENDENTE',
-                status: 'CRIADO',
-                criadoEm: serverTimestamp()
-            };
-
-            try {
-                await addDoc(collection(db, "vendas_logs"), orderObj);
-                window.state.carrinho = [];
-                setView('meus');
-                syncOrders();
-            } catch (e) { alert("Erro ao enviar."); }
-        };
-
-        function syncOrders() {
-            const q = query(collection(db, "vendas_logs"), where("telefone", "==", window.state.perfil.fone), orderBy("criadoEm", "desc"));
-            onSnapshot(q, s => { 
-                window.state.meusPedidos = s.docs.map(d => ({ id: d.id, ...d.data() })); 
-                window.render(); 
-            });
-        }
-
-        function drawMeusPedidos() {
-            return `
-                <div class="space-y-6">
-                    <h2 class="font-black text-3xl mb-8 uppercase tracking-tighter">Meus Pedidos</h2>
-                    ${window.state.meusPedidos.map(p => `
-                        <div class="premium-card p-8 border-l-[12px] ${p.status === 'FINALIZADO' ? 'border-green-500' : 'border-rose-600'}">
-                            <div class="flex justify-between items-start mb-6">
-                                <div>
-                                    <p class="font-black text-xs uppercase text-gray-400 mb-1 tracking-widest">${p.status}</p>
-                                    <h4 class="font-black text-gray-800 text-sm uppercase leading-tight">${p.produto}</h4>
-                                </div>
-                            </div>
-                            <div class="flex justify-between items-end">
-                                <span class="text-rose-600 font-black text-2xl">R$ ${Number(p.valorTotal).toFixed(2)}</span>
-                                <span class="text-[10px] font-black uppercase bg-gray-100 px-3 py-1 rounded-lg text-gray-500">${p.metodoPagamento}</span>
-                            </div>
-                        </div>`).join('') || '<p class="text-center py-20 font-black text-gray-300">SEM PEDIDOS</p>'}
+                    ` : ''}
                 </div>`;
         }
 
-        init();
+        function renderDashboard() {
+            const filtrados = filtrarDados(state.logs).filter(l => l.status === 'FINALIZADO');
+            let totalVendas = filtrados.reduce((acc, curr) => acc + Number(curr.valorTotal), 0);
+            
+            return `
+                <div class="mb-12">
+                    <h1 class="text-4xl font-black text-gray-900 mb-2 tracking-tighter">Bem-vindo ao AppEgg</h1>
+                    <p class="text-gray-500 font-medium">Sua central de inteligência para distribuição de ovos.</p>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+                    <div class="stat-card bg-rose-600 text-white shadow-xl shadow-rose-200">
+                        <p class="text-[10px] font-black uppercase opacity-70 mb-2">Vendas ${state.filtroData}</p>
+                        <h3 class="text-3xl font-black">R$ ${totalVendas.toFixed(2)}</h3>
+                    </div>
+                    <div class="stat-card bg-white border">
+                        <p class="text-[10px] font-black uppercase text-gray-400 mb-2">Pedidos Pendentes</p>
+                        <h3 class="text-3xl font-black text-gray-800">${state.logs.filter(l => !['FINALIZADO','CANCELADO'].includes(l.status)).length}</h3>
+                    </div>
+                    <div class="stat-card bg-gray-900 text-white">
+                        <p class="text-[10px] font-black uppercase opacity-60 mb-2">Itens em Estoque</p>
+                        <h3 class="text-3xl font-black">${state.produtos.reduce((acc, p) => acc + p.quantidade, 0)}</h3>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div class="card p-8">
+                        <div class="flex justify-between items-center mb-8">
+                            <h4 class="font-black uppercase text-sm text-gray-400">Ações Rápidas</h4>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <button onclick="state.view='pedidos';render()" class="p-6 bg-rose-50 rounded-3xl text-rose-600 font-black text-xs uppercase hover:bg-rose-100 transition">Ver Pedidos</button>
+                            <button onclick="state.view='estoque';render()" class="p-6 bg-blue-50 rounded-3xl text-blue-600 font-black text-xs uppercase hover:bg-blue-100 transition">Gerir Estoque</button>
+                        </div>
+                    </div>
+                    <div class="card p-8">
+                        <h4 class="font-black uppercase text-sm text-gray-400 mb-6">Alerta de Estoque Baixo</h4>
+                        <div class="space-y-4">
+                            ${state.produtos.filter(p => p.quantidade < 15).map(p => `
+                                <div class="flex justify-between items-center">
+                                    <span class="text-xs font-bold uppercase text-gray-700">${p.nome}</span>
+                                    <span class="px-3 py-1 bg-red-100 text-red-600 rounded-full font-black text-[10px]">${p.quantidade} un</span>
+                                </div>
+                            `).join('') || '<p class="text-[10px] font-bold text-gray-300">ESTOQUE SAUDÁVEL</p>'}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        window.atualizarStatus = async (id, novoStatus) => {
+            const ref = doc(db, "vendas_logs", id);
+            await updateDoc(ref, { status: novoStatus, ultimaAtualizacao: serverTimestamp() });
+        };
+
+        function renderPedidos() {
+            const filtrados = filtrarDados(state.logs).filter(l => !['FINALIZADO', 'CANCELADO'].includes(l.status));
+            return filtrados.map(l => `
+                <div class="card p-8 mb-6 border-l-[12px] ${l.status === 'CRIADO' ? 'border-gray-200' : 'border-rose-500'}">
+                    <div class="flex justify-between items-start mb-6">
+                        <div>
+                            <h3 class="font-black uppercase text-lg tracking-tight">${l.clienteNome}</h3>
+                            <p class="text-[11px] font-bold text-gray-400 uppercase tracking-widest">${l.telefone || 'Sem telefone'}</p>
+                            ${l.dataProximaRemessa ? `<p class="text-[9px] font-black text-rose-600 uppercase mt-1">Agendado para: ${l.dataProximaRemessa}</p>` : ''}
+                        </div>
+                        <div class="flex flex-col items-end gap-2">
+                            <div class="bg-gray-100 px-4 py-2 rounded-2xl font-black text-[10px] uppercase text-gray-500">${l.status}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-gray-50 p-6 rounded-[24px] mb-6 flex justify-between items-center">
+                        <span class="font-black text-sm uppercase">${l.quantidade}x ${l.produto}</span>
+                        <span class="text-rose-600 font-black text-lg">R$ ${Number(l.valorTotal).toFixed(2)}</span>
+                    </div>
+
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-6">
+                        <button onclick="atualizarStatus('${l.id}', 'PREPARANDO')" class="btn-flow ${l.status==='PREPARANDO'?'active':''}">Preparando</button>
+                        <button onclick="atualizarStatus('${l.id}', 'EMBALANDO')" class="btn-flow ${l.status==='EMBALANDO'?'active':''}">Embalando</button>
+                        <button onclick="atualizarStatus('${l.id}', 'SAIU PARA ENTREGA')" class="btn-flow ${l.status==='SAIU PARA ENTREGA'?'active':''}">Em Rota</button>
+                        <button onclick="finalizarComWhatsApp('${l.id}')" class="btn-flow">Finalizar</button>
+                    </div>
+                </div>`).join('') || '<div class="text-center py-20 card font-black text-gray-300 uppercase">Nenhum pedido pendente</div>';
+        }
+
+        function renderEstoque() {
+            return `
+                <div class="flex justify-between items-center mb-8">
+                    <button onclick="abrirModalNovo()" class="bg-rose-600 text-white px-8 py-4 rounded-2xl font-black uppercase text-xs shadow-xl shadow-rose-100 hover:scale-105 transition">+ Novo Produto</button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    ${state.produtos.map((prod, i) => `
+                        <div class="card p-6 flex items-center justify-between border ${prod.quantidade < 15 ? 'border-red-200 bg-red-50/30' : ''}">
+                            <div class="flex items-center gap-5">
+                                <img src="${safeImg(prod.foto_url)}" onerror="this.src='${IMG_DEFAULT}'" class="w-16 h-16 rounded-[20px] object-cover shadow-sm">
+                                <div>
+                                    <p class="font-black text-sm uppercase text-gray-800">${prod.nome}</p>
+                                    <p class="text-[10px] font-bold text-gray-400 uppercase">${prod.embalagem} • ${prod.quantidade} no estoque</p>
+                                </div>
+                            </div>
+                            <button onclick="window.editarIndex(${i})" class="bg-white border-2 border-gray-100 px-5 py-2 rounded-xl font-black text-[10px] uppercase hover:border-rose-200 hover:text-rose-600 transition">Editar</button>
+                        </div>
+                    `).join('')}
+                </div>`;
+        }
+
+        window.abrirModalNovo = () => {
+            state.editando = { nome: 'Ovo Branco', preco: '', preco_custo: '', quantidade: '', foto_url: '', embalagem: 'Cartela 30' };
+            state.tempImg = null;
+            window.render();
+        };
+
+        window.editarIndex = (i) => { 
+            state.editando = {...state.produtos[i]}; 
+            state.tempImg = state.editando.foto_url;
+            window.render(); 
+        };
+
+        window.handleFile = (e) => {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                state.tempImg = reader.result;
+                document.getElementById('preview-img').src = reader.result;
+            };
+            if (file) reader.readAsDataURL(file);
+        };
+
+        function renderModalEdicao() {
+            const p = state.editando;
+            const tipos = ["Ovo Branco", "Ovo Vermelho", "Ovo Caipira", "Ovo Jumbo", "Ovo Codorna", "Ovo Orgânico", "Ovo Pasteurizado", "Ovos Brancos G", "Ovos Brancos M"];
+            const embalagens = ["Cartela 30", "Cartela 20", "Dúzia 12", "Meia Dúzia 06", "Caixa 360", "Pote 50 un"];
+
+            return `
+                <div class="modal-overlay">
+                    <div class="card w-full max-w-2xl p-10 overflow-y-auto max-h-[90vh]">
+                        <div class="flex justify-between items-center mb-8">
+                            <h3 class="font-black text-2xl uppercase tracking-tighter">${p.id ? 'Editar' : 'Novo'} Produto</h3>
+                            <button onclick="state.editando=null;render()" class="text-gray-300 hover:text-rose-600 font-black">FECHAR</button>
+                        </div>
+                        
+                        <form onsubmit="salvarProd(event)" class="space-y-6">
+                            <div class="flex flex-col items-center gap-4 bg-gray-50 p-6 rounded-3xl border-2 border-dashed border-gray-200">
+                                <img id="preview-img" src="${safeImg(state.tempImg)}" class="w-32 h-32 rounded-3xl object-cover shadow-lg bg-white">
+                                <div class="flex gap-2">
+                                    <label class="bg-white border px-4 py-2 rounded-xl text-[10px] font-black uppercase cursor-pointer hover:bg-gray-50">
+                                        Subir Foto
+                                        <input type="file" class="hidden" accept="image/*" onchange="handleFile(event)">
+                                    </label>
+                                    <input id="url-input" class="bg-white border px-4 py-2 rounded-xl text-[10px] font-bold outline-none" placeholder="Ou cole a URL aqui" oninput="state.tempImg=this.value;document.getElementById('preview-img').src=this.value">
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="space-y-1">
+                                    <label class="text-[9px] font-black uppercase text-gray-400 ml-2">Tipo de Ovo</label>
+                                    <select name="nome" class="input-egg" required>
+                                        ${tipos.map(t => `<option value="${t}" ${p.nome===t?'selected':''}>${t}</option>`).join('')}
+                                    </select>
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="text-[9px] font-black uppercase text-gray-400 ml-2">Embalagem</label>
+                                    <select name="embalagem" class="input-egg" required>
+                                        ${embalagens.map(e => `<option value="${e}" ${p.embalagem===e?'selected':''}>${e}</option>`).join('')}
+                                    </select>
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="text-[9px] font-black uppercase text-gray-400 ml-2">Custo Un.</label>
+                                    <input name="preco_custo" type="number" step="0.01" value="${p.preco_custo}" class="input-egg" required>
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="text-[9px] font-black uppercase text-gray-400 ml-2">Preço Venda</label>
+                                    <input name="preco" type="number" step="0.01" value="${p.preco}" class="input-egg" required>
+                                </div>
+                                <div class="space-y-1 md:col-span-2">
+                                    <label class="text-[9px] font-black uppercase text-gray-400 ml-2">Estoque Inicial</label>
+                                    <input name="quantidade" type="number" value="${p.quantidade}" class="input-egg" required>
+                                </div>
+                            </div>
+
+                            <button class="w-full bg-rose-600 text-white py-6 rounded-3xl font-black uppercase text-sm shadow-xl hover:bg-rose-700 transition">Confirmar Dados</button>
+                        </form>
+                    </div>
+                </div>`;
+        }
+
+        window.salvarProd = async (e) => {
+            e.preventDefault();
+            const f = new FormData(e.target);
+            const nome = f.get('nome');
+            
+            let finalFoto = state.tempImg;
+
+            // Lógica de Foto Automática Inteligente se estiver vazio
+            if (!finalFoto || finalFoto === "" || finalFoto === IMG_DEFAULT) {
+                if (nome.includes("Branco")) finalFoto = "https://images.unsplash.com/photo-1582722872445-41ca501ea14b?auto=format&fit=crop&w=400&q=80";
+                else if (nome.includes("Vermelho")) finalFoto = "https://images.unsplash.com/photo-1598965402089-897ce52e8355?auto=format&fit=crop&w=400&q=80";
+                else if (nome.includes("Caipira")) finalFoto = "https://images.unsplash.com/photo-1516448620398-c5f44bf9f441?auto=format&fit=crop&w=400&q=80";
+                else if (nome.includes("Codorna")) finalFoto = "https://images.unsplash.com/photo-1612140801642-1f9530510531?auto=format&fit=crop&w=400&q=80";
+                else finalFoto = IMG_DEFAULT;
+            }
+
+            const payload = { 
+                nome, 
+                preco: parseFloat(f.get('preco')), 
+                preco_custo: parseFloat(f.get('preco_custo')), 
+                quantidade: parseInt(f.get('quantidade')), 
+                foto_url: finalFoto, 
+                embalagem: f.get('embalagem') 
+            };
+            
+            const url = state.editando.id ? `${API_BASE}/produtos/${state.editando.id}` : `${API_BASE}/produtos`;
+            
+            try {
+                const res = await fetch(url, { 
+                    method: state.editando.id ? 'PUT' : 'POST', 
+                    headers: {'Content-Type': 'application/json'}, 
+                    body: JSON.stringify(payload) 
+                });
+                
+                if(res.ok) {
+                    state.editando = null;
+                    state.tempImg = null;
+                    loadProdutos();
+                } else {
+                    alert("Erro ao salvar no servidor.");
+                }
+            } catch {
+                alert("Erro de conexão com o banco de dados.");
+            }
+        };
+
+        window.finalizarComWhatsApp = async (id) => {
+            const snap = await getDoc(doc(db, "vendas_logs", id));
+            const p = snap.data();
+            await updateDoc(doc(db, "vendas_logs", id), { status: 'FINALIZADO', horarioConcluido: serverTimestamp() });
+            window.open(`https://wa.me/${p.telefone?.replace(/\D/g,'') || ''}?text=${encodeURIComponent('Seu pedido AppEgg está a caminho! 🥚')}`);
+        };
+
+        window.handleLogin = async (e) => {
+            e.preventDefault();
+            const f = new FormData(e.target);
+            try { await signInWithEmailAndPassword(auth, f.get('email'), f.get('pass')); } catch (err) { alert("Credenciais Inválidas"); }
+        };
+
+        function renderLogin() { 
+            return `<div class="min-h-screen flex items-center justify-center bg-gray-900 p-8"><form onsubmit="handleLogin(event)" class="bg-white p-12 rounded-[48px] shadow-2xl w-full max-w-md"><div class="logo-text text-5xl mb-4 text-center">AppEgg</div><p class="text-center text-gray-400 font-bold text-xs uppercase mb-10 tracking-widest">Painel Administrativo</p><input name="email" class="input-egg border mb-3" placeholder="Email corporativo"><input name="pass" type="password" class="input-egg border mb-8" placeholder="Senha de acesso"><button class="w-full bg-rose-600 text-white py-6 rounded-3xl font-black uppercase text-sm shadow-xl shadow-rose-100">Acessar Dashboard</button></form></div>`; 
+        }
+
+        window.signOut = () => signOut(auth);
     </script>
 </body>
 </html>
