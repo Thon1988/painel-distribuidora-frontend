@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AppEgg | Comprar Ovos</title>
+    <title>AppEgg | Pedir Ovos</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&display=swap');
@@ -39,9 +39,8 @@
         const API_BASE = "https://painel-distribuidora-backend.onrender.com/api";
         const IMG_DEFAULT = "https://images.unsplash.com/photo-1582722872445-41fe501ea146?w=400&auto=format";
 
-        // 1️⃣ CORREÇÃO: Definir e referenciar state via window
-        window.state = { user: null, view: 'loja', produtos: [], pedidos: [], comprando: null, qtd: 1, filtroHistorico: 'todos' };
-        const state = window.state; 
+        window.state = { user: null, view: 'loja', produtos: [], pedidos: [], comprando: null, qtd: 1 };
+        const state = window.state;
 
         onAuthStateChanged(auth, user => {
             state.user = user;
@@ -54,7 +53,7 @@
                 const r = await fetch(`${API_BASE}/produtos`);
                 state.produtos = await r.json();
                 window.render();
-            } catch(e) { console.error("Erro Produtos", e); }
+            } catch(e) { console.error(e); }
         }
 
         function syncPedidos() {
@@ -74,7 +73,7 @@
                 <div class="p-6">
                     <header class="flex justify-between items-center mb-8">
                         <div class="logo-text text-3xl italic">AppEgg</div>
-                        <div class="bg-rose-50 px-4 py-2 rounded-full"><span class="text-[10px] font-black text-rose-600 uppercase">Olá, ${state.user.email.split('@')[0]}</span></div>
+                        <div class="bg-rose-50 px-4 py-2 rounded-full"><span class="text-[10px] font-black text-rose-600 uppercase">@${state.user.email.split('@')[0]}</span></div>
                     </header>
                     ${state.view === 'loja' ? renderLoja() : state.view === 'programar' ? renderProgramar() : renderPedidos()}
                 </div>
@@ -89,76 +88,54 @@
         };
 
         function renderLoja() {
-            // 2️⃣ CORREÇÃO: Clique via Index (Seguro) e 3️⃣ CORREÇÃO: Renderizar Imagem
-            return `<h2 class="font-black uppercase text-xs text-gray-400 mb-4 tracking-widest">Escolha seus Ovos</h2>
+            return `<h2 class="font-black uppercase text-xs text-gray-400 mb-4 tracking-widest">Catálogo</h2>
                 ${state.produtos.map((p, i) => `
-                <div class="card-egg flex gap-4 items-center shadow-sm" onclick="window.abrirCompraIndex(${i})">
+                <div class="card-egg flex gap-4 items-center shadow-sm" onclick="window.abrirIndex(${i})">
                     <img src="${p.foto_url || IMG_DEFAULT}" onerror="this.src='${IMG_DEFAULT}'" class="w-20 h-20 object-cover rounded-2xl">
                     <div class="flex-1">
                         <h3 class="font-black uppercase text-sm mb-1">${p.nome}</h3>
+                        <p class="text-gray-400 text-[10px] font-bold uppercase mb-2">${p.embalagem || 'Pente'}</p>
                         <p class="text-rose-600 font-black text-lg">R$ ${Number(p.preco).toFixed(2)}</p>
                     </div>
-                    <div class="bg-gray-100 p-2 rounded-xl">➔</div>
                 </div>`).join('')}`;
         }
 
         function renderProgramar() {
-            return `
-                <div class="bg-blue-600 p-8 rounded-[40px] text-white mb-8 shadow-xl">
-                    <h2 class="text-2xl font-black italic mb-2 uppercase text-white">Programação</h2>
-                    <p class="text-[11px] font-bold opacity-80 uppercase leading-relaxed text-white">Escolha um produto e agende a entrega.</p>
-                </div>
-                ${renderLoja()}`;
+            return `<div class="bg-blue-600 p-8 rounded-[40px] text-white mb-8 shadow-xl shadow-blue-100"><h2 class="text-2xl font-black italic mb-2 uppercase">Programar</h2><p class="text-[11px] font-bold opacity-80 uppercase">Receba seus ovos automaticamente.</p></div>${renderLoja()}`;
         }
 
         function renderPedidos() {
-            const agora = new Date();
-            const filtrados = state.pedidos.filter(p => {
-                if(!p.criadoEm) return false;
-                const dt = new Date(p.criadoEm.seconds * 1000);
-                if(state.filtroHistorico === 'mes') return (agora - dt) / (1000 * 3600 * 24) <= 30;
-                return true;
-            });
-            return `
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="font-black uppercase text-xs tracking-widest text-gray-400">Meus Pedidos</h2>
-                    <select onchange="state.filtroHistorico=this.value;render()" class="text-[10px] font-black uppercase border rounded-lg p-2">
-                        <option value="todos">Tudo</option>
-                        <option value="mes" ${state.filtroHistorico==='mes'?'selected':''}>Últimos 30 dias</option>
-                    </select>
-                </div>
-                ${filtrados.map(p => `
+            return `<h2 class="font-black uppercase text-xs tracking-widest text-gray-400 mb-4">Pedidos</h2>
+                ${state.pedidos.map(p => `
                 <div class="card-egg border-l-4 ${p.status === 'FINALIZADO' ? 'border-emerald-500' : 'border-rose-500'}">
-                    <div class="flex justify-between items-start mb-2"><span class="text-[9px] font-black uppercase text-gray-400">${p.status}</span></div>
+                    <span class="text-[9px] font-black uppercase text-gray-400">${p.status}</span>
                     <h4 class="font-black uppercase text-xs">${p.quantidade}x ${p.produto}</h4>
                     <p class="text-rose-600 font-bold text-xs">Total: R$ ${Number(p.valorTotal).toFixed(2)}</p>
-                    ${p.recorrencia ? `<span class="text-[8px] font-black text-blue-500 uppercase">📅 Agenda: ${p.recorrencia}</span>` : ''}
                 </div>`).join('') || '<p class="text-center py-10 uppercase font-black text-gray-300">Vazio</p>'}`;
         }
 
-        window.abrirCompraIndex = (i) => { state.comprando = state.produtos[i]; state.qtd = 1; window.render(); };
+        window.abrirIndex = (i) => { state.comprando = state.produtos[i]; state.qtd = 1; window.render(); };
         window.ajustarQtd = (v) => { if(state.qtd + v > 0) { state.qtd += v; window.render(); } };
 
         window.finalizarPedido = async (e) => {
             e.preventDefault();
             const f = new FormData(e.target);
             const p = state.comprando;
-            try {
-                await addDoc(collection(db, "vendas_logs"), {
-                    clienteId: auth.currentUser.uid,
-                    clienteNome: auth.currentUser.email.split('@')[0],
-                    produtoId: p.id,
-                    produto: p.nome,
-                    quantidade: state.qtd,
-                    precoUnidade: p.preco,
-                    valorTotal: p.preco * state.qtd,
-                    recorrencia: f.get('recorrencia'),
-                    status: 'AGUARDANDO PAGAMENTO',
-                    criadoEm: serverTimestamp()
-                });
-                await fetch(`${API_BASE}/produtos/${p.id}`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ quantidade: p.quantidade - state.qtd }) });
-                state.comprando = null; state.view = 'pedidos'; window.render();
-            } catch(e) { alert("Erro ao salvar pedido"); }
+            await addDoc(collection(db, "vendas_logs"), {
+                clienteId: auth.currentUser.uid,
+                clienteNome: auth.currentUser.email.split('@')[0],
+                produtoId: p.id,
+                produto: p.nome,
+                quantidade: state.qtd,
+                precoUnidade: p.preco,
+                valorTotal: p.preco * state.qtd,
+                recorrencia: f.get('recorrencia'),
+                telefone: f.get('telefone'),
+                status: 'AGUARDANDO PAGAMENTO',
+                criadoEm: serverTimestamp()
+            });
+            await fetch(`${API_BASE}/produtos/${p.id}`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ quantidade: p.quantidade - state.qtd }) });
+            state.comprando = null; state.view = 'pedidos'; window.render();
         };
 
         function renderModalCompra() {
@@ -166,34 +143,25 @@
             return `
             <div class="fixed inset-0 bg-black/80 flex items-end z-[200]">
                 <div class="bg-white w-full p-8 rounded-t-[40px] shadow-2xl">
-                    <div class="flex gap-4 mb-6">
-                        <img src="${p.foto_url || IMG_DEFAULT}" class="w-16 h-16 object-cover rounded-xl">
-                        <div>
-                            <h3 class="font-black uppercase italic text-xl">${p.nome}</h3>
-                            <p class="text-rose-600 font-bold">R$ ${p.preco.toFixed(2)} / un</p>
-                        </div>
-                    </div>
-                    <div class="flex items-center justify-between mb-8 bg-gray-50 p-4 rounded-3xl">
-                        <button onclick="ajustarQtd(-1)" class="w-14 h-14 bg-white rounded-2xl font-black shadow-sm">-</button>
+                    <div class="flex gap-4 mb-4"><img src="${p.foto_url || IMG_DEFAULT}" class="w-16 h-16 object-cover rounded-xl"><h3 class="font-black uppercase text-xl">${p.nome}</h3></div>
+                    <div class="flex items-center justify-between mb-6 bg-gray-50 p-4 rounded-3xl">
+                        <button onclick="ajustarQtd(-1)" class="w-14 h-14 bg-white rounded-2xl font-black">-</button>
                         <span class="text-3xl font-black">${state.qtd}</span>
-                        <button onclick="ajustarQtd(1)" class="w-14 h-14 bg-white rounded-2xl font-black shadow-sm">+</button>
+                        <button onclick="ajustarQtd(1)" class="w-14 h-14 bg-white rounded-2xl font-black">+</button>
                     </div>
-                    <form onsubmit="finalizarPedido(event)" class="space-y-4">
-                        <select name="recorrencia" class="input-egg font-black uppercase text-[10px]">
-                            <option value="">Apenas esta vez</option>
-                            <option value="Semanal">Toda Semana</option>
-                            <option value="Quinzenal">A cada 15 dias</option>
-                            <option value="Mensal">Todo Mês</option>
+                    <form onsubmit="finalizarPedido(event)" class="space-y-3">
+                        <input name="telefone" placeholder="WhatsApp (DDD)" class="input-egg border" required>
+                        <select name="recorrencia" class="input-egg border font-black uppercase text-[10px]">
+                            <option value="">Apenas uma vez</option><option value="Semanal">Toda Semana</option><option value="Mensal">Todo Mês</option>
                         </select>
-                        <button class="w-full bg-rose-600 text-white py-6 rounded-3xl font-black uppercase shadow-xl">Confirmar • R$ ${(p.preco * state.qtd).toFixed(2)}</button>
+                        <button class="w-full bg-rose-600 text-white py-6 rounded-3xl font-black uppercase shadow-xl">Confirmar Pedido</button>
                     </form>
                     <button onclick="state.comprando=null;render()" class="w-full py-4 text-gray-400 font-black text-[10px] uppercase">Voltar</button>
                 </div>
             </div>`;
         }
 
-        function renderLogin() { return `<div class="min-h-screen flex flex-col justify-center p-8 bg-white"><div class="logo-text text-6xl mb-12 italic text-center">AppEgg</div><form onsubmit="handleLogin(event)" class="space-y-4"><input name="email" class="input-egg border" placeholder="Seu E-mail"><input name="pass" type="password" class="input-egg border" placeholder="Sua Senha"><button class="w-full bg-rose-600 text-white py-6 rounded-[25px] font-black uppercase shadow-2xl">Entrar</button></form></div>`; }
-        window.handleLogin = async (e) => { e.preventDefault(); const f = new FormData(e.target); try { await signInWithEmailAndPassword(auth, f.get('email'), f.get('pass')); } catch (err) { alert("Erro no login"); } };
+        window.handleLogin = async (e) => { e.preventDefault(); const f = new FormData(e.target); try { await signInWithEmailAndPassword(auth, f.get('email'), f.get('pass')); } catch (err) { alert("Erro"); } };
         window.signOut = () => signOut(auth);
     </script>
 </body>
