@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AppEgg</title>
+    <title>AppEgg | Cliente</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&display=swap');
@@ -87,8 +87,8 @@
                     <button onclick="window.state.tela='catalogo';window.state.visualizandoPedido=null;window.render()" class="nav-item ${window.state.tela==='catalogo'?'active':''}">
                         <span class="text-xl">🥚</span><span class="nav-text">Comprar</span>
                     </button>
-                    <button onclick="window.state.tela='notificacoes';window.render()" class="nav-item ${window.state.tela==='notificacoes'?'active':''}">
-                        <span class="text-xl">📦</span><span class="nav-text">Pedidos</span>
+                    <button onclick="window.state.tela='meusPedidos';window.render()" class="nav-item ${window.state.tela==='meusPedidos'?'active':''}">
+                        <span class="text-xl">📦</span><span class="nav-text">Meus Pedidos</span>
                     </button>
                     <button onclick="window.actions.logout()" class="nav-item">
                         <span class="text-xl">🚪</span><span class="nav-text">Sair</span>
@@ -126,30 +126,24 @@
 
                 <form onsubmit="window.actions.finalizarPedido(event)" class="space-y-4">
                     <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-[10px] font-black uppercase text-gray-400 mb-2">Logística</label>
-                            <select name="entrega" class="w-full p-4 bg-gray-100 rounded-2xl font-bold text-xs outline-none">
-                                <option value="RETIRADA">Retirar</option>
-                                <option value="ENTREGA">Receber</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-black uppercase text-gray-400 mb-2">Pagamento</label>
-                            <select name="pagamento" class="w-full p-4 bg-gray-100 rounded-2xl font-bold text-xs outline-none">
-                                <option value="PIX">PIX</option>
-                                <option value="DINHEIRO">Dinheiro</option>
-                            </select>
-                        </div>
+                        <select name="entrega" class="w-full p-4 bg-gray-100 rounded-2xl font-bold text-xs outline-none">
+                            <option value="RETIRADA">Retirar no Local</option>
+                            <option value="ENTREGA">Entrega em Casa</option>
+                        </select>
+                        <select name="pagamento" class="w-full p-4 bg-gray-100 rounded-2xl font-bold text-xs outline-none">
+                            <option value="PIX">PIX</option>
+                            <option value="DINHEIRO">Dinheiro</option>
+                        </select>
                     </div>
-                    <button class="w-full py-5 bg-rose-600 text-white rounded-2xl font-black uppercase shadow-lg">Confirmar • R$ ${total.toFixed(2)}</button>
+                    <button class="w-full py-5 bg-rose-600 text-white rounded-2xl font-black uppercase shadow-lg mt-4">Finalizar • R$ ${total.toFixed(2)}</button>
                 </form>
             </div></div>`;
         }
 
         function renderPedidos() {
-            return `<div class="p-6"><h2 class="text-3xl font-black uppercase mb-8 italic">Meus Pedidos</h2><div class="space-y-4">
+            return `<div class="p-6"><h2 class="text-3xl font-black uppercase mb-8 italic text-rose-600">Meus Pedidos</h2><div class="space-y-4">
                 ${window.state.meusPedidos.map((p, idx) => `
-                    <div onclick="window.state.visualizandoPedido=window.state.meusPedidos[${idx}];window.render()" class="card flex justify-between items-center cursor-pointer">
+                    <div onclick="window.state.visualizandoPedido=window.state.meusPedidos[${idx}];window.render()" class="card flex justify-between items-center cursor-pointer border-l-4 ${p.status === 'FINALIZADO' ? 'border-emerald-500' : 'border-rose-500'}">
                         <div class="flex-1">
                             <span class="text-[9px] font-black text-rose-600 uppercase tracking-widest">${p.status}</span>
                             <p class="text-[11px] font-bold text-gray-800 uppercase truncate">${p.quantidade}x ${p.produto}</p>
@@ -158,7 +152,7 @@
                             <p class="text-sm font-black">R$ ${Number(p.valorTotal).toFixed(2)}</p>
                             <p class="text-[9px] text-gray-400 font-bold">${formatTime(p.criadoEm)}</p>
                         </div>
-                    </div>`).join('') || '<p class="text-center font-black py-20 text-gray-300 uppercase">Nenhum pedido realizado</p>'}
+                    </div>`).join('') || '<p class="text-center font-black py-20 text-gray-300 uppercase">Sem histórico de pedidos</p>'}
             </div></div>`;
         }
 
@@ -174,11 +168,11 @@
                 </div>
 
                 ${p.status === 'AGUARDANDO PAGAMENTO' && p.pagamento === 'PIX' && !p.confirmacaoPagamento ? `
-                    <div class="bg-amber-50 p-6 rounded-[24px] border border-amber-100 mb-6 text-center">
-                        <p class="text-[10px] font-black uppercase text-amber-600 mb-2">Copie a chave e pague no seu banco</p>
-                        <p class="text-xs font-bold break-all mb-4 bg-white p-3 rounded-xl border border-amber-200">${window.state.config.pixChave}</p>
-                        <button onclick="window.actions.copiarPix('${window.state.config.pixChave}')" class="w-full bg-amber-500 text-white py-3 rounded-xl font-black text-[10px] uppercase mb-2">Copiar Chave PIX</button>
-                        <button onclick="window.actions.jaPaguei('${p.id}')" class="w-full bg-emerald-600 text-white py-3 rounded-xl font-black text-[10px] uppercase italic">Já realizei o pagamento</button>
+                    <div class="bg-emerald-50 p-6 rounded-[24px] border border-emerald-100 mb-6 text-center">
+                        <p class="text-[10px] font-black uppercase text-emerald-600 mb-2">Chave PIX da Loja</p>
+                        <p class="text-xs font-bold break-all mb-4 bg-white p-3 rounded-xl border border-emerald-200">${window.state.config.pixChave}</p>
+                        <button onclick="window.actions.copiarPix('${window.state.config.pixChave}')" class="w-full bg-emerald-600 text-white py-3 rounded-xl font-black text-[10px] uppercase mb-2">Copiar Chave</button>
+                        <button onclick="window.actions.jaPaguei('${p.id}')" class="w-full bg-gray-900 text-white py-3 rounded-xl font-black text-[10px] uppercase italic">Já realizei o pagamento</button>
                     </div>
                 ` : ''}
 
@@ -189,8 +183,8 @@
                     <div class="timeline-step"><div class="absolute left-[-4px] timeline-dot ${!p.horarioConcluido?'bg-gray-100':''}"></div><p class="text-[9px] font-black uppercase text-gray-400">Finalizado: <span class="text-gray-900">${formatTime(p.horarioConcluido)}</span></p></div>
                 </div>
 
-                <a href="https://wa.me/5511985706243?text=Oi, preciso de ajuda com meu pedido de ${p.produto}" target="_blank" class="flex items-center justify-center gap-2 w-full py-4 bg-emerald-50 text-emerald-600 rounded-2xl font-black text-[10px] uppercase">
-                    💬 Falar com Atendimento
+                <a href="https://wa.me/5511985706243?text=Oi, preciso de suporte com meu pedido de ${p.produto}" target="_blank" class="flex items-center justify-center gap-2 w-full py-4 bg-gray-100 text-gray-600 rounded-2xl font-black text-[10px] uppercase">
+                    💬 Suporte via WhatsApp
                 </a>
             </div></div>`;
         }
@@ -198,7 +192,7 @@
         window.actions = {
             login: async (e) => {
                 e.preventDefault();
-                try { await signInWithEmailAndPassword(auth, e.target.email.value, e.target.pass.value); } catch (err) { alert("Acesso inválido."); }
+                try { await signInWithEmailAndPassword(auth, e.target.email.value, e.target.pass.value); } catch (err) { alert("Credenciais incorretas."); }
             },
             logout: async () => { await signOut(auth); },
             abrirCompra: (idx) => { window.state.comprando = window.state.produtos[idx]; window.state.qtd = 1; window.render(); },
@@ -235,7 +229,7 @@
                 });
 
                 window.state.comprando = null;
-                window.state.tela = 'notificacoes';
+                window.state.tela = 'meusPedidos';
                 window.render();
                 initApp();
             },
@@ -245,7 +239,7 @@
                     confirmacaoPagamento: true,
                     horarioPagamento: serverTimestamp()
                 });
-                alert("Aviso enviado ao Admin!");
+                alert("O Admin foi notificado do seu pagamento!");
             }
         };
 
