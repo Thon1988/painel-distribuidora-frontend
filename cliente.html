@@ -3,54 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AppEgg | Ovos Direto ao Cliente</title>
+    <title>AppEgg | Meus Pedidos</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800;900&display=swap');
-        
         body { font-family: 'Inter', sans-serif; background: #fff; padding-bottom: 120px; color: #1f2937; }
-        
-        /* TIPOGRAFIA E LOGO */
         .logo-text { font-weight: 900; color: #e11d48; font-size: 1.8rem; letter-spacing: -1px; }
-        
-        /* NAVEGAÇÃO MOBILE PREMIUM */
-        .nav-bottom { 
-            position: fixed; bottom: 20px; left: 15px; right: 15px; 
-            background: #111; border-radius: 32px; display: flex; 
-            justify-content: space-around; padding: 14px; z-index: 100; 
-            box-shadow: 0 15px 35px rgba(0,0,0,0.2); 
-        }
-        .nav-item { 
-            flex: 1; display: flex; flex-direction: column; align-items: center; 
-            gap: 6px; color: #666; font-size: 10px; font-weight: 800; 
-            border: none; background: transparent; transition: 0.3s;
-        }
+        .nav-bottom { position: fixed; bottom: 20px; left: 15px; right: 15px; background: #111; border-radius: 32px; display: flex; justify-content: space-around; padding: 14px; z-index: 100; box-shadow: 0 15px 35px rgba(0,0,0,0.2); }
+        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; color: #666; font-size: 10px; font-weight: 800; border: none; background: transparent; }
         .nav-item.active { color: #fff; }
-        .nav-item span { font-size: 18px; }
-
-        /* CARDS E INTERFACE */
-        .card-egg { 
-            background: white; border: 1px solid #f3f4f6; 
-            border-radius: 32px; padding: 20px; margin-bottom: 16px; 
-            transition: transform 0.2s;
-        }
-        .card-egg:active { transform: scale(0.97); }
-        
-        .badge-status { 
-            padding: 4px 10px; border-radius: 10px; 
-            font-size: 9px; font-weight: 900; text-transform: uppercase; 
-        }
-
-        /* BOTÕES */
-        .btn-main {
-            background: #e11d48; color: white; padding: 20px;
-            border-radius: 24px; font-weight: 900; text-transform: uppercase;
-            font-size: 13px; box-shadow: 0 10px 20px rgba(225, 29, 72, 0.2);
-            width: 100%; transition: 0.2s;
-        }
-        .btn-main:active { transform: scale(0.95); }
-
-        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .card-pedido { background: white; border: 1px solid #f3f4f6; border-radius: 32px; padding: 24px; margin-bottom: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.02); }
+        .btn-refazer { background: #1f2937; color: white; padding: 12px; border-radius: 16px; font-weight: 900; text-transform: uppercase; font-size: 10px; flex: 1; text-align: center; }
+        .btn-agendar { background: #2563eb; color: white; padding: 12px; border-radius: 16px; font-weight: 900; text-transform: uppercase; font-size: 10px; flex: 1; text-align: center; }
+        .input-egg { width: 100%; padding: 18px; background: #f9fafb; border-radius: 20px; border: 2px solid transparent; font-weight: 700; font-size: 14px; outline: none; }
+        .status-badge { font-size: 9px; font-weight: 900; padding: 6px 12px; border-radius: 12px; text-transform: uppercase; }
+        .status-criado { background: #fef3c7; color: #92400e; }
+        .status-embalando { background: #dcfce7; color: #166534; }
+        .status-entrega { background: #dbeafe; color: #1e40af; }
+        .status-finalizado { background: #f3f4f6; color: #374151; }
     </style>
 </head>
 <body>
@@ -58,7 +28,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-        import { getFirestore, collection, addDoc, serverTimestamp, onSnapshot, query, where, orderBy } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, serverTimestamp, onSnapshot, query, where, orderBy, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
         import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
 
         const firebaseConfig = {
@@ -76,10 +46,9 @@
         const API_BASE = "https://painel-distribuidora-backend.onrender.com/api";
         const IMG_DEFAULT = "https://via.placeholder.com/300x300?text=AppEgg+Ovos";
 
-        window.state = { user: null, view: 'loja', produtos: [], pedidos: [], comprando: null, qtd: 1 };
+        window.state = { user: null, view: 'loja', produtos: [], pedidos: [], comprando: null, qtd: 1, recorrenciaSel: '' };
         const state = window.state;
 
-        // SAFE IMG PROTEGIDO
         window.safeImg = (url) => {
             if (!url || typeof url !== "string" || url.trim() === "" || !url.startsWith("http")) return IMG_DEFAULT;
             return url.trim();
@@ -91,15 +60,12 @@
             window.render();
         });
 
-        // FETCH PROTEGIDO E TRATADO
         async function loadProdutos() {
             try {
                 const r = await fetch(`${API_BASE}/produtos`);
                 const data = await r.json();
                 state.produtos = Array.isArray(data) ? data : [];
-            } catch {
-                state.produtos = [];
-            }
+            } catch { state.produtos = []; }
             window.render();
         }
 
@@ -124,18 +90,13 @@
                             @${state.user.email.split('@')[0]}
                         </div>
                     </header>
-
-                    ${state.view === 'loja' ? renderLoja() : 
-                      state.view === 'programar' ? renderProgramar() : renderPedidos()}
+                    ${state.view === 'loja' ? renderLoja() : renderPedidos()}
                 </div>
-
                 <nav class="nav-bottom">
                     <button onclick="state.view='loja';render()" class="nav-item ${state.view==='loja'?'active':''}"><span>🏠</span>LOJA</button>
-                    <button onclick="state.view='programar';render()" class="nav-item ${state.view==='programar'?'active':''}"><span>📅</span>AGENDAR</button>
                     <button onclick="state.view='pedidos';render()" class="nav-item ${state.view==='pedidos'?'active':''}"><span>📦</span>PEDIDOS</button>
                     <button onclick="signOut(auth)" class="nav-item text-rose-500"><span>🚪</span>SAIR</button>
                 </nav>
-
                 ${state.comprando ? renderModalCompra() : ''}
             `;
         };
@@ -143,13 +104,13 @@
         function renderLoja() {
             return `
                 <h2 class="font-black uppercase text-[10px] tracking-widest text-gray-400 mb-6">Produtos Frescos</h2>
-                <div class="space-y-2">
+                <div class="space-y-3">
                     ${state.produtos.map((p, i) => `
-                        <div class="card-egg flex gap-5 items-center shadow-sm" onclick="window.abrirIndex(${i})">
-                            <img src="${safeImg(p.foto_url)}" onerror="this.src='${IMG_DEFAULT}'" class="w-24 h-24 object-cover rounded-[24px]">
+                        <div class="card-pedido flex gap-5 items-center" onclick="window.abrirIndex(${i})">
+                            <img src="${safeImg(p.foto_url)}" class="w-24 h-24 object-cover rounded-[24px]">
                             <div class="flex-1">
-                                <h3 class="font-black uppercase text-sm mb-1 text-gray-800 leading-tight">${p.nome}</h3>
-                                <p class="text-gray-400 text-[10px] font-bold uppercase mb-3">${p.embalagem || 'Cartela'}</p>
+                                <h3 class="font-black uppercase text-sm mb-1 text-gray-800">${p.nome}</h3>
+                                <p class="text-gray-400 text-[10px] font-bold uppercase mb-3">${p.embalagem}</p>
                                 <p class="text-rose-600 font-black text-xl">R$ ${Number(p.preco).toFixed(2)}</p>
                             </div>
                         </div>
@@ -157,131 +118,120 @@
                 </div>`;
         }
 
-        function renderProgramar() {
-            return `
-                <div class="bg-blue-600 p-10 rounded-[40px] text-white mb-10 shadow-xl shadow-blue-100">
-                    <h2 class="text-3xl font-black mb-3 uppercase tracking-tighter">Entregas Automáticas</h2>
-                    <p class="text-[11px] font-bold opacity-80 uppercase leading-relaxed tracking-wide">
-                        Programe o seu pedido e receba toda a semana ou mês sem precisar pedir de novo.
-                    </p>
-                </div>
-                ${renderLoja()}
-            `;
-        }
-
         function renderPedidos() {
             return `
-                <h2 class="font-black uppercase text-[10px] tracking-widest text-gray-400 mb-6">Histórico de Compras</h2>
-                <div class="space-y-4">
-                    ${state.pedidos.map(p => `
-                        <div class="card-egg border-l-8 ${p.status === 'FINALIZADO' ? 'border-emerald-500' : 'border-rose-500'}">
-                            <div class="flex justify-between items-start mb-2">
-                                <span class="badge-status ${p.status === 'FINALIZADO' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}">
-                                    ${p.status}
-                                </span>
-                                <span class="text-[9px] font-bold text-gray-300 uppercase">#${p.id.slice(-4)}</span>
+                <h2 class="font-black uppercase text-[10px] tracking-widest text-gray-400 mb-8">Acompanhamento</h2>
+                <div class="space-y-6">
+                    ${state.pedidos.map(p => {
+                        const s = p.status || 'CRIADO';
+                        let classStatus = 'status-criado';
+                        if(s === 'EMBALANDO') classStatus = 'status-embalando';
+                        if(s === 'SAIU PARA ENTREGA') classStatus = 'status-entrega';
+                        if(s === 'FINALIZADO') classStatus = 'status-finalizado';
+
+                        return `
+                        <div class="card-pedido border-t-8 ${s === 'FINALIZADO' ? 'border-gray-200' : 'border-rose-500'}">
+                            <div class="flex justify-between items-start mb-4">
+                                <div>
+                                    <h4 class="font-black uppercase text-sm text-gray-800">${p.quantidade}x ${p.produto}</h4>
+                                    <p class="text-[10px] font-bold text-gray-400 uppercase">${p.criadoEm ? new Date(p.criadoEm.seconds*1000).toLocaleDateString() : 'Processando...'}</p>
+                                    ${p.dataProximaRemessa ? `<p class="text-[9px] font-black text-blue-600 uppercase mt-1">📅 Remessa: ${p.dataProximaRemessa}</p>` : ''}
+                                </div>
+                                <span class="status-badge ${classStatus}">${s}</span>
                             </div>
-                            <h4 class="font-black uppercase text-xs text-gray-800">${p.quantidade}x ${p.produto}</h4>
-                            <p class="text-rose-600 font-black text-sm mt-1">R$ ${Number(p.valorTotal).toFixed(2)}</p>
-                        </div>
-                    `).join('') || '<div class="text-center py-20 font-black text-gray-300 uppercase">Sem pedidos realizados</div>'}
+                            <div class="flex gap-3 mt-6">
+                                <button onclick="window.acaoPedido('${p.produtoId}', ${p.quantidade}, '')" class="btn-refazer">Novo Pedido</button>
+                            </div>
+                        </div>`;
+                    }).join('') || '<div class="text-center py-20 font-black text-gray-300 uppercase">Sem pedidos</div>'}
                 </div>`;
         }
 
-        window.abrirIndex = (i) => { state.comprando = state.produtos[i]; state.qtd = 1; window.render(); };
+        window.abrirIndex = (i) => { state.comprando = state.produtos[i]; state.qtd = 1; state.recorrenciaSel = ''; window.render(); };
+        
+        window.updateRecorrencia = (val) => {
+            state.recorrenciaSel = val;
+            window.render();
+        };
+
         window.ajustarQtd = (v) => { if(state.qtd + v > 0) { state.qtd += v; window.render(); } };
 
         window.finalizarPedido = async (e) => {
             e.preventDefault();
             const f = new FormData(e.target);
             const p = state.comprando;
-            
+            const qtd = state.qtd;
+
+            // 1. Criar o Log da Venda
             await addDoc(collection(db, "vendas_logs"), {
                 clienteId: auth.currentUser.uid,
                 clienteNome: auth.currentUser.email.split('@')[0],
                 produtoId: p.id,
                 produto: p.nome,
-                quantidade: state.qtd,
+                quantidade: qtd,
                 precoUnidade: p.preco,
-                valorTotal: p.preco * state.qtd,
+                valorTotal: p.preco * qtd,
                 recorrencia: f.get('recorrencia'),
+                dataProximaRemessa: f.get('dataRemessa') || null,
                 telefone: f.get('telefone'),
-                status: 'AGUARDANDO PAGAMENTO',
+                status: 'CRIADO',
                 criadoEm: serverTimestamp()
             });
 
-            await fetch(`${API_BASE}/produtos/${p.id}`, { 
-                method: 'PUT', 
-                headers: {'Content-Type': 'application/json'}, 
-                body: JSON.stringify({ quantidade: p.quantidade - state.qtd }) 
-            });
+            // 2. Baixar Estoque via API
+            try {
+                const novoQtd = p.quantidade - qtd;
+                await fetch(`${API_BASE}/produtos/${p.id}`, {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ ...p, quantidade: novoQtd })
+                });
+            } catch (err) { console.error("Erro estoque", err); }
 
             state.comprando = null; state.view = 'pedidos'; window.render();
         };
 
         function renderModalCompra() {
             const p = state.comprando;
+            const precisaCalendario = ['Semanal', 'Quinzenal', 'Mensal'].includes(state.recorrenciaSel);
+            
             return `
-            <div class="fixed inset-0 bg-black/80 flex items-end z-[200] animate-in fade-in duration-300">
-                <div class="bg-white w-full p-10 rounded-t-[48px] shadow-2xl">
+            <div class="fixed inset-0 bg-black/80 flex items-end z-[200]">
+                <div class="bg-white w-full p-10 rounded-t-[48px] max-h-[90vh] overflow-y-auto">
                     <div class="flex gap-5 mb-8 items-center">
-                        <img src="${safeImg(p.foto_url)}" onerror="this.src='${IMG_DEFAULT}'" class="w-20 h-20 object-cover rounded-[24px] shadow-sm">
-                        <div>
-                            <h3 class="font-black uppercase text-2xl tracking-tighter text-gray-800">${p.nome}</h3>
-                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">${p.embalagem}</p>
-                        </div>
+                        <img src="${safeImg(p.foto_url)}" class="w-16 h-16 object-cover rounded-[20px]">
+                        <h3 class="font-black uppercase text-xl text-gray-800">${p.nome}</h3>
                     </div>
-                    
                     <form onsubmit="finalizarPedido(event)" class="space-y-4">
-                        <div class="flex items-center justify-between bg-gray-50 p-5 rounded-[32px]">
-                            <button type="button" onclick="ajustarQtd(-1)" class="w-16 h-16 bg-white rounded-2xl font-black text-xl shadow-sm">-</button>
-                            <span class="text-4xl font-black text-gray-900">${state.qtd}</span>
-                            <button type="button" onclick="ajustarQtd(1)" class="w-16 h-16 bg-white rounded-2xl font-black text-xl shadow-sm">+</button>
+                        <div class="flex items-center justify-between bg-gray-50 p-4 rounded-[28px]">
+                            <button type="button" onclick="window.ajustarQtd(-1)" class="w-14 h-14 bg-white rounded-2xl font-black">-</button>
+                            <span class="text-3xl font-black">${state.qtd}</span>
+                            <button type="button" onclick="window.ajustarQtd(1)" class="w-14 h-14 bg-white rounded-2xl font-black">+</button>
                         </div>
-                        
-                        <input name="telefone" placeholder="WhatsApp (com DDD)" class="w-full p-6 bg-gray-50 rounded-[24px] font-bold outline-none border-2 border-transparent focus:border-rose-100 transition" required>
-                        
-                        <select name="recorrencia" class="w-full p-6 bg-gray-50 rounded-[24px] font-black outline-none text-[10px] uppercase tracking-widest">
-                            <option value="">Apenas uma vez</option>
-                            <option value="Semanal">Entrega Semanal</option>
-                            <option value="Mensal">Entrega Mensal</option>
-                        </select>
-                        
-                        <div class="pt-4">
-                            <button class="btn-main">Confirmar Pedido • R$ ${(p.preco * state.qtd).toFixed(2)}</button>
+                        <input name="telefone" placeholder="WhatsApp (DDD)" class="input-egg" required>
+                        <div class="space-y-1">
+                            <label class="text-[9px] font-black uppercase text-gray-400 ml-4">Frequência</label>
+                            <select name="recorrencia" onchange="window.updateRecorrencia(this.value)" class="input-egg text-[11px] uppercase">
+                                <option value="">Apenas uma vez</option>
+                                <option value="Semanal" ${state.recorrenciaSel==='Semanal'?'selected':''}>Semanal</option>
+                                <option value="Quinzenal" ${state.recorrenciaSel==='Quinzenal'?'selected':''}>Quinzenal</option>
+                                <option value="Mensal" ${state.recorrenciaSel==='Mensal'?'selected':''}>Mensal</option>
+                            </select>
                         </div>
+                        ${precisaCalendario ? `
+                        <div class="space-y-1">
+                            <label class="text-[9px] font-black uppercase text-gray-400 ml-4">Data da Próxima Remessa</label>
+                            <input type="date" name="dataRemessa" class="input-egg" required>
+                        </div>` : ''}
+                        <button class="w-full bg-rose-600 text-white py-6 rounded-[28px] font-black uppercase text-xs mt-4">Confirmar e Pagar</button>
                     </form>
-                    
-                    <button onclick="state.comprando=null;render()" class="w-full py-6 text-gray-400 font-black text-[10px] uppercase tracking-widest">Cancelar</button>
+                    <button onclick="state.comprando=null;render()" class="w-full py-6 text-gray-400 font-black text-[10px] uppercase">Cancelar</button>
                 </div>
             </div>`;
         }
 
-        window.handleLogin = async (e) => {
-            e.preventDefault();
-            const f = new FormData(e.target);
-            try { 
-                await signInWithEmailAndPassword(auth, f.get('email'), f.get('pass')); 
-            } catch (err) { 
-                alert("Erro ao entrar. Verifique os dados."); 
-            }
-        };
-
-        function renderLogin() { 
-            return `
-                <div class="min-h-screen flex items-center justify-center bg-white p-8">
-                    <div class="w-full max-w-sm">
-                        <div class="logo-text text-5xl mb-2 text-center">AppEgg</div>
-                        <p class="text-center text-gray-400 font-black text-[10px] uppercase tracking-[0.2em] mb-12">Ovos Direto da Granja</p>
-                        <form onsubmit="handleLogin(event)" class="space-y-3">
-                            <input name="email" class="w-full p-6 bg-gray-50 rounded-[24px] font-bold outline-none" placeholder="Seu email">
-                            <input name="pass" type="password" class="w-full p-6 bg-gray-50 rounded-[24px] font-bold outline-none" placeholder="Sua senha">
-                            <button class="btn-main mt-4">Entrar no App</button>
-                        </form>
-                    </div>
-                </div>`; 
-        }
-
+        window.handleLogin = async (e) => { e.preventDefault(); const f = new FormData(e.target); try { await signInWithEmailAndPassword(auth, f.get('email'), f.get('pass')); } catch (err) { alert("Erro ao entrar"); } };
+        function renderLogin() { return `<div class="min-h-screen flex items-center justify-center bg-white p-8"><div class="w-full max-w-sm"><div class="logo-text text-5xl mb-12 text-center">AppEgg</div><form onsubmit="handleLogin(event)" class="space-y-3"><input name="email" class="input-egg" placeholder="Email"><input name="pass" type="password" class="input-egg" placeholder="Senha"><button class="w-full bg-rose-600 text-white py-6 rounded-[28px] font-black uppercase text-xs mt-4">Entrar</button></form></div></div>`; }
         window.signOut = () => signOut(auth);
     </script>
 </body>
