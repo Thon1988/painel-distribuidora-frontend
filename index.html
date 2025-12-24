@@ -9,12 +9,13 @@
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
         body { font-family: 'Inter', sans-serif; background: #f9fafb; color: #1f2937; }
         .card { background: #ffffff; border: 1px solid #f3f4f6; border-radius: 24px; box-shadow: 0 4px 15px rgba(0,0,0,0.02); }
-        .nav-link { font-size: 10px; font-weight: 800; text-transform: uppercase; color: #9ca3af; padding: 12px 14px; border-radius: 12px; cursor: pointer; transition: 0.2s; }
+        .nav-link { font-size: 10px; font-weight: 800; text-transform: uppercase; color: #9ca3af; padding: 12px 14px; border-radius: 12px; cursor: pointer; }
         .nav-link.active { color: #e11d48; background: #fff1f2; }
-        .logo-text { font-weight: 800; color: #e11d48; font-size: 1.25rem; letter-spacing: -0.05em; font-style: italic; }
+        .logo-text { font-weight: 800; color: #e11d48; font-size: 1.25rem; font-style: italic; }
+        .alert-pulse { animation: pulse 1.5s infinite; background: #ecfdf5; border: 1px solid #10b981; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.01); } 100% { transform: scale(1); } }
         .timeline-dot { width: 8px; height: 8px; border-radius: 50%; background: #e11d48; position: relative; z-index: 10; }
         .timeline-step { position: relative; padding-left: 20px; border-left: 2px solid #f3f4f6; margin-left: 3px; padding-bottom: 15px; }
-        .timeline-step:last-child { border-left: 2px solid transparent; }
     </style>
 </head>
 <body>
@@ -22,7 +23,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, query, orderBy, doc, updateDoc, deleteDoc, serverTimestamp, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, query, orderBy, doc, updateDoc, serverTimestamp, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
         import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
 
         const firebaseConfig = {
@@ -42,8 +43,7 @@
         window.state = { 
             user: null, view: 'pedidos', produtos: [], logs: [], config: { pixChave: "" },
             editando: null, clienteSelecionado: null,
-            tiposEmbalagem: ["Unidade", "Dúzia", "Cartela (20)", "Cartela (30)", "Caixa"],
-            listaPadrao: ["Ovo Branco Grande", "Ovo Branco Extra", "Ovo Vermelho Grande", "Ovo Vermelho Extra", "Ovo Caipira", "Ovo de Codorna"]
+            tiposEmbalagem: ["Unidade", "Dúzia", "Cartela (20)", "Cartela (30)", "Caixa"]
         };
 
         onAuthStateChanged(auth, async (user) => {
@@ -59,16 +59,18 @@
 
         const formatTime = (ts) => {
             if (!ts) return "--:--";
-            const date = ts.toDate ? ts.toDate() : new Date(ts);
-            return date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            try {
+                const date = ts.seconds ? new Date(ts.seconds * 1000) : new Date(ts);
+                return date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            } catch (e) { return "--:--" }
         };
 
         window.render = () => {
             const root = document.getElementById('app-root');
             if (!window.state.user) {
                 root.innerHTML = `<div class="min-h-screen flex items-center justify-center bg-rose-600 p-6 text-center">
-                    <div class="bg-white p-10 rounded-[40px] w-full max-w-md shadow-2xl">
-                        <div class="logo-text text-3xl mb-8">AppEgg Admin</div>
+                    <div class="bg-white p-10 rounded-[40px] w-full max-w-md">
+                        <div class="logo-text text-3xl mb-8 italic">AppEgg Admin</div>
                         <form onsubmit="window.actions.login(event)" class="space-y-4">
                             <input name="email" type="email" placeholder="E-mail" class="w-full p-5 bg-gray-50 rounded-2xl outline-none font-bold border" required>
                             <input name="pass" type="password" placeholder="Senha" class="w-full p-5 bg-gray-50 rounded-2xl outline-none font-bold border" required>
@@ -82,7 +84,7 @@
             root.innerHTML = `
                 <nav class="bg-white border-b px-6 sticky top-0 z-50 h-20 flex items-center justify-between">
                     <div class="logo-text">AppEgg</div>
-                    <div class="flex gap-1 overflow-x-auto">
+                    <div class="flex gap-1">
                         <button onclick="window.state.view='pedidos';window.render()" class="nav-link ${window.state.view==='pedidos'?'active':''}">Pedidos</button>
                         <button onclick="window.state.view='clientes';window.render()" class="nav-link ${window.state.view==='clientes'?'active':''}">Clientes</button>
                         <button onclick="window.state.view='estoque';window.render()" class="nav-link ${window.state.view==='estoque'?'active':''}">Estoque</button>
@@ -90,9 +92,7 @@
                         <button onclick="window.actions.logout()" class="p-3 text-gray-300 font-black text-[10px] uppercase">Sair</button>
                     </div>
                 </nav>
-                <main class="max-w-5xl mx-auto p-6">
-                    ${renderContent()}
-                </main>`;
+                <main class="max-w-5xl mx-auto p-6">${renderContent()}</main>`;
         };
 
         function renderContent() {
@@ -108,23 +108,28 @@
         function renderPedidos() {
             const ativos = window.state.logs.filter(l => l.status !== 'FINALIZADO' && l.status !== 'CANCELADO');
             return `<div class="grid gap-6">${ativos.map(l => `
-                <div class="card p-6 border-l-8 ${l.status === 'AGUARDANDO PAGAMENTO' ? 'border-amber-400' : 'border-rose-500'}">
+                <div class="card p-6 border-l-8 ${l.confirmacaoPagamento ? 'alert-pulse border-emerald-500' : 'border-amber-400'}">
                     <div class="flex justify-between mb-4">
                         <div>
                             <h3 class="font-black uppercase text-sm">${l.clienteNome || 'Cliente'}</h3>
                             <p class="text-[10px] font-bold text-gray-400">${l.clienteWhatsapp}</p>
                         </div>
-                        <span class="bg-gray-100 text-gray-600 text-[10px] font-black px-3 py-1 rounded-full uppercase">${l.status}</span>
+                        <div class="text-right">
+                            <span class="bg-white text-gray-600 text-[10px] font-black px-3 py-1 rounded-full uppercase border">${l.status}</span>
+                            ${l.confirmacaoPagamento ? '<p class="text-[9px] font-black text-emerald-600 mt-1 uppercase">✓ Cliente informou pagamento</p>' : ''}
+                        </div>
                     </div>
-                    <div class="bg-gray-50 p-4 rounded-2xl mb-4 text-xs font-bold flex justify-between">
-                        <span>${l.produto}</span>
-                        <span class="text-rose-600">R$ ${Number(l.precoNoMomento).toFixed(2)}</span>
+                    <div class="bg-white p-4 rounded-2xl mb-4 text-xs font-bold flex justify-between border">
+                        <span>${l.quantidade}x ${l.produto}</span>
+                        <span class="text-rose-600">R$ ${Number(l.valorTotal).toFixed(2)}</span>
                     </div>
                     <div class="grid grid-cols-2 gap-2">
+                        ${l.confirmacaoPagamento ? `
+                            <button onclick="window.actions.confirmarPagamento('${l.id}')" class="bg-emerald-600 text-white py-4 rounded-xl text-[9px] font-black uppercase col-span-2 shadow-lg mb-2">Confirmar Recebimento PIX</button>
+                        ` : ''}
                         <button onclick="window.actions.mudarStatus('${l.id}', 'EMBALANDO')" class="bg-blue-500 text-white py-3 rounded-xl text-[9px] font-black uppercase">Embalando</button>
-                        <button onclick="window.actions.mudarStatus('${l.id}', '${l.pagamento === 'RETIRADA' ? 'DISPONÍVEL PARA RETIRADA' : 'SAIU PARA ENTREGA'}')" class="bg-orange-500 text-white py-3 rounded-xl text-[9px] font-black uppercase">Logística</button>
-                        <button onclick="window.actions.mudarStatus('${l.id}', 'FINALIZADO')" class="bg-emerald-500 text-white py-3 rounded-xl text-[9px] font-black uppercase">Concluir</button>
-                        <button onclick="window.actions.mudarStatus('${l.id}', 'CANCELADO')" class="bg-gray-200 text-gray-500 py-3 rounded-xl text-[9px] font-black uppercase">Cancelar</button>
+                        <button onclick="window.actions.mudarStatus('${l.id}', 'PRONTO')" class="bg-orange-500 text-white py-3 rounded-xl text-[9px] font-black uppercase">Pronto (Logística)</button>
+                        <button onclick="window.actions.mudarStatus('${l.id}', 'FINALIZADO')" class="bg-gray-900 text-white py-4 rounded-xl text-[9px] font-black uppercase col-span-2 mt-2">Finalizar Pedido</button>
                     </div>
                 </div>`).join('') || '<p class="text-center py-20 font-black text-gray-300 uppercase">Sem pedidos ativos</p>'}</div>`;
         }
@@ -132,84 +137,63 @@
         function renderClientes() {
             const map = {};
             window.state.logs.forEach(l => {
-                if(!map[l.clienteWhatsapp]) map[l.clienteWhatsapp] = [];
-                map[l.clienteWhatsapp].push(l);
+                const key = l.clienteWhatsapp || 'Sem ID';
+                if(!map[key]) map[key] = [];
+                map[key].push(l);
             });
-            const zaps = Object.keys(map);
+            const lista = Object.keys(map);
 
             if (window.state.clienteSelecionado) {
                 const peds = map[window.state.clienteSelecionado];
-                return `
-                    <button onclick="window.state.clienteSelecionado=null;window.render()" class="mb-6 font-black text-rose-600 uppercase text-[10px]">← Voltar</button>
-                    <h2 class="text-2xl font-black mb-6 uppercase">Histórico: ${peds[0].clienteNome}</h2>
-                    <div class="space-y-6">
+                return `<button onclick="window.state.clienteSelecionado=null;window.render()" class="mb-6 font-black text-rose-600 uppercase text-[10px]">← Voltar</button>
+                    <h2 class="text-2xl font-black mb-8 uppercase">${peds[0].clienteNome}</h2>
+                    <div class="space-y-4">
                         ${peds.map(p => `
-                            <div class="card p-6 border-l-4 ${p.status === 'CANCELADO' ? 'border-gray-300 opacity-60' : 'border-emerald-500'}">
-                                <div class="flex justify-between items-center mb-4">
-                                    <span class="text-[10px] font-black uppercase px-2 py-1 bg-gray-100 rounded">${p.status}</span>
-                                    <span class="text-lg font-black text-rose-600">R$ ${Number(p.precoNoMomento).toFixed(2)}</span>
+                            <div class="card p-6 border-l-4 ${p.status === 'FINALIZADO' ? 'border-emerald-500' : 'border-gray-200'}">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="text-[9px] font-black uppercase px-2 py-1 bg-gray-50 rounded border">${p.status}</span>
+                                    <span class="text-lg font-black text-rose-600">R$ ${Number(p.valorTotal).toFixed(2)}</span>
                                 </div>
-                                <p class="text-sm font-bold mb-4 uppercase">${p.produto}</p>
-                                <div class="border-t pt-4">
-                                    <div class="timeline-step"><div class="absolute left-[-5px] timeline-dot"></div><p class="text-[10px] font-black uppercase text-gray-400">Criado: <span class="text-gray-900">${formatTime(p.criadoEm)}</span></p></div>
-                                    <div class="timeline-step"><div class="absolute left-[-5px] timeline-dot ${!p.horarioEmbalando?'bg-gray-200':''}"></div><p class="text-[10px] font-black uppercase text-gray-400">Embalagem: <span class="text-gray-900">${formatTime(p.horarioEmbalando)}</span></p></div>
-                                    <div class="timeline-step"><div class="absolute left-[-5px] timeline-dot ${!p.horarioSaiu?'bg-gray-200':''}"></div><p class="text-[10px] font-black uppercase text-gray-400">Logística: <span class="text-gray-900">${formatTime(p.horarioSaiu)}</span></p></div>
-                                    <div class="timeline-step"><div class="absolute left-[-5px] timeline-dot ${!p.horarioConcluido?'bg-gray-200':''}"></div><p class="text-[10px] font-black uppercase text-gray-400">Finalizado: <span class="text-gray-900">${formatTime(p.horarioConcluido)}</span></p></div>
-                                </div>
+                                <p class="text-sm font-bold uppercase">${p.quantidade}x ${p.produto}</p>
                             </div>`).join('')}
                     </div>`;
             }
             return `<div class="card overflow-hidden"><table class="w-full text-left">
                 <thead class="bg-gray-50 border-b text-[10px] font-black uppercase text-gray-400"><th class="p-4">Cliente</th><th class="p-4 text-right">Ação</th></thead>
-                <tbody class="divide-y">${zaps.map(z => `<tr class="text-xs font-bold"><td class="p-4 uppercase">${map[z][0].clienteNome}</td><td class="p-4 text-right"><button onclick="window.state.clienteSelecionado='${z}';window.render()" class="text-rose-600 font-black uppercase text-[10px]">Ver Histórico</button></td></tr>`).join('')}</tbody>
+                <tbody class="divide-y">${lista.map(id => `<tr class="text-xs font-bold"><td class="p-4 uppercase">${map[id][0].clienteNome} <br><span class="text-[9px] text-gray-400">${id}</span></td><td class="p-4 text-right"><button onclick="window.state.clienteSelecionado='${id}';window.render()" class="text-rose-600 font-black uppercase text-[10px]">Ver Histórico</button></td></tr>`).join('')}</tbody>
             </table></div>`;
         }
 
         function renderEstoque() {
             const p = window.state.editando || { nome: '', quantidade: '', preco: '', foto_url: '', tipo_estoque: 'Caixa' };
-            return `
-                <div class="card p-8 mb-10">
-                    <form onsubmit="window.actions.salvarProduto(event)" class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <input name="nome" value="${p.nome}" list="ovos-lista" placeholder="Nome do Ovo" class="p-4 bg-gray-50 rounded-2xl font-bold text-sm outline-none border focus:border-rose-600" required>
-                        <datalist id="ovos-lista">${window.state.listaPadrao.map(o => `<option value="${o}">`).join('')}</datalist>
-                        <input name="quantidade" type="number" value="${p.quantidade}" placeholder="Qtd" class="p-4 bg-gray-50 rounded-2xl font-bold text-sm outline-none border focus:border-rose-600" required>
-                        <input name="preco" type="number" step="0.01" value="${p.preco}" placeholder="Preço" class="p-4 bg-gray-50 rounded-2xl font-bold text-sm outline-none border focus:border-rose-600" required>
-                        <select name="tipo_estoque" class="p-4 bg-gray-50 rounded-2xl font-bold text-sm outline-none border">
-                            ${window.state.tiposEmbalagem.map(t => `<option value="${t}" ${p.tipo_estoque === t ? 'selected' : ''}>${t}</option>`).join('')}
-                        </select>
-                        <input name="foto_url" value="${p.foto_url}" placeholder="URL da Foto" class="md:col-span-2 p-4 bg-gray-50 rounded-2xl font-bold text-sm outline-none border" required>
-                        <div class="md:col-span-2 flex gap-2">
-                            <button class="flex-1 bg-rose-600 text-white font-black py-4 rounded-2xl uppercase shadow-lg">${window.state.editando ? 'Atualizar' : 'Adicionar'}</button>
-                            ${window.state.editando ? `<button type="button" onclick="window.actions.excluirProduto('${window.state.editando.id}')" class="bg-gray-100 text-rose-600 px-6 rounded-2xl font-black text-xs uppercase">Excluir</button>` : ''}
-                        </div>
-                    </form>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    ${window.state.produtos.map(prod => `
-                        <div class="card p-5 flex items-center gap-4">
-                            <img src="${prod.foto_url}" class="w-12 h-12 object-contain">
-                            <div class="flex-1"><p class="font-black text-xs uppercase">${prod.nome}</p><p class="text-rose-600 font-black text-sm">R$ ${parseFloat(prod.preco).toFixed(2)}</p></div>
-                            <button onclick='window.state.editando=${JSON.stringify(prod)};window.render()' class="text-blue-500 font-black text-[9px] uppercase">Editar</button>
-                        </div>`).join('')}
-                </div>`;
+            return `<div class="card p-8 mb-10"><form onsubmit="window.actions.salvarProduto(event)" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <input name="nome" value="${p.nome}" placeholder="Nome" class="p-4 bg-gray-50 rounded-2xl font-bold border outline-none">
+                <input name="quantidade" type="number" value="${p.quantidade}" placeholder="Qtd" class="p-4 bg-gray-50 rounded-2xl font-bold border outline-none">
+                <input name="preco" type="number" step="0.01" value="${p.preco}" placeholder="Preço" class="p-4 bg-gray-50 rounded-2xl font-bold border outline-none">
+                <select name="tipo_estoque" class="p-4 bg-gray-50 rounded-2xl font-bold border outline-none">${window.state.tiposEmbalagem.map(t=>`<option value="${t}" ${p.tipo_estoque===t?'selected':''}>${t}</option>`).join('')}</select>
+                <input name="foto_url" value="${p.foto_url}" placeholder="URL Foto" class="md:col-span-2 p-4 bg-gray-50 rounded-2xl font-bold border outline-none">
+                <button class="md:col-span-2 bg-rose-600 text-white font-black py-4 rounded-2xl uppercase shadow-lg">Salvar Produto</button>
+            </form></div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">${window.state.produtos.map(prod => `
+                <div class="card p-5 flex items-center gap-4">
+                    <img src="${prod.foto_url}" class="w-12 h-12 object-contain">
+                    <div class="flex-1 font-black text-xs uppercase">${prod.nome}<br><span class="text-rose-600">R$ ${parseFloat(prod.preco).toFixed(2)}</span></div>
+                    <button onclick='window.state.editando=${JSON.stringify(prod)};window.render()' class="text-blue-500 font-black text-[9px] uppercase">Editar</button>
+                </div>`).join('')}</div>`;
         }
 
         function renderPix() {
-            return `
-                <div class="card p-10 max-w-xl mx-auto">
-                    <h2 class="text-2xl font-black uppercase italic mb-6">Configuração PIX</h2>
-                    <p class="text-xs font-bold text-gray-400 mb-8 uppercase">Esta chave será exibida para todos os clientes no momento do pagamento.</p>
-                    <form onsubmit="window.actions.salvarPix(event)" class="space-y-4">
-                        <input name="pixChave" value="${window.state.config.pixChave || ''}" placeholder="Sua Chave PIX (CPF, CNPJ, Telefone ou Aleatória)" class="w-full p-5 bg-gray-50 rounded-2xl font-bold border outline-none focus:border-rose-600" required>
-                        <button class="w-full py-5 bg-rose-600 text-white rounded-2xl font-black uppercase shadow-lg">Salvar Chave</button>
-                    </form>
-                </div>`;
+            return `<div class="card p-10 max-w-xl mx-auto"><h2 class="text-xl font-black uppercase mb-6 italic">Chave PIX</h2>
+                <form onsubmit="window.actions.salvarPix(event)" class="space-y-4">
+                    <input name="pixChave" value="${window.state.config.pixChave || ''}" class="w-full p-5 bg-gray-50 rounded-2xl font-bold border outline-none" placeholder="Sua Chave PIX">
+                    <button class="w-full py-5 bg-rose-600 text-white rounded-2xl font-black uppercase shadow-lg">Atualizar</button>
+                </form></div>`;
         }
 
         window.actions = {
             login: async (e) => {
                 e.preventDefault();
-                try { await signInWithEmailAndPassword(auth, e.target.email.value, e.target.pass.value); } catch (err) { alert("Erro no Login."); }
+                try { await signInWithEmailAndPassword(auth, e.target.email.value, e.target.pass.value); } catch (err) { alert("Erro de Login"); }
             },
             logout: async () => { await signOut(auth); },
             loadProdutos: async () => {
@@ -226,28 +210,28 @@
                 window.state.editando = null;
                 window.actions.loadProdutos();
             },
-            excluirProduto: async (id) => {
-                if(confirm("Excluir item?")) {
-                    await fetch(`${API_BASE}/produtos/${id}`, {method:'DELETE'});
-                    window.state.editando = null;
-                    window.actions.loadProdutos();
-                }
-            },
             salvarPix: async (e) => {
                 e.preventDefault();
-                const chave = new FormData(e.target).get('pixChave');
-                await setDoc(doc(db, "config", "loja"), { pixChave: chave });
-                window.state.config.pixChave = chave;
-                alert("Chave PIX atualizada com sucesso!");
+                await setDoc(doc(db, "config", "loja"), { pixChave: new FormData(e.target).get('pixChave') });
+                alert("Chave Salva!");
                 window.render();
             },
-            mudarStatus: async (id, status) => {
-                const update = { status };
-                const agora = new Date();
-                if (status === 'EMBALANDO') update.horarioEmbalando = agora;
-                if (status.includes('SAIU') || status.includes('DISPONÍVEL')) update.horarioSaiu = agora;
-                if (status === 'FINALIZADO') update.horarioConcluido = agora;
-                await updateDoc(doc(db, "vendas_logs", id), update);
+            confirmarPagamento: async (id) => {
+                await updateDoc(doc(db, "vendas_logs", id), { confirmacaoPagamento: false, status: 'EMBALANDO', horarioEmbalando: serverTimestamp() });
+            },
+            mudarStatus: async (id, acao) => {
+                const docRef = doc(db, "vendas_logs", id);
+                const snap = await getDoc(docRef);
+                const p = snap.data();
+                let statusFinal = acao;
+                const update = {};
+                if (acao === 'EMBALANDO') update.horarioEmbalando = serverTimestamp();
+                else if (acao === 'PRONTO') {
+                    statusFinal = p.entrega === 'RETIRADA' ? 'DISPONÍVEL PARA RETIRADA' : 'SAIU PARA ENTREGA';
+                    update.horarioSaiu = serverTimestamp();
+                } else if (acao === 'FINALIZADO') update.horarioConcluido = serverTimestamp();
+                update.status = statusFinal;
+                await updateDoc(docRef, update);
             }
         };
 
