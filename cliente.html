@@ -3,17 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AppEgg | Ovos Premium</title>
+    <title>AppEgg | Loja de Ovos</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
-        :root { --brand: #e11d48; }
-        body { font-family: 'Inter', sans-serif; background: #f9fafb; color: #1f2937; -webkit-tap-highlight-color: transparent; }
-        .premium-card { background: white; border-radius: 32px; box-shadow: 0 10px 30px rgba(0,0,0,0.04); border: 1px solid rgba(0,0,0,0.02); }
-        .btn-primary { background: var(--brand); color: white; border-radius: 24px; font-weight: 900; text-transform: uppercase; padding: 20px; width: 100%; transition: 0.3s; box-shadow: 0 10px 20px rgba(225, 29, 72, 0.2); }
-        .input-egg { width: 100%; padding: 18px; background: #f3f4f6; border-radius: 20px; border: 2px solid transparent; font-weight: 700; outline: none; }
-        .input-egg:focus { border-color: var(--brand); background: #fff; }
-        .badge-cart { position: absolute; top: -5px; right: -5px; background: var(--brand); color: white; width: 22px; height: 22px; border-radius: 50%; font-size: 11px; display: flex; align-items: center; justify-content: center; font-weight: 900; border: 2px solid white; }
+        body { font-family: 'Inter', sans-serif; background: #f9fafb; color: #111827; }
+        .card-egg { background: white; border-radius: 24px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); border: 1px solid #f1f1f1; }
+        .btn-main { background: #e11d48; color: white; border-radius: 18px; font-weight: 900; text-transform: uppercase; padding: 16px; width: 100%; transition: 0.2s; }
+        .btn-main:active { transform: scale(0.95); }
+        .input-user { width: 100%; padding: 14px; background: #f3f4f6; border-radius: 14px; border: 2px solid transparent; font-weight: 700; outline: none; }
+        .input-user:focus { border-color: #e11d48; background: white; }
+        .status-pill { font-size: 9px; font-weight: 900; padding: 4px 8px; border-radius: 8px; text-transform: uppercase; }
+        .status-CRIADO { background: #f3f4f6; color: #6b7280; }
+        .status-PREPARANDO { background: #fef3c7; color: #d97706; }
+        .status-ROTA { background: #dcfce7; color: #166534; }
     </style>
 </head>
 <body class="pb-24">
@@ -34,180 +37,144 @@
 
         const appFB = initializeApp(firebaseConfig);
         const db = getFirestore(appFB);
-        const API_BASE = "https://painel-distribuidora-backend.onrender.com/api";
+        const API_URL = "https://painel-distribuidora-backend.onrender.com/api";
 
-        window.state = {
-            view: 'loja', 
-            produtos: [],
-            carrinho: [],
+        window.state = { 
+            view: 'vitrine', 
+            produtos: [], 
+            carrinho: [], 
             meusPedidos: [],
-            cliente: JSON.parse(localStorage.getItem('appegg_user')) || { nome: '', telefone: '', enderecos: [] },
-            checkout: { metodoPagamento: '', enderecoSelecionado: '' }
+            perfil: JSON.parse(localStorage.getItem('appegg_perfil')) || { nome: '', fone: '', local: '' } 
         };
 
         async function init() {
             try {
-                const r = await fetch(`${API_BASE}/produtos`);
-                window.state.produtos = await r.json();
-            } catch { window.state.produtos = []; }
-            if (window.state.cliente.telefone) syncMeusPedidos();
-            render();
+                const r = await fetch(`${API_URL}/produtos`);
+                const data = await r.json();
+                window.state.produtos = data.map(p => ({ ...p, id: p.id || p._id }));
+                if(window.state.perfil.fone) syncPedidos();
+                render();
+            } catch(e) { console.error("Erro init", e); }
+        }
+
+        function syncPedidos() {
+            const q = query(collection(db, "vendas_logs"), where("telefone", "==", window.state.perfil.fone), orderBy("criadoEm", "desc"));
+            onSnapshot(q, s => {
+                window.state.meusPedidos = s.docs.map(d => ({ id: d.id, ...d.data() }));
+                render();
+            });
         }
 
         window.render = () => {
             const root = document.getElementById('app-root');
+            const s = window.state;
             root.innerHTML = `
-                <header class="p-6 pt-10 bg-white mb-4 flex justify-between items-center sticky top-0 z-50">
-                    <div><h1 class="text-3xl font-black tracking-tighter">AppEgg</h1></div>
+                <header class="p-6 bg-white sticky top-0 z-50 flex justify-between items-center border-b">
+                    <h1 class="text-xl font-black text-rose-600 uppercase">AppEgg</h1>
                     <div class="flex gap-4">
-                        <button onclick="window.state.view='loja';render()" class="p-2 ${window.state.view==='loja'?'text-rose-600':'text-gray-300'}">
-                            <svg class="w-7 h-7" fill="currentColor" viewBox="0 0 20 20"><path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"></path></svg>
-                        </button>
-                        <button onclick="window.state.view='carrinho';render()" class="relative p-2 ${window.state.view==='carrinho'?'text-rose-600':'text-gray-300'}">
-                            <svg class="w-7 h-7" fill="currentColor" viewBox="0 0 20 20"><path d="M3 1a1 1 0 000 2h1.22l.305 1.222a.997.997 0 00.01.042l1.358 5.43-.893.892C3.74 11.846 4.632 14 6.414 14H15a1 1 0 100-2H6.414l1-1H14a1 1 0 00.894-.553l3-6A1 1 0 0017 3H6.28l-.31-1.243A1 1 0 005 1H3zM16 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM6.5 18a1.5 1.5 0 100-3 1.5 1.5 0 000 3z"></path></svg>
-                            ${window.state.carrinho.length > 0 ? `<div class="badge-cart">${window.state.carrinho.length}</div>` : ''}
-                        </button>
-                        <button onclick="window.state.view='pedidos';render()" class="p-2 ${window.state.view==='pedidos'?'text-rose-600':'text-gray-300'}">
-                            <svg class="w-7 h-7" fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"></path><path d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5z"></path></svg>
-                        </button>
+                        <button onclick="window.state.view='vitrine';window.render()" class="text-xs font-bold ${s.view==='vitrine'?'text-rose-600':''}">LOJA</button>
+                        <button onclick="window.state.view='pedidos';window.render()" class="text-xs font-bold ${s.view==='pedidos'?'text-rose-600':''}">MEUS PEDIDOS</button>
                     </div>
                 </header>
-                <main class="px-6">${renderView()}</main>
+                <main class="p-6">
+                    ${s.view === 'vitrine' ? drawVitrine() : s.view === 'carrinho' ? drawCarrinho() : drawPedidos()}
+                </main>
+                ${s.carrinho.length > 0 && s.view === 'vitrine' ? `
+                    <div class="fixed bottom-0 left-0 right-0 p-4 bg-white border-t">
+                        <button onclick="window.state.view='carrinho';window.render()" class="btn-main">Ver Carrinho (${s.carrinho.length})</button>
+                    </div>` : ''}
             `;
         };
 
-        function renderView() {
-            if(window.state.view === 'loja') return renderLoja();
-            if(window.state.view === 'carrinho') return renderCarrinho();
-            if(window.state.view === 'pagamento') return renderPagamento();
-            if(window.state.view === 'endereco') return renderEndereco();
-            if(window.state.view === 'pedidos') return renderMeusPedidos();
-        }
-
-        function renderLoja() {
-            return `<div class="grid gap-6">${window.state.produtos.map(p => `
-                <div class="premium-card overflow-hidden">
-                    <img src="${p.foto_url || 'https://via.placeholder.com/300'}" class="w-full h-48 object-cover">
-                    <div class="p-6 flex justify-between items-center">
-                        <div><h3 class="font-black uppercase text-sm">${p.nome}</h3><p class="text-rose-600 font-black">R$ ${p.preco.toFixed(2)}</p></div>
-                        <button onclick='window.addToCart(${JSON.stringify(p)})' class="bg-gray-900 text-white p-4 rounded-2xl shadow-lg active:scale-95">+</button>
+        function drawVitrine() {
+            return `<div class="grid gap-4">${window.state.produtos.map(p => `
+                <div class="card-egg p-4 flex items-center justify-between">
+                    <div class="flex items-center gap-4">
+                        <img src="${p.foto_url || ''}" class="w-16 h-16 rounded-xl object-cover bg-gray-50">
+                        <div>
+                            <p class="text-[10px] font-black text-gray-400 uppercase">${p.embalagem}</p>
+                            <h3 class="font-black text-sm uppercase">${p.nome}</h3>
+                            <p class="text-rose-600 font-black">R$ ${Number(p.preco).toFixed(2)}</p>
+                        </div>
                     </div>
+                    <button onclick='addToCart(${JSON.stringify(p)})' class="bg-gray-900 text-white w-10 h-10 rounded-full font-black">+</button>
                 </div>`).join('')}</div>`;
         }
 
-        window.addToCart = (p) => { window.state.carrinho.push(p); render(); };
+        window.addToCart = (p) => { window.state.carrinho.push(p); window.render(); };
 
-        function renderCarrinho() {
-            const total = window.state.carrinho.reduce((acc, i) => acc + i.preco, 0);
-            if (window.state.carrinho.length === 0) return `<div class="text-center py-20 font-black text-gray-300 uppercase">Seu carrinho está vazio</div>`;
+        function drawCarrinho() {
+            const total = window.state.carrinho.reduce((a, b) => a + Number(b.preco), 0);
             return `
-                <div class="premium-card p-6 mb-6">
-                    <h2 class="font-black text-xl mb-6 uppercase">Itens no Carrinho</h2>
-                    ${window.state.carrinho.map((item, idx) => `
-                        <div class="flex justify-between py-4 border-b">
-                            <span class="font-bold text-sm uppercase">${item.nome}</span>
-                            <div class="flex items-center gap-4">
-                                <span class="font-black text-rose-600">R$ ${item.preco.toFixed(2)}</span>
-                                <button onclick="window.state.carrinho.splice(${idx},1);render()" class="text-gray-300 font-black">REMOVER</button>
-                            </div>
-                        </div>`).join('')}
-                    <div class="mt-8 flex justify-between items-center">
-                        <span class="font-black text-gray-400">SUBTOTAL</span>
-                        <span class="text-2xl font-black text-rose-600">R$ ${total.toFixed(2)}</span>
+                <div class="card-egg p-6 mb-6">
+                    <h2 class="font-black text-lg mb-4 uppercase">Finalizar Pedido</h2>
+                    <div class="space-y-3 mb-6">
+                        <input id="uNome" placeholder="Nome" value="${window.state.perfil.nome}" class="input-user">
+                        <input id="uFone" placeholder="WhatsApp" value="${window.state.perfil.fone}" class="input-user">
+                        <input id="uLocal" placeholder="Endereço Completo" value="${window.state.perfil.local}" class="input-user">
+                    </div>
+                    <div class="border-t pt-4">
+                        ${window.state.carrinho.map(i => `<p class="text-xs font-bold uppercase mb-1">1x ${i.nome}</p>`).join('')}
+                        <p class="text-xl font-black text-rose-600 mt-4">TOTAL: R$ ${total.toFixed(2)}</p>
                     </div>
                 </div>
-                <button onclick="window.state.view='pagamento';render()" class="btn-primary">Ir para o Pagamento</button>
+                <button onclick="sendOrder()" class="btn-main">Enviar para o WhatsApp</button>
+                <button onclick="window.state.view='vitrine';window.render()" class="w-full mt-4 font-bold text-gray-400 text-xs uppercase text-center">Adicionar mais itens</button>
             `;
         }
 
-        function renderPagamento() {
-            return `
-                <div class="premium-card p-8">
-                    <h2 class="font-black text-xl mb-6 uppercase">Opção de Pagamento</h2>
-                    <div class="space-y-4">
-                        <button onclick="setPagamento('PAGO_PIX')" class="input-egg text-left border-2 ${window.state.checkout.metodoPagamento === 'PAGO_PIX' ? 'border-rose-500 bg-white' : ''}">📱 Já realizei o PIX</button>
-                        <button onclick="setPagamento('PENDENTE_ENTREGA')" class="input-egg text-left border-2 ${window.state.checkout.metodoPagamento === 'PENDENTE_ENTREGA' ? 'border-rose-500 bg-white' : ''}">🚚 Pagar na Entrega</button>
-                        <button onclick="setPagamento('PENDENTE_RETIRADA')" class="input-egg text-left border-2 ${window.state.checkout.metodoPagamento === 'PENDENTE_RETIRADA' ? 'border-rose-500 bg-white' : ''}">🏪 Pagar na Retirada</button>
-                    </div>
-                    <button onclick="window.state.view='endereco';render()" class="btn-primary mt-8" ${!window.state.checkout.metodoPagamento ? 'disabled opacity-50' : ''}>Próximo: Endereço</button>
-                </div>
-            `;
-        }
+        window.sendOrder = async () => {
+            const n = document.getElementById('uNome').value;
+            const f = document.getElementById('uFone').value;
+            const l = document.getElementById('uLocal').value;
+            if(!n || !f || !l) return alert("Preencha todos os campos!");
 
-        window.setPagamento = (val) => { window.state.checkout.metodoPagamento = val; render(); };
+            window.state.perfil = { nome: n, fone: f, local: l };
+            localStorage.setItem('appegg_perfil', JSON.stringify(window.state.perfil));
 
-        function renderEndereco() {
-            return `
-                <div class="premium-card p-8">
-                    <h2 class="font-black text-xl mb-6 uppercase">Endereço de Entrega</h2>
-                    <div class="flex gap-2 mb-6">
-                        <input id="new-end" placeholder="Adicionar novo endereço" class="input-egg !py-3">
-                        <button onclick="addEndereco()" class="bg-gray-900 text-white px-6 rounded-2xl font-black">+</button>
-                    </div>
-                    <div class="space-y-3 mb-8">
-                        ${window.state.cliente.enderecos.map(end => `
-                            <button onclick="window.state.checkout.enderecoSelecionado='${end}';render()" 
-                                class="input-egg text-left text-xs border-2 ${window.state.checkout.enderecoSelecionado === end ? 'border-rose-500 bg-white' : ''}">${end}</button>
-                        `).join('')}
-                    </div>
-                    <input id="user-nome" placeholder="Seu Nome" class="input-egg mb-3" value="${window.state.cliente.nome}">
-                    <input id="user-tel" placeholder="Seu WhatsApp" class="input-egg mb-6" value="${window.state.cliente.telefone}">
-                    <button onclick="finalizarCompra()" class="btn-primary" ${!window.state.checkout.enderecoSelecionado ? 'disabled opacity-50' : ''}>Finalizar Compra</button>
-                </div>
-            `;
-        }
-
-        window.addEndereco = () => {
-            const val = document.getElementById('new-end').value;
-            if(val) { window.state.cliente.enderecos.push(val); render(); }
-        };
-
-        window.finalizarCompra = async () => {
-            const nome = document.getElementById('user-nome').value;
-            const tel = document.getElementById('user-tel').value;
-            window.state.cliente.nome = nome;
-            window.state.cliente.telefone = tel;
-            localStorage.setItem('appegg_user', JSON.stringify(window.state.cliente));
-
-            const total = window.state.carrinho.reduce((acc, i) => acc + i.preco, 0);
+            const total = window.state.carrinho.reduce((a, b) => a + Number(b.preco), 0);
+            
+            // ESTRUTURA iFOOD: itens[] para o Admin baixar stock
             const pedido = {
-                clienteNome: nome,
-                telefone: tel,
-                endereco: window.state.checkout.enderecoSelecionado,
-                produto: window.state.carrinho.map(i => i.nome).join(', '),
+                clienteNome: n,
+                telefone: f,
+                endereco: l,
+                itens: window.state.carrinho.map(i => ({
+                    produtoId: i.id,
+                    nome: i.nome,
+                    quantidade: 1,
+                    preco: Number(i.preco)
+                })),
                 valorTotal: total,
-                metodoPagamento: window.state.checkout.metodoPagamento,
-                statusPagamento: window.state.checkout.metodoPagamento === 'PAGO_PIX' ? 'PAGO' : 'PENDENTE',
                 status: 'CRIADO',
                 criadoEm: serverTimestamp()
             };
 
             await addDoc(collection(db, "vendas_logs"), pedido);
-            alert("✅ Pedido criado com sucesso!");
+            alert("🐣 Pedido recebido! Acompanhe o status agora.");
             window.state.carrinho = [];
             window.state.view = 'pedidos';
-            syncMeusPedidos();
+            syncPedidos();
         };
 
-        function syncMeusPedidos() {
-            const q = query(collection(db, "vendas_logs"), where("telefone", "==", window.state.cliente.telefone), orderBy("criadoEm", "desc"));
-            onSnapshot(q, s => { window.state.meusPedidos = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); });
-        }
-
-        function renderMeusPedidos() {
-            return `<div class="space-y-4">
-                <h2 class="font-black text-xl mb-4 uppercase">Meus Pedidos</h2>
-                ${window.state.meusPedidos.map(p => `
-                <div class="premium-card p-6 border-l-[8px] border-rose-500">
-                    <div class="flex justify-between items-start">
-                        <h4 class="font-black text-xs uppercase">${p.produto}</h4>
-                        <span class="bg-gray-100 px-3 py-1 rounded text-[9px] font-black uppercase text-gray-400">${p.status}</span>
-                    </div>
-                    <div class="flex justify-between items-center mt-6">
-                        <span class="text-rose-600 font-black">R$ ${Number(p.valorTotal).toFixed(2)}</span>
-                        <span class="text-[9px] font-black uppercase ${p.statusPagamento === 'PAGO' ? 'text-green-600' : 'text-amber-500'}">${p.statusPagamento}</span>
-                    </div>
-                </div>`).join('')}</div>`;
+        function drawPedidos() {
+            return `
+                <h2 class="font-black text-lg mb-6 uppercase">Meus Pedidos</h2>
+                <div class="space-y-4">
+                    ${window.state.meusPedidos.map(p => `
+                        <div class="card-egg p-5 border-l-8 ${p.status === 'FINALIZADO' ? 'border-green-500' : 'border-rose-600'}">
+                            <div class="flex justify-between items-start mb-2">
+                                <span class="status-pill status-${p.status?.split(' ')[0]}">${p.status}</span>
+                                <span class="text-[10px] font-bold text-gray-400">#${p.id.slice(-4)}</span>
+                            </div>
+                            <p class="text-xs font-black uppercase text-gray-700">${Array.isArray(p.itens) ? p.itens.map(i => i.nome).join(', ') : 'Pedido'}</p>
+                            <div class="flex justify-between mt-4 items-center">
+                                <span class="font-black text-rose-600">R$ ${Number(p.valorTotal).toFixed(2)}</span>
+                                <button onclick="window.open('https://wa.me/5511999999999')" class="text-[10px] font-black text-blue-500">SUPORTE</button>
+                            </div>
+                        </div>`).join('') || '<p class="text-center font-black text-gray-300 py-10">NENHUM PEDIDO ENCONTRADO</p>'}
+                </div>
+            `;
         }
 
         init();
