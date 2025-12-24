@@ -2,38 +2,26 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AppEgg | Peça Seus Ovos</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AppEgg Admin | Gestão Premium</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
-        
-        :root { --brand: #e11d48; }
-        body { font-family: 'Inter', sans-serif; background: #f9fafb; color: #1f2937; -webkit-tap-highlight-color: transparent; }
-        
-        .premium-card { background: white; border-radius: 32px; box-shadow: 0 10px 30px rgba(0,0,0,0.04); border: 1px solid rgba(0,0,0,0.03); transition: all 0.3s ease; }
-        .premium-card:active { transform: scale(0.98); }
-        
-        .btn-primary { background: var(--brand); color: white; border-radius: 24px; font-weight: 900; text-transform: uppercase; letter-spacing: -0.5px; transition: 0.2s; shadow: 0 10px 20px rgba(225, 29, 72, 0.2); }
-        .btn-primary:disabled { background: #e5e7eb; color: #9ca3af; shadow: none; }
-
-        .egg-badge { position: absolute; top: 12px; right: 12px; background: rgba(255,255,255,0.9); backdrop-filter: blur(8px); padding: 6px 12px; border-radius: 14px; font-weight: 800; font-size: 10px; color: var(--brand); }
-        
-        .status-pill { padding: 6px 12px; border-radius: 12px; font-size: 10px; font-weight: 900; text-transform: uppercase; }
-        .status-CRIADO { background: #f3f4f6; color: #6b7280; }
-        .status-PREPARANDO { background: #fef3c7; color: #d97706; }
-        .status-SAIU { background: #dcfce7; color: #166534; }
-
-        .no-scrollbar::-webkit-scrollbar { display: none; }
+        body { font-family: 'Inter', sans-serif; background: #f4f7f6; color: #1f2937; }
+        .nav-link { font-size: 13px; font-weight: 800; text-transform: uppercase; color: #6b7280; padding: 14px 24px; border-radius: 16px; cursor: pointer; transition: 0.3s; }
+        .nav-link.active { color: #e11d48; background: #fff; box-shadow: 0 4px 12px rgba(225, 29, 72, 0.08); }
+        .card { background: #ffffff; border-radius: 32px; box-shadow: 0 10px 40px rgba(0,0,0,0.03); border: 1px solid rgba(0,0,0,0.02); }
+        .input-egg { width: 100%; padding: 16px; background: #f9fafb; border-radius: 20px; border: 1px solid #eee; font-weight: 700; font-size: 14px; outline: none; }
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 20px; }
     </style>
 </head>
-<body class="pb-24">
-
+<body>
     <div id="app-root"></div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-        import { getFirestore, collection, addDoc, onSnapshot, query, where, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, query, orderBy, doc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyD3Otz9-zdZH-E5Feg9IOGWPzVycoe8gro",
@@ -46,197 +34,163 @@
 
         const appFB = initializeApp(firebaseConfig);
         const db = getFirestore(appFB);
+        const auth = getAuth(appFB);
         const API_BASE = "https://painel-distribuidora-backend.onrender.com/api";
-        const IMG_DEFAULT = "https://via.placeholder.com/300x300?text=AppEgg+Ovos";
 
-        window.state = {
-            view: 'loja', // loja, pedidos, checkout
-            produtos: [],
-            meusPedidos: [],
-            carrinho: null,
-            loading: true,
-            cliente: JSON.parse(localStorage.getItem('appegg_user')) || null
-        };
+        window.state = { user: null, view: 'pedidos', logs: [], produtos: [], editando: null, tempImg: null };
+        let lastCount = -1;
 
-        // Lógica de Foto Segura (Mesma do Admin para paridade total)
-        window.safeImg = (url) => {
-            if (!url || typeof url !== "string" || url.trim() === "" || url.includes("null")) return IMG_DEFAULT;
-            return url.trim();
-        };
-
-        async function init() {
-            await loadProdutos();
-            if (state.cliente) {
-                syncMeusPedidos();
-            }
-            render();
-        }
+        onAuthStateChanged(auth, user => {
+            window.state.user = user;
+            if (user) { loadProdutos(); syncRealtime(); }
+            window.render();
+        });
 
         async function loadProdutos() {
             try {
                 const r = await fetch(`${API_BASE}/produtos`);
                 const data = await r.json();
-                state.produtos = Array.isArray(data) ? data : [];
-            } catch (e) {
-                console.error("Erro API:", e);
-                state.produtos = [];
-            }
-            state.loading = false;
-            render();
+                window.state.produtos = Array.isArray(data) ? data : [];
+            } catch { window.state.produtos = []; }
+            window.render();
         }
 
-        function syncMeusPedidos() {
-            const q = query(
-                collection(db, "vendas_logs"), 
-                where("telefone", "==", state.cliente.telefone),
-                orderBy("criadoEm", "desc")
-            );
-            onSnapshot(q, s => {
-                state.meusPedidos = s.docs.map(d => ({ id: d.id, ...d.data() }));
-                render();
+        function syncRealtime() {
+            onSnapshot(query(collection(db, "vendas_logs"), orderBy("criadoEm", "desc")), s => {
+                const logs = s.docs.map(d => ({ id: d.id, ...d.data() }));
+                if (lastCount !== -1 && logs.length > lastCount) {
+                    new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3').play().catch(() => {});
+                    alert("🐣 NOVO PEDIDO RECEBIDO!");
+                }
+                lastCount = logs.length;
+                window.state.logs = logs;
+                window.render();
             });
         }
 
         window.render = () => {
             const root = document.getElementById('app-root');
-            
-            root.innerHTML = `
-                <header class="p-6 pt-10 bg-white mb-4">
-                    <div class="flex justify-between items-center">
-                        <div>
-                            <h1 class="text-3xl font-black tracking-tighter text-gray-900">AppEgg</h1>
-                            <p class="text-[10px] font-bold text-rose-600 uppercase tracking-widest">Ovos Direto da Granja</p>
-                        </div>
-                        <div class="flex gap-2">
-                            <button onclick="state.view='loja';render()" class="p-3 rounded-2xl ${state.view==='loja'?'bg-rose-50 text-rose-600':'text-gray-400'}">
-                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
-                            </button>
-                            <button onclick="state.view='pedidos';render()" class="p-3 rounded-2xl ${state.view==='pedidos'?'bg-rose-50 text-rose-600':'text-gray-400'}">
-                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-                            </button>
-                        </div>
-                    </div>
-                </header>
+            if (!window.state.user) { root.innerHTML = renderLogin(); return; }
 
-                <main class="px-6">
-                    ${state.view === 'loja' ? renderLoja() : 
-                      state.view === 'checkout' ? renderCheckout() : renderMeusPedidos()}
+            root.innerHTML = `
+                <nav class="bg-white border-b px-8 h-24 flex justify-between items-center sticky top-0 z-50">
+                    <div class="font-black text-rose-600 text-2xl tracking-tighter">AppEgg Admin</div>
+                    <div class="flex gap-2">
+                        <button onclick="window.state.view='pedidos';render()" class="nav-link ${window.state.view==='pedidos'?'active':''}">Pedidos</button>
+                        <button onclick="window.state.view='estoque';render()" class="nav-link ${window.state.view==='estoque'?'active':''}">Estoque</button>
+                        <button onclick="signOut(auth)" class="nav-link text-rose-600">Sair</button>
+                    </div>
+                </nav>
+                <main class="p-8 max-w-6xl mx-auto">
+                    ${window.state.view === 'pedidos' ? renderPedidos() : renderEstoque()}
                 </main>
-            `;
+                ${window.state.editando ? renderModalEdicao() : ''}`;
         };
 
-        function renderLoja() {
-            if (state.loading) return `<div class="py-20 text-center font-black text-gray-300 animate-pulse">CARREGANDO ESTOQUE...</div>`;
-            
+        function renderPedidos() {
+            return window.state.logs.map(l => `
+                <div class="card p-8 mb-6 border-l-[12px] border-rose-500">
+                    <div class="flex justify-between items-start mb-6">
+                        <div>
+                            <h3 class="font-black uppercase text-lg">${l.clienteNome}</h3>
+                            <p class="text-xs font-bold text-gray-400">${l.endereco}</p>
+                        </div>
+                        <div class="text-right">
+                            <div class="bg-rose-50 text-rose-600 px-4 py-2 rounded-2xl font-black text-[10px] uppercase">${l.status}</div>
+                            <p class="text-[9px] font-black text-amber-600 mt-2">${l.statusPagamento} (${l.metodoPagamento})</p>
+                        </div>
+                    </div>
+                    <div class="bg-gray-50 p-6 rounded-[24px] mb-6 flex justify-between items-center">
+                        <span class="font-black text-sm uppercase">${l.produto}</span>
+                        <span class="text-rose-600 font-black text-lg">R$ ${Number(l.valorTotal).toFixed(2)}</span>
+                    </div>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                        <button onclick="atualizarStatus('${l.id}', 'PREPARANDO')" class="bg-white border p-3 rounded-xl font-black text-[10px] uppercase">Preparar</button>
+                        <button onclick="atualizarStatus('${l.id}', 'SAIU PARA ENTREGA')" class="bg-white border p-3 rounded-xl font-black text-[10px] uppercase">Enviar</button>
+                        <button onclick="atualizarStatus('${l.id}', 'FINALIZADO')" class="bg-gray-900 text-white p-3 rounded-xl font-black text-[10px] uppercase">Finalizar</button>
+                    </div>
+                </div>`).join('');
+        }
+
+        async function atualizarStatus(id, status) {
+            await updateDoc(doc(db, "vendas_logs", id), { status });
+        }
+
+        function renderEstoque() {
             return `
-                <div class="grid grid-cols-1 gap-6">
-                    ${state.produtos.map(p => `
-                        <div class="premium-card overflow-hidden" onclick="abrirCheckout(${JSON.stringify(p).replace(/"/g, '&quot;')})">
-                            <div class="relative h-48">
-                                <img src="${safeImg(p.foto_url)}" class="w-full h-full object-cover">
-                                <div class="egg-badge">${p.embalagem}</div>
-                            </div>
-                            <div class="p-6 flex justify-between items-end">
+                <div class="flex justify-between items-center mb-8">
+                    <h2 class="text-3xl font-black uppercase tracking-tighter">Estoque</h2>
+                    <button onclick="window.abrirModalNovo()" class="bg-rose-600 text-white px-8 py-4 rounded-2xl font-black uppercase text-xs">+ Novo Produto</button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    ${window.state.produtos.map((p, i) => `
+                        <div class="card p-6 flex items-center justify-between">
+                            <div class="flex items-center gap-5">
+                                <img src="${p.foto_url || 'https://via.placeholder.com/100'}" class="w-16 h-16 rounded-2xl object-cover">
                                 <div>
-                                    <h3 class="font-black text-lg uppercase">${p.nome}</h3>
-                                    <p class="text-rose-600 font-black text-xl">R$ ${Number(p.preco).toFixed(2)}</p>
-                                </div>
-                                <div class="bg-gray-900 text-white p-4 rounded-2xl shadow-lg">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4"/></svg>
+                                    <p class="font-black text-sm uppercase">${p.nome}</p>
+                                    <p class="text-[10px] font-bold text-gray-400 uppercase">${p.quantidade} un no estoque</p>
                                 </div>
                             </div>
+                            <button onclick="window.editarIndex(${i})" class="bg-gray-50 px-5 py-2 rounded-xl font-black text-[10px] uppercase">Editar</button>
                         </div>
                     `).join('')}
-                </div>
-            `;
+                </div>`;
         }
 
-        window.abrirCheckout = (prod) => {
-            state.carrinho = prod;
-            state.view = 'checkout';
-            render();
-        };
+        window.abrirModalNovo = () => { window.state.editando = { nome: 'Ovo Branco', preco: 0, preco_custo: 0, quantidade: 0, embalagem: 'Cartela 30' }; window.state.tempImg = null; render(); };
+        window.editarIndex = (i) => { window.state.editando = {...window.state.produtos[i]}; window.state.tempImg = window.state.editando.foto_url; render(); };
 
-        function renderCheckout() {
-            const p = state.carrinho;
+        function renderModalEdicao() {
+            const p = window.state.editando;
             return `
-                <div class="premium-card p-8">
-                    <button onclick="state.view='loja';render()" class="text-[10px] font-black text-gray-400 mb-6 uppercase">← Voltar</button>
-                    <div class="flex items-center gap-4 mb-8">
-                        <img src="${safeImg(p.foto_url)}" class="w-20 h-20 rounded-[24px] object-cover">
-                        <div>
-                            <h2 class="font-black text-xl uppercase">${p.nome}</h2>
-                            <p class="text-rose-600 font-black">${p.embalagem} • R$ ${p.preco}</p>
-                        </div>
+                <div class="modal-overlay">
+                    <div class="card w-full max-w-xl p-10">
+                        <h3 class="font-black text-2xl uppercase mb-8">${p.id ? 'Editar' : 'Novo'} Produto</h3>
+                        <form onsubmit="window.salvarProd(event)" class="space-y-4">
+                            <input name="nome" value="${p.nome}" placeholder="Nome" class="input-egg" required>
+                            <input name="embalagem" value="${p.embalagem}" placeholder="Embalagem" class="input-egg" required>
+                            <div class="grid grid-cols-2 gap-4">
+                                <input name="preco" type="number" step="0.01" value="${p.preco}" placeholder="Preço Venda" class="input-egg" required>
+                                <input name="preco_custo" type="number" step="0.01" value="${p.preco_custo}" placeholder="Preço Custo" class="input-egg" required>
+                            </div>
+                            <input name="quantidade" type="number" value="${p.quantidade}" placeholder="Estoque" class="input-egg" required>
+                            <input name="foto_url" value="${p.foto_url || ''}" placeholder="URL da Foto (ou deixe vazio)" class="input-egg">
+                            
+                            <div class="pt-6 flex gap-3">
+                                <button type="button" onclick="window.state.editando=null;render()" class="w-1/3 font-black text-[10px] uppercase text-gray-400">Cancelar</button>
+                                <button class="btn-primary flex-1 bg-rose-600 text-white p-5 rounded-2xl font-black uppercase">Salvar Produto</button>
+                            </div>
+                        </form>
                     </div>
-
-                    <form onsubmit="finalizarPedido(event)" class="space-y-4">
-                        <input name="nome" placeholder="Seu Nome" required class="w-full p-5 bg-gray-50 rounded-2xl border-none font-bold outline-none focus:ring-2 ring-rose-500" value="${state.cliente?.nome || ''}">
-                        <input name="whatsapp" placeholder="WhatsApp (DDD)" required type="tel" class="w-full p-5 bg-gray-50 rounded-2xl border-none font-bold outline-none focus:ring-2 ring-rose-500" value="${state.cliente?.telefone || ''}">
-                        <input name="endereco" placeholder="Endereço de Entrega" required class="w-full p-5 bg-gray-50 rounded-2xl border-none font-bold outline-none focus:ring-2 ring-rose-500">
-                        
-                        <div class="pt-6">
-                            <button class="btn-primary w-full py-6 text-sm">Confirmar Pedido</button>
-                        </div>
-                    </form>
-                </div>
-            `;
+                </div>`;
         }
 
-        window.finalizarPedido = async (e) => {
+        window.salvarProd = async (e) => {
             e.preventDefault();
             const f = new FormData(e.target);
-            const cliente = { nome: f.get('nome'), telefone: f.get('whatsapp') };
-            localStorage.setItem('appegg_user', JSON.stringify(cliente));
-            state.cliente = cliente;
-
-            const pedido = {
-                clienteNome: cliente.nome,
-                telefone: cliente.telefone,
-                endereco: f.get('endereco'),
-                produto: state.carrinho.nome,
-                quantidade: 1,
-                valorTotal: state.carrinho.preco,
-                status: 'CRIADO',
-                criadoEm: serverTimestamp()
+            const payload = {
+                nome: f.get('nome'),
+                embalagem: f.get('embalagem'),
+                preco: parseFloat(f.get('preco')),
+                preco_custo: parseFloat(f.get('preco_custo')),
+                quantidade: parseInt(f.get('quantidade')),
+                foto_url: f.get('foto_url') || "https://images.unsplash.com/photo-1582722872445-41ca501ea14b?w=400"
             };
 
+            const id = window.state.editando.id;
+            const url = id ? `${API_BASE}/produtos/${id}` : `${API_BASE}/produtos`;
+            const method = id ? 'PUT' : 'POST';
+
             try {
-                await addDoc(collection(db, "vendas_logs"), pedido);
-                state.view = 'pedidos';
-                syncMeusPedidos();
-                render();
-            } catch (err) {
-                alert("Erro ao enviar pedido.");
-            }
+                const res = await fetch(url, { method, headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+                if(res.ok) { window.state.editando = null; loadProdutos(); }
+                else { alert("Erro ao salvar no servidor."); }
+            } catch { alert("Servidor offline."); }
         };
 
-        function renderMeusPedidos() {
-            if (!state.cliente) return `<div class="py-20 text-center font-black text-gray-300">VOCÊ AINDA NÃO TEM PEDIDOS</div>`;
-
-            return `
-                <h2 class="font-black uppercase text-xs text-gray-400 mb-6 tracking-widest text-center">Acompanhe seus pedidos</h2>
-                <div class="space-y-4">
-                    ${state.meusPedidos.map(p => `
-                        <div class="premium-card p-6 border-l-[10px] ${p.status === 'SAIU PARA ENTREGA' ? 'border-green-500' : 'border-rose-500'}">
-                            <div class="flex justify-between items-start mb-4">
-                                <div>
-                                    <p class="font-black text-sm uppercase">${p.produto}</p>
-                                    <p class="text-[10px] font-bold text-gray-400">${new Date(p.criadoEm?.seconds * 1000).toLocaleDateString()}</p>
-                                </div>
-                                <span class="status-pill status-${p.status?.split(' ')[0]}">${p.status}</span>
-                            </div>
-                            <div class="flex justify-between items-center bg-gray-50 p-4 rounded-2xl">
-                                <span class="text-[10px] font-black text-gray-400 uppercase">Total</span>
-                                <span class="font-black text-rose-600">R$ ${Number(p.valorTotal).toFixed(2)}</span>
-                            </div>
-                        </div>
-                    `).join('') || '<p class="text-center py-10 font-bold text-gray-300">Nenhum pedido recente</p>'}
-                </div>
-            `;
-        }
-
-        init();
+        function renderLogin() { return `<div class="min-h-screen flex items-center justify-center bg-gray-900 p-8"><form onsubmit="handleLogin(event)" class="bg-white p-12 rounded-[48px] shadow-2xl w-full max-w-md"><h1 class="text-4xl font-black text-rose-600 mb-8 text-center">AppEgg Admin</h1><input name="email" class="input-egg border mb-3" placeholder="Email"><input name="pass" type="password" class="input-egg border mb-8" placeholder="Senha"><button class="w-full bg-rose-600 text-white py-6 rounded-3xl font-black uppercase">Entrar</button></form></div>`; }
+        async function handleLogin(e) { e.preventDefault(); const f = new FormData(e.target); try { await signInWithEmailAndPassword(auth, f.get('email'), f.get('pass')); } catch { alert("Erro!"); } }
     </script>
 </body>
 </html>
