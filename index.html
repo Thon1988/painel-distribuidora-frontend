@@ -3,47 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AppEgg Admin | Dashboard Pro</title>
+    <title>AppEgg Admin | Gestão Premium</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
-        
         body { font-family: 'Inter', sans-serif; background: #f4f7f6; color: #1f2937; }
-        
-        /* ABAS E NAVEGAÇÃO */
-        .nav-link { 
-            font-size: 13px; font-weight: 800; text-transform: uppercase; 
-            color: #6b7280; padding: 14px 24px; border-radius: 16px; 
-            cursor: pointer; transition: all 0.3s ease; white-space: nowrap;
-            border: 2px solid transparent;
-        }
-        
-        @media (min-width: 1024px) {
-            .nav-link:hover { background: #fff; color: #e11d48; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-        }
-        
-        .nav-link.active { color: #e11d48; background: #fff; border-color: #ffe4e6; box-shadow: 0 4px 12px rgba(225, 29, 72, 0.08); }
-        
-        .logo-text { font-weight: 900; color: #e11d48; font-size: 1.6rem; letter-spacing: -1px; }
-        
+        .nav-link { font-size: 13px; font-weight: 800; text-transform: uppercase; color: #6b7280; padding: 14px 24px; border-radius: 16px; cursor: pointer; transition: 0.3s; }
+        .nav-link.active { color: #e11d48; background: #fff; box-shadow: 0 4px 12px rgba(225, 29, 72, 0.08); }
         .card { background: #ffffff; border-radius: 32px; box-shadow: 0 10px 40px rgba(0,0,0,0.03); border: 1px solid rgba(0,0,0,0.02); }
-        .input-egg { width: 100%; padding: 16px; background: #f9fafb; border-radius: 20px; border: 1px solid #eee; font-weight: 700; font-size: 14px; outline: none; transition: 0.2s; }
-        .input-egg:focus { border-color: #e11d48; background: #fff; }
-        
-        .stat-card { padding: 32px; border-radius: 32px; transition: transform 0.3s; }
-        .stat-card:hover { transform: scale(1.02); }
-
-        .progress-bar { height: 10px; border-radius: 20px; background: #f3f4f6; overflow: hidden; }
-        .progress-fill { height: 100%; background: linear-gradient(90deg, #e11d48, #fb7185); transition: 1s cubic-bezier(0.4, 0, 0.2, 1); }
-        
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-
-        .btn-flow { padding: 8px 12px; border-radius: 12px; font-weight: 800; font-size: 9px; text-transform: uppercase; transition: 0.2s; border: 1px solid #eee; background: #f9fafb; color: #6b7280; }
-        .btn-flow:hover { background: #fff; border-color: #e11d48; color: #e11d48; }
-        .btn-flow.active { background: #e11d48; color: white; border-color: #e11d48; }
-
-        /* MODAL */
-        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); z-index: 100; display: flex; items-center: center; justify-content: center; padding: 20px; }
+        .input-egg { width: 100%; padding: 16px; background: #f9fafb; border-radius: 20px; border: 1px solid #eee; font-weight: 700; font-size: 14px; outline: none; }
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 20px; }
     </style>
 </head>
 <body>
@@ -51,7 +20,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, query, orderBy, doc, updateDoc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, query, orderBy, doc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
         import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
 
         const firebaseConfig = {
@@ -67,18 +36,12 @@
         const db = getFirestore(appFB);
         const auth = getAuth(appFB);
         const API_BASE = "https://painel-distribuidora-backend.onrender.com/api";
-        const IMG_DEFAULT = "https://via.placeholder.com/300x300?text=AppEgg+Ovos";
 
-        window.state = { user: null, view: 'dashboard', logs: [], produtos: [], editando: null, filtroData: 'hoje', tempImg: null };
-        const state = window.state;
-
-        window.safeImg = (url) => {
-            if (!url || typeof url !== "string" || url.trim() === "" || !url.startsWith("http")) return IMG_DEFAULT;
-            return url.trim();
-        };
+        window.state = { user: null, view: 'pedidos', logs: [], produtos: [], editando: null, tempImg: null };
+        let lastCount = -1;
 
         onAuthStateChanged(auth, user => {
-            state.user = user;
+            window.state.user = user;
             if (user) { loadProdutos(); syncRealtime(); }
             window.render();
         });
@@ -87,255 +50,117 @@
             try {
                 const r = await fetch(`${API_BASE}/produtos`);
                 const data = await r.json();
-                state.produtos = Array.isArray(data) ? data : [];
-            } catch { 
-                state.produtos = []; 
-                console.error("Erro ao carregar API");
-            }
+                window.state.produtos = Array.isArray(data) ? data : [];
+            } catch { window.state.produtos = []; }
             window.render();
         }
 
         function syncRealtime() {
             onSnapshot(query(collection(db, "vendas_logs"), orderBy("criadoEm", "desc")), s => {
-                state.logs = s.docs.map(d => ({ id: d.id, ...d.data() }));
+                const logs = s.docs.map(d => ({ id: d.id, ...d.data() }));
+                if (lastCount !== -1 && logs.length > lastCount) {
+                    new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3').play().catch(() => {});
+                    alert("🐣 NOVO PEDIDO RECEBIDO!");
+                }
+                lastCount = logs.length;
+                window.state.logs = logs;
                 window.render();
-            });
-        }
-
-        function filtrarDados(dados) {
-            const agora = new Date();
-            return dados.filter(l => {
-                if (!l.criadoEm) return false;
-                const dt = new Date(l.criadoEm.seconds * 1000);
-                if (state.filtroData === 'hoje') return dt.toDateString() === agora.toDateString();
-                if (state.filtroData === 'semana') return (agora - dt) / (1000 * 3600 * 24) <= 7;
-                if (state.filtroData === 'mes') return (agora - dt) / (1000 * 3600 * 24) <= 30;
-                return true;
             });
         }
 
         window.render = () => {
             const root = document.getElementById('app-root');
-            if (!state.user) { root.innerHTML = renderLogin(); return; }
+            if (!window.state.user) { root.innerHTML = renderLogin(); return; }
 
             root.innerHTML = `
                 <nav class="bg-white border-b px-8 h-24 flex justify-between items-center sticky top-0 z-50">
-                    <div class="logo-text cursor-pointer" onclick="state.view='dashboard';render()">AppEgg</div>
-                    <div class="flex gap-2 overflow-x-auto no-scrollbar">
-                        <button onclick="state.view='pedidos';render()" class="nav-link ${state.view==='pedidos'?'active':''}">Pedidos</button>
-                        <button onclick="state.view='estoque';render()" class="nav-link ${state.view==='estoque'?'active':''}">Estoque</button>
-                        <button onclick="state.view='financeiro';render()" class="nav-link ${state.view==='financeiro'?'active':''}">Financeiro</button>
-                        <button onclick="signOut(auth)" class="nav-link text-rose-600 hover:bg-rose-50">Sair</button>
+                    <div class="font-black text-rose-600 text-2xl tracking-tighter">AppEgg Admin</div>
+                    <div class="flex gap-2">
+                        <button onclick="window.state.view='pedidos';render()" class="nav-link ${window.state.view==='pedidos'?'active':''}">Pedidos</button>
+                        <button onclick="window.state.view='estoque';render()" class="nav-link ${window.state.view==='estoque'?'active':''}">Estoque</button>
+                        <button onclick="signOut(auth)" class="nav-link text-rose-600">Sair</button>
                     </div>
                 </nav>
                 <main class="p-8 max-w-6xl mx-auto">
-                    ${renderHeaderContextual()}
-                    ${state.view === 'dashboard' ? renderDashboard() :
-                      state.view === 'financeiro' ? renderFinanceiro() : 
-                      state.view === 'estoque' ? renderEstoque() : renderPedidos()}
+                    ${window.state.view === 'pedidos' ? renderPedidos() : renderEstoque()}
                 </main>
-                ${state.editando ? renderModalEdicao() : ''}`;
-        };
-
-        function renderHeaderContextual() {
-            if (state.view === 'dashboard') return '';
-            return `
-                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4">
-                    <h2 class="text-3xl font-black uppercase tracking-tighter text-gray-800">${state.view}</h2>
-                    ${['pedidos', 'financeiro'].includes(state.view) ? `
-                        <div class="flex items-center gap-3 bg-white p-2 rounded-2xl shadow-sm border">
-                            <span class="text-[10px] font-black uppercase text-gray-400 ml-3">Filtrar:</span>
-                            <select onchange="state.filtroData=this.value;render()" class="bg-transparent font-black uppercase text-xs outline-none p-2 cursor-pointer">
-                                <option value="hoje" ${state.filtroData==='hoje'?'selected':''}>Hoje</option>
-                                <option value="semana" ${state.filtroData==='semana'?'selected':''}>7 Dias</option>
-                                <option value="mes" ${state.filtroData==='mes'?'selected':''}>30 Dias</option>
-                                <option value="todos" ${state.filtroData==='todos'?'selected':''}>Tudo</option>
-                            </select>
-                        </div>
-                    ` : ''}
-                </div>`;
-        }
-
-        function renderDashboard() {
-            const filtrados = filtrarDados(state.logs).filter(l => l.status === 'FINALIZADO');
-            let totalVendas = filtrados.reduce((acc, curr) => acc + Number(curr.valorTotal), 0);
-            
-            return `
-                <div class="mb-12">
-                    <h1 class="text-4xl font-black text-gray-900 mb-2 tracking-tighter">Bem-vindo ao AppEgg</h1>
-                    <p class="text-gray-500 font-medium">Sua central de inteligência para distribuição de ovos.</p>
-                </div>
-                
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-                    <div class="stat-card bg-rose-600 text-white shadow-xl shadow-rose-200">
-                        <p class="text-[10px] font-black uppercase opacity-70 mb-2">Vendas ${state.filtroData}</p>
-                        <h3 class="text-3xl font-black">R$ ${totalVendas.toFixed(2)}</h3>
-                    </div>
-                    <div class="stat-card bg-white border">
-                        <p class="text-[10px] font-black uppercase text-gray-400 mb-2">Pedidos Pendentes</p>
-                        <h3 class="text-3xl font-black text-gray-800">${state.logs.filter(l => !['FINALIZADO','CANCELADO'].includes(l.status)).length}</h3>
-                    </div>
-                    <div class="stat-card bg-gray-900 text-white">
-                        <p class="text-[10px] font-black uppercase opacity-60 mb-2">Itens em Estoque</p>
-                        <h3 class="text-3xl font-black">${state.produtos.reduce((acc, p) => acc + p.quantidade, 0)}</h3>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    <div class="card p-8">
-                        <div class="flex justify-between items-center mb-8">
-                            <h4 class="font-black uppercase text-sm text-gray-400">Ações Rápidas</h4>
-                        </div>
-                        <div class="grid grid-cols-2 gap-4">
-                            <button onclick="state.view='pedidos';render()" class="p-6 bg-rose-50 rounded-3xl text-rose-600 font-black text-xs uppercase hover:bg-rose-100 transition">Ver Pedidos</button>
-                            <button onclick="state.view='estoque';render()" class="p-6 bg-blue-50 rounded-3xl text-blue-600 font-black text-xs uppercase hover:bg-blue-100 transition">Gerir Estoque</button>
-                        </div>
-                    </div>
-                    <div class="card p-8">
-                        <h4 class="font-black uppercase text-sm text-gray-400 mb-6">Alerta de Estoque Baixo</h4>
-                        <div class="space-y-4">
-                            ${state.produtos.filter(p => p.quantidade < 15).map(p => `
-                                <div class="flex justify-between items-center">
-                                    <span class="text-xs font-bold uppercase text-gray-700">${p.nome}</span>
-                                    <span class="px-3 py-1 bg-red-100 text-red-600 rounded-full font-black text-[10px]">${p.quantidade} un</span>
-                                </div>
-                            `).join('') || '<p class="text-[10px] font-bold text-gray-300">ESTOQUE SAUDÁVEL</p>'}
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-
-        window.atualizarStatus = async (id, novoStatus) => {
-            const ref = doc(db, "vendas_logs", id);
-            await updateDoc(ref, { status: novoStatus, ultimaAtualizacao: serverTimestamp() });
+                ${window.state.editando ? renderModalEdicao() : ''}`;
         };
 
         function renderPedidos() {
-            const filtrados = filtrarDados(state.logs).filter(l => !['FINALIZADO', 'CANCELADO'].includes(l.status));
-            return filtrados.map(l => `
-                <div class="card p-8 mb-6 border-l-[12px] ${l.status === 'CRIADO' ? 'border-gray-200' : 'border-rose-500'}">
+            return window.state.logs.map(l => `
+                <div class="card p-8 mb-6 border-l-[12px] border-rose-500">
                     <div class="flex justify-between items-start mb-6">
                         <div>
-                            <h3 class="font-black uppercase text-lg tracking-tight">${l.clienteNome}</h3>
-                            <p class="text-[11px] font-bold text-gray-400 uppercase tracking-widest">${l.telefone || 'Sem telefone'}</p>
-                            ${l.dataProximaRemessa ? `<p class="text-[9px] font-black text-rose-600 uppercase mt-1">Agendado para: ${l.dataProximaRemessa}</p>` : ''}
+                            <h3 class="font-black uppercase text-lg">${l.clienteNome}</h3>
+                            <p class="text-xs font-bold text-gray-400">${l.endereco}</p>
                         </div>
-                        <div class="flex flex-col items-end gap-2">
-                            <div class="bg-gray-100 px-4 py-2 rounded-2xl font-black text-[10px] uppercase text-gray-500">${l.status}</div>
+                        <div class="text-right">
+                            <div class="bg-rose-50 text-rose-600 px-4 py-2 rounded-2xl font-black text-[10px] uppercase">${l.status}</div>
+                            <p class="text-[9px] font-black text-amber-600 mt-2">${l.statusPagamento} (${l.metodoPagamento})</p>
                         </div>
                     </div>
-                    
                     <div class="bg-gray-50 p-6 rounded-[24px] mb-6 flex justify-between items-center">
-                        <span class="font-black text-sm uppercase">${l.quantidade}x ${l.produto}</span>
+                        <span class="font-black text-sm uppercase">${l.produto}</span>
                         <span class="text-rose-600 font-black text-lg">R$ ${Number(l.valorTotal).toFixed(2)}</span>
                     </div>
-
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-6">
-                        <button onclick="atualizarStatus('${l.id}', 'PREPARANDO')" class="btn-flow ${l.status==='PREPARANDO'?'active':''}">Preparando</button>
-                        <button onclick="atualizarStatus('${l.id}', 'EMBALANDO')" class="btn-flow ${l.status==='EMBALANDO'?'active':''}">Embalando</button>
-                        <button onclick="atualizarStatus('${l.id}', 'SAIU PARA ENTREGA')" class="btn-flow ${l.status==='SAIU PARA ENTREGA'?'active':''}">Em Rota</button>
-                        <button onclick="finalizarComWhatsApp('${l.id}')" class="btn-flow">Finalizar</button>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                        <button onclick="atualizarStatus('${l.id}', 'PREPARANDO')" class="bg-white border p-3 rounded-xl font-black text-[10px] uppercase">Preparar</button>
+                        <button onclick="atualizarStatus('${l.id}', 'SAIU PARA ENTREGA')" class="bg-white border p-3 rounded-xl font-black text-[10px] uppercase">Enviar</button>
+                        <button onclick="atualizarStatus('${l.id}', 'FINALIZADO')" class="bg-gray-900 text-white p-3 rounded-xl font-black text-[10px] uppercase">Finalizar</button>
                     </div>
-                </div>`).join('') || '<div class="text-center py-20 card font-black text-gray-300 uppercase">Nenhum pedido pendente</div>';
+                </div>`).join('');
+        }
+
+        async function atualizarStatus(id, status) {
+            await updateDoc(doc(db, "vendas_logs", id), { status });
         }
 
         function renderEstoque() {
             return `
                 <div class="flex justify-between items-center mb-8">
-                    <button onclick="abrirModalNovo()" class="bg-rose-600 text-white px-8 py-4 rounded-2xl font-black uppercase text-xs shadow-xl shadow-rose-100 hover:scale-105 transition">+ Novo Produto</button>
+                    <h2 class="text-3xl font-black uppercase tracking-tighter">Estoque</h2>
+                    <button onclick="window.abrirModalNovo()" class="bg-rose-600 text-white px-8 py-4 rounded-2xl font-black uppercase text-xs">+ Novo Produto</button>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    ${state.produtos.map((prod, i) => `
-                        <div class="card p-6 flex items-center justify-between border ${prod.quantidade < 15 ? 'border-red-200 bg-red-50/30' : ''}">
+                    ${window.state.produtos.map((p, i) => `
+                        <div class="card p-6 flex items-center justify-between">
                             <div class="flex items-center gap-5">
-                                <img src="${safeImg(prod.foto_url)}" onerror="this.src='${IMG_DEFAULT}'" class="w-16 h-16 rounded-[20px] object-cover shadow-sm">
+                                <img src="${p.foto_url || 'https://via.placeholder.com/100'}" class="w-16 h-16 rounded-2xl object-cover">
                                 <div>
-                                    <p class="font-black text-sm uppercase text-gray-800">${prod.nome}</p>
-                                    <p class="text-[10px] font-bold text-gray-400 uppercase">${prod.embalagem} • ${prod.quantidade} no estoque</p>
+                                    <p class="font-black text-sm uppercase">${p.nome}</p>
+                                    <p class="text-[10px] font-bold text-gray-400 uppercase">${p.quantidade} un no estoque</p>
                                 </div>
                             </div>
-                            <button onclick="window.editarIndex(${i})" class="bg-white border-2 border-gray-100 px-5 py-2 rounded-xl font-black text-[10px] uppercase hover:border-rose-200 hover:text-rose-600 transition">Editar</button>
+                            <button onclick="window.editarIndex(${i})" class="bg-gray-50 px-5 py-2 rounded-xl font-black text-[10px] uppercase">Editar</button>
                         </div>
                     `).join('')}
                 </div>`;
         }
 
-        window.abrirModalNovo = () => {
-            state.editando = { nome: 'Ovo Branco', preco: '', preco_custo: '', quantidade: '', foto_url: '', embalagem: 'Cartela 30' };
-            state.tempImg = null;
-            window.render();
-        };
-
-        window.editarIndex = (i) => { 
-            state.editando = {...state.produtos[i]}; 
-            state.tempImg = state.editando.foto_url;
-            window.render(); 
-        };
-
-        window.handleFile = (e) => {
-            const file = e.target.files[0];
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                state.tempImg = reader.result;
-                document.getElementById('preview-img').src = reader.result;
-            };
-            if (file) reader.readAsDataURL(file);
-        };
+        window.abrirModalNovo = () => { window.state.editando = { nome: 'Ovo Branco', preco: 0, preco_custo: 0, quantidade: 0, embalagem: 'Cartela 30' }; window.state.tempImg = null; render(); };
+        window.editarIndex = (i) => { window.state.editando = {...window.state.produtos[i]}; window.state.tempImg = window.state.editando.foto_url; render(); };
 
         function renderModalEdicao() {
-            const p = state.editando;
-            const tipos = ["Ovo Branco", "Ovo Vermelho", "Ovo Caipira", "Ovo Jumbo", "Ovo Codorna", "Ovo Orgânico", "Ovo Pasteurizado", "Ovos Brancos G", "Ovos Brancos M"];
-            const embalagens = ["Cartela 30", "Cartela 20", "Dúzia 12", "Meia Dúzia 06", "Caixa 360", "Pote 50 un"];
-
+            const p = window.state.editando;
             return `
                 <div class="modal-overlay">
-                    <div class="card w-full max-w-2xl p-10 overflow-y-auto max-h-[90vh]">
-                        <div class="flex justify-between items-center mb-8">
-                            <h3 class="font-black text-2xl uppercase tracking-tighter">${p.id ? 'Editar' : 'Novo'} Produto</h3>
-                            <button onclick="state.editando=null;render()" class="text-gray-300 hover:text-rose-600 font-black">FECHAR</button>
-                        </div>
-                        
-                        <form onsubmit="salvarProd(event)" class="space-y-6">
-                            <div class="flex flex-col items-center gap-4 bg-gray-50 p-6 rounded-3xl border-2 border-dashed border-gray-200">
-                                <img id="preview-img" src="${safeImg(state.tempImg)}" class="w-32 h-32 rounded-3xl object-cover shadow-lg bg-white">
-                                <div class="flex gap-2">
-                                    <label class="bg-white border px-4 py-2 rounded-xl text-[10px] font-black uppercase cursor-pointer hover:bg-gray-50">
-                                        Subir Foto
-                                        <input type="file" class="hidden" accept="image/*" onchange="handleFile(event)">
-                                    </label>
-                                    <input id="url-input" class="bg-white border px-4 py-2 rounded-xl text-[10px] font-bold outline-none" placeholder="Ou cole a URL aqui" oninput="state.tempImg=this.value;document.getElementById('preview-img').src=this.value">
-                                </div>
+                    <div class="card w-full max-w-xl p-10">
+                        <h3 class="font-black text-2xl uppercase mb-8">${p.id ? 'Editar' : 'Novo'} Produto</h3>
+                        <form onsubmit="window.salvarProd(event)" class="space-y-4">
+                            <input name="nome" value="${p.nome}" placeholder="Nome" class="input-egg" required>
+                            <input name="embalagem" value="${p.embalagem}" placeholder="Embalagem" class="input-egg" required>
+                            <div class="grid grid-cols-2 gap-4">
+                                <input name="preco" type="number" step="0.01" value="${p.preco}" placeholder="Preço Venda" class="input-egg" required>
+                                <input name="preco_custo" type="number" step="0.01" value="${p.preco_custo}" placeholder="Preço Custo" class="input-egg" required>
                             </div>
-
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div class="space-y-1">
-                                    <label class="text-[9px] font-black uppercase text-gray-400 ml-2">Tipo de Ovo</label>
-                                    <select name="nome" class="input-egg" required>
-                                        ${tipos.map(t => `<option value="${t}" ${p.nome===t?'selected':''}>${t}</option>`).join('')}
-                                    </select>
-                                </div>
-                                <div class="space-y-1">
-                                    <label class="text-[9px] font-black uppercase text-gray-400 ml-2">Embalagem</label>
-                                    <select name="embalagem" class="input-egg" required>
-                                        ${embalagens.map(e => `<option value="${e}" ${p.embalagem===e?'selected':''}>${e}</option>`).join('')}
-                                    </select>
-                                </div>
-                                <div class="space-y-1">
-                                    <label class="text-[9px] font-black uppercase text-gray-400 ml-2">Custo Un.</label>
-                                    <input name="preco_custo" type="number" step="0.01" value="${p.preco_custo}" class="input-egg" required>
-                                </div>
-                                <div class="space-y-1">
-                                    <label class="text-[9px] font-black uppercase text-gray-400 ml-2">Preço Venda</label>
-                                    <input name="preco" type="number" step="0.01" value="${p.preco}" class="input-egg" required>
-                                </div>
-                                <div class="space-y-1 md:col-span-2">
-                                    <label class="text-[9px] font-black uppercase text-gray-400 ml-2">Estoque Inicial</label>
-                                    <input name="quantidade" type="number" value="${p.quantidade}" class="input-egg" required>
-                                </div>
+                            <input name="quantidade" type="number" value="${p.quantidade}" placeholder="Estoque" class="input-egg" required>
+                            <input name="foto_url" value="${p.foto_url || ''}" placeholder="URL da Foto (ou deixe vazio)" class="input-egg">
+                            
+                            <div class="pt-6 flex gap-3">
+                                <button type="button" onclick="window.state.editando=null;render()" class="w-1/3 font-black text-[10px] uppercase text-gray-400">Cancelar</button>
+                                <button class="btn-primary flex-1 bg-rose-600 text-white p-5 rounded-2xl font-black uppercase">Salvar Produto</button>
                             </div>
-
-                            <button class="w-full bg-rose-600 text-white py-6 rounded-3xl font-black uppercase text-sm shadow-xl hover:bg-rose-700 transition">Confirmar Dados</button>
                         </form>
                     </div>
                 </div>`;
@@ -344,67 +169,28 @@
         window.salvarProd = async (e) => {
             e.preventDefault();
             const f = new FormData(e.target);
-            const nome = f.get('nome');
-            
-            let finalFoto = state.tempImg;
-
-            // Lógica de Foto Automática Inteligente se estiver vazio
-            if (!finalFoto || finalFoto === "" || finalFoto === IMG_DEFAULT) {
-                if (nome.includes("Branco")) finalFoto = "https://images.unsplash.com/photo-1582722872445-41ca501ea14b?auto=format&fit=crop&w=400&q=80";
-                else if (nome.includes("Vermelho")) finalFoto = "https://images.unsplash.com/photo-1598965402089-897ce52e8355?auto=format&fit=crop&w=400&q=80";
-                else if (nome.includes("Caipira")) finalFoto = "https://images.unsplash.com/photo-1516448620398-c5f44bf9f441?auto=format&fit=crop&w=400&q=80";
-                else if (nome.includes("Codorna")) finalFoto = "https://images.unsplash.com/photo-1612140801642-1f9530510531?auto=format&fit=crop&w=400&q=80";
-                else finalFoto = IMG_DEFAULT;
-            }
-
-            const payload = { 
-                nome, 
-                preco: parseFloat(f.get('preco')), 
-                preco_custo: parseFloat(f.get('preco_custo')), 
-                quantidade: parseInt(f.get('quantidade')), 
-                foto_url: finalFoto, 
-                embalagem: f.get('embalagem') 
+            const payload = {
+                nome: f.get('nome'),
+                embalagem: f.get('embalagem'),
+                preco: parseFloat(f.get('preco')),
+                preco_custo: parseFloat(f.get('preco_custo')),
+                quantidade: parseInt(f.get('quantidade')),
+                foto_url: f.get('foto_url') || "https://images.unsplash.com/photo-1582722872445-41ca501ea14b?w=400"
             };
-            
-            const url = state.editando.id ? `${API_BASE}/produtos/${state.editando.id}` : `${API_BASE}/produtos`;
-            
+
+            const id = window.state.editando.id;
+            const url = id ? `${API_BASE}/produtos/${id}` : `${API_BASE}/produtos`;
+            const method = id ? 'PUT' : 'POST';
+
             try {
-                const res = await fetch(url, { 
-                    method: state.editando.id ? 'PUT' : 'POST', 
-                    headers: {'Content-Type': 'application/json'}, 
-                    body: JSON.stringify(payload) 
-                });
-                
-                if(res.ok) {
-                    state.editando = null;
-                    state.tempImg = null;
-                    loadProdutos();
-                } else {
-                    alert("Erro ao salvar no servidor.");
-                }
-            } catch {
-                alert("Erro de conexão com o banco de dados.");
-            }
+                const res = await fetch(url, { method, headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+                if(res.ok) { window.state.editando = null; loadProdutos(); }
+                else { alert("Erro ao salvar no servidor."); }
+            } catch { alert("Servidor offline."); }
         };
 
-        window.finalizarComWhatsApp = async (id) => {
-            const snap = await getDoc(doc(db, "vendas_logs", id));
-            const p = snap.data();
-            await updateDoc(doc(db, "vendas_logs", id), { status: 'FINALIZADO', horarioConcluido: serverTimestamp() });
-            window.open(`https://wa.me/${p.telefone?.replace(/\D/g,'') || ''}?text=${encodeURIComponent('Seu pedido AppEgg está a caminho! 🥚')}`);
-        };
-
-        window.handleLogin = async (e) => {
-            e.preventDefault();
-            const f = new FormData(e.target);
-            try { await signInWithEmailAndPassword(auth, f.get('email'), f.get('pass')); } catch (err) { alert("Credenciais Inválidas"); }
-        };
-
-        function renderLogin() { 
-            return `<div class="min-h-screen flex items-center justify-center bg-gray-900 p-8"><form onsubmit="handleLogin(event)" class="bg-white p-12 rounded-[48px] shadow-2xl w-full max-w-md"><div class="logo-text text-5xl mb-4 text-center">AppEgg</div><p class="text-center text-gray-400 font-bold text-xs uppercase mb-10 tracking-widest">Painel Administrativo</p><input name="email" class="input-egg border mb-3" placeholder="Email corporativo"><input name="pass" type="password" class="input-egg border mb-8" placeholder="Senha de acesso"><button class="w-full bg-rose-600 text-white py-6 rounded-3xl font-black uppercase text-sm shadow-xl shadow-rose-100">Acessar Dashboard</button></form></div>`; 
-        }
-
-        window.signOut = () => signOut(auth);
+        function renderLogin() { return `<div class="min-h-screen flex items-center justify-center bg-gray-900 p-8"><form onsubmit="handleLogin(event)" class="bg-white p-12 rounded-[48px] shadow-2xl w-full max-w-md"><h1 class="text-4xl font-black text-rose-600 mb-8 text-center">AppEgg Admin</h1><input name="email" class="input-egg border mb-3" placeholder="Email"><input name="pass" type="password" class="input-egg border mb-8" placeholder="Senha"><button class="w-full bg-rose-600 text-white py-6 rounded-3xl font-black uppercase">Entrar</button></form></div>`; }
+        async function handleLogin(e) { e.preventDefault(); const f = new FormData(e.target); try { await signInWithEmailAndPassword(auth, f.get('email'), f.get('pass')); } catch { alert("Erro!"); } }
     </script>
 </body>
 </html>
