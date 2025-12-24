@@ -13,11 +13,9 @@
         .logo-text { font-weight: 900; color: #e11d48; font-size: 1.6rem; letter-spacing: -1px; }
         .card { background: #ffffff; border-radius: 32px; box-shadow: 0 10px 40px rgba(0,0,0,0.03); border: 1px solid rgba(0,0,0,0.02); }
         .input-egg { width: 100%; padding: 16px; background: #f9fafb; border-radius: 20px; border: 1px solid #eee; font-weight: 700; outline: none; transition: 0.2s; }
-        .input-egg:focus { border-color: #e11d48; background: #fff; }
         .btn-flow { padding: 8px 12px; border-radius: 12px; font-weight: 800; font-size: 9px; text-transform: uppercase; transition: 0.2s; border: 1px solid #eee; background: #f9fafb; color: #6b7280; }
         .btn-flow.active { background: #e11d48; color: white; border-color: #e11d48; }
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 20px; }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
     </style>
 </head>
 <body>
@@ -42,7 +40,7 @@
         const auth = getAuth(appFB);
         const API_BASE = "https://painel-distribuidora-backend.onrender.com/api";
 
-        window.state = { user: null, view: 'dashboard', logs: [], produtos: [], editando: null, filtroData: 'hoje', tempImg: null };
+        window.state = { user: null, view: 'dashboard', logs: [], produtos: [], editando: null, tempImg: null };
 
         onAuthStateChanged(auth, user => {
             window.state.user = user;
@@ -51,13 +49,10 @@
         });
 
         async function loadProdutos() {
-            try {
-                const r = await fetch(`${API_BASE}/produtos`);
-                const data = await r.json();
-                // RESOLVE O ERRO DO ID: Mapeia _id para id globalmente
-                window.state.produtos = Array.isArray(data) ? data.map(p => ({ ...p, id: p.id || p._id })) : [];
-                window.render();
-            } catch (e) { console.error("Erro API", e); }
+            const r = await fetch(`${API_BASE}/produtos`);
+            const data = await r.json();
+            window.state.produtos = data.map(p => ({ ...p, id: p._id || p.id }));
+            window.render();
         }
 
         function syncRealtime() {
@@ -74,8 +69,8 @@
 
             root.innerHTML = `
                 <nav class="bg-white border-b px-8 h-24 flex justify-between items-center sticky top-0 z-50">
-                    <div class="logo-text cursor-pointer" onclick="window.state.view='dashboard';window.render()">AppEgg</div>
-                    <div class="flex gap-2 overflow-x-auto no-scrollbar">
+                    <div class="logo-text cursor-pointer" onclick="window.state.view='dashboard';window.render()">AppEgg Admin</div>
+                    <div class="flex gap-2">
                         <button onclick="window.state.view='pedidos';window.render()" class="nav-link ${s.view==='pedidos'?'active':''}">Pedidos</button>
                         <button onclick="window.state.view='estoque';window.render()" class="nav-link ${s.view==='estoque'?'active':''}">Estoque</button>
                         <button onclick="signOut(auth)" class="nav-link text-rose-600">Sair</button>
@@ -91,12 +86,12 @@
             const abertos = window.state.logs.filter(l => !['FINALIZADO','CANCELADO'].includes(l.status)).length;
             const estoqueTotal = window.state.produtos.reduce((acc, p) => acc + (p.quantidade || 0), 0);
             return `
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-                    <div class="stat-card bg-rose-600 text-white p-8 rounded-[32px]">
-                        <p class="text-[10px] font-black uppercase opacity-70 mb-2">Pedidos em Aberto</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
+                    <div class="bg-rose-600 text-white p-8 rounded-[32px]">
+                        <p class="text-[10px] font-black uppercase opacity-70 mb-2">Pedidos Ativos</p>
                         <h3 class="text-3xl font-black">${abertos}</h3>
                     </div>
-                    <div class="stat-card bg-white border p-8 rounded-[32px]">
+                    <div class="bg-white border p-8 rounded-[32px]">
                         <p class="text-[10px] font-black uppercase text-gray-400 mb-2">Estoque Global</p>
                         <h3 class="text-3xl font-black text-gray-800">${estoqueTotal} un</h3>
                     </div>
@@ -104,23 +99,20 @@
         }
 
         function renderPedidos() {
-            const pedidos = window.state.logs.filter(l => !['FINALIZADO', 'CANCELADO'].includes(l.status));
-            return pedidos.map(l => {
-                // Suporta tanto o modelo antigo (string) quanto o novo (array de itens)
-                const textoProdutos = Array.isArray(l.itens) ? l.itens.map(i => `${i.quantidade}x ${i.nome}`).join(', ') : l.produto;
-                
+            return window.state.logs.filter(l => !['FINALIZADO', 'CANCELADO'].includes(l.status)).map(l => {
+                const itensTxt = Array.isArray(l.itens) ? l.itens.map(i => `${i.quantidade}x ${i.nome}`).join(', ') : l.produto;
                 return `
                 <div class="card p-8 mb-6 border-l-[12px] ${l.status === 'CRIADO' ? 'border-gray-200' : 'border-rose-500'}">
-                    <div class="flex justify-between mb-6">
+                    <div class="flex justify-between mb-4">
                         <div>
-                            <h3 class="font-black uppercase text-lg">${l.clienteNome}</h3>
-                            <p class="text-[11px] font-bold text-gray-400 uppercase">${l.telefone}</p>
+                            <h3 class="font-black uppercase">${l.clienteNome}</h3>
+                            <p class="text-[11px] font-bold text-gray-400 uppercase">${l.telefone} | ${l.endereco}</p>
                         </div>
-                        <div class="bg-gray-100 px-4 py-2 rounded-2xl font-black text-[10px] text-gray-500">${l.status}</div>
+                        <div class="bg-gray-100 px-3 py-1 rounded-xl font-black text-[9px] text-gray-500">${l.status}</div>
                     </div>
-                    <div class="bg-gray-50 p-6 rounded-[24px] mb-6 flex justify-between items-center">
-                        <span class="font-black text-sm uppercase">${textoProdutos}</span>
-                        <span class="text-rose-600 font-black text-lg">R$ ${Number(l.valorTotal).toFixed(2)}</span>
+                    <div class="bg-gray-50 p-6 rounded-[24px] mb-6 flex justify-between items-center font-black">
+                        <span class="text-sm uppercase">${itensTxt}</span>
+                        <span class="text-rose-600 text-lg">R$ ${Number(l.valorTotal).toFixed(2)}</span>
                     </div>
                     <div class="flex gap-2">
                         <button onclick="atualizarStatus('${l.id}', 'SAIU PARA ENTREGA')" class="btn-flow">Rota</button>
@@ -134,7 +126,7 @@
             const snap = await getDoc(doc(db, "vendas_logs", id));
             const pedido = snap.data();
             
-            // Lógica de Baixa de Estoque Automática (Nível iFood)
+            // BAIXA DE ESTOQUE REAL NO MONGODB VIA API
             if (Array.isArray(pedido.itens)) {
                 for (const item of pedido.itens) {
                     const pLocal = window.state.produtos.find(p => p.id === item.produtoId);
@@ -148,10 +140,8 @@
                     }
                 }
             }
-
             await updateDoc(doc(db, "vendas_logs", id), { status: 'FINALIZADO', concluidoEm: serverTimestamp() });
             loadProdutos();
-            window.open(`https://wa.me/${pedido.telefone?.replace(/\D/g,'')}?text=Pedido Finalizado!`);
         };
 
         window.atualizarStatus = async (id, s) => { await updateDoc(doc(db, "vendas_logs", id), { status: s }); };
@@ -159,36 +149,23 @@
         function renderEstoque() {
             return `
                 <div class="flex justify-end mb-8">
-                    <button onclick="abrirModalNovo()" class="bg-rose-600 text-white px-8 py-4 rounded-2xl font-black uppercase text-xs">Novo Produto</button>
+                    <button onclick="window.state.editando={nome:'', preco:'', preco_custo:'', quantidade:0, embalagem:'Cartela 30'};window.render()" class="bg-rose-600 text-white px-8 py-4 rounded-2xl font-black uppercase text-xs">Novo Produto</button>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    ${window.state.produtos.map((p, i) => `
+                    ${window.state.produtos.map(p => `
                         <div class="card p-6 flex items-center justify-between border ${p.quantidade < 15 ? 'border-red-200 bg-red-50' : ''}">
                             <div class="flex items-center gap-4">
                                 <img src="${p.foto_url || ''}" class="w-14 h-14 rounded-2xl object-cover bg-gray-100">
                                 <div>
                                     <p class="font-black text-sm uppercase">${p.nome}</p>
-                                    <p class="text-[10px] font-bold text-gray-400 uppercase">${p.quantidade} un em estoque</p>
+                                    <p class="text-[10px] font-bold text-gray-400 uppercase">${p.quantidade} un | R$ ${p.preco}</p>
                                 </div>
                             </div>
-                            <button onclick="window.editarIndex(${i})" class="bg-white border px-4 py-2 rounded-xl font-black text-[10px] uppercase">Editar</button>
+                            <button onclick="window.state.editando={...${JSON.stringify(p)}, id:'${p.id}'};window.render()" class="bg-white border px-4 py-2 rounded-xl font-black text-[10px] uppercase">Editar</button>
                         </div>
                     `).join('')}
                 </div>`;
         }
-
-        window.editarIndex = (i) => {
-            // GARANTE O ID NA EDIÇÃO
-            const p = window.state.produtos[i];
-            window.state.editando = { ...p, id: p.id };
-            window.state.tempImg = p.foto_url;
-            window.render();
-        };
-
-        window.abrirModalNovo = () => { 
-            window.state.editando = { nome: '', preco: '', preco_custo: '', quantidade: '', embalagem: 'Cartela 30' }; 
-            window.render(); 
-        };
 
         window.salvarProd = async (e) => {
             e.preventDefault();
@@ -200,18 +177,13 @@
                 preco: parseFloat(f.get('preco')),
                 preco_custo: parseFloat(f.get('preco_custo')),
                 quantidade: parseInt(f.get('quantidade')),
-                foto_url: window.state.tempImg || ''
+                foto_url: f.get('foto_url')
             };
-
-            const method = id ? 'PUT' : 'POST';
-            const url = id ? `${API_BASE}/produtos/${id}` : `${API_BASE}/produtos`;
-
-            const res = await fetch(url, {
-                method,
+            const res = await fetch(id ? `${API_BASE}/produtos/${id}` : `${API_BASE}/produtos`, {
+                method: id ? 'PUT' : 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify(payload)
             });
-
             if (res.ok) { window.state.editando = null; loadProdutos(); }
         };
 
@@ -219,36 +191,26 @@
             const p = window.state.editando;
             return `
                 <div class="modal-overlay">
-                    <div class="card w-full max-w-xl p-10">
-                        <h3 class="font-black text-xl uppercase mb-6">${p.id ? 'Editar' : 'Novo'} Ovo</h3>
-                        <form onsubmit="salvarProd(event)" class="space-y-4">
-                            <input name="nome" value="${p.nome}" placeholder="Nome" class="input-egg" required>
-                            <input name="embalagem" value="${p.embalagem}" placeholder="Embalagem" class="input-egg" required>
-                            <div class="grid grid-cols-2 gap-4">
-                                <input name="preco_custo" type="number" step="0.01" value="${p.preco_custo}" placeholder="Custo" class="input-egg">
-                                <input name="preco" type="number" step="0.01" value="${p.preco}" placeholder="Venda" class="input-egg">
-                            </div>
-                            <input name="quantidade" type="number" value="${p.quantidade}" placeholder="Estoque" class="input-egg">
-                            <input placeholder="URL da Foto" class="input-egg" oninput="window.state.tempImg=this.value">
-                            <div class="flex gap-2">
-                                <button type="button" onclick="window.state.editando=null;window.render()" class="flex-1 font-black uppercase text-xs">Cancelar</button>
-                                <button class="flex-1 bg-rose-600 text-white py-4 rounded-2xl font-black uppercase text-xs">Salvar</button>
-                            </div>
-                        </form>
-                    </div>
+                    <form onsubmit="salvarProd(event)" class="card w-full max-w-xl p-10 space-y-4">
+                        <h3 class="font-black text-xl uppercase">${p.id ? 'Editar' : 'Novo'} Ovo</h3>
+                        <input name="nome" value="${p.nome}" placeholder="Nome" class="input-egg" required>
+                        <input name="embalagem" value="${p.embalagem}" placeholder="Embalagem" class="input-egg" required>
+                        <div class="grid grid-cols-2 gap-4">
+                            <input name="preco_custo" type="number" step="0.01" value="${p.preco_custo}" placeholder="Custo" class="input-egg">
+                            <input name="preco" type="number" step="0.01" value="${p.preco}" placeholder="Venda" class="input-egg">
+                        </div>
+                        <input name="quantidade" type="number" value="${p.quantidade}" placeholder="Estoque" class="input-egg">
+                        <input name="foto_url" value="${p.foto_url || ''}" placeholder="URL da Foto" class="input-egg">
+                        <div class="flex gap-2">
+                            <button type="button" onclick="window.state.editando=null;window.render()" class="flex-1 font-black uppercase text-xs">Cancelar</button>
+                            <button class="flex-1 bg-rose-600 text-white py-4 rounded-2xl font-black uppercase text-xs">Salvar</button>
+                        </div>
+                    </form>
                 </div>`;
         }
 
-        window.handleLogin = async (e) => {
-            e.preventDefault();
-            const f = new FormData(e.target);
-            try { await signInWithEmailAndPassword(auth, f.get('email'), f.get('pass')); } catch { alert("Erro"); }
-        };
-
-        function renderLogin() { 
-            return `<div class="min-h-screen flex items-center justify-center bg-gray-900 p-8"><form onsubmit="handleLogin(event)" class="bg-white p-12 rounded-[48px] w-full max-w-md"><h2 class="logo-text text-center mb-8">AppEgg Admin</h2><input name="email" class="input-egg border mb-3" placeholder="Email"><input name="pass" type="password" class="input-egg border mb-8" placeholder="Senha"><button class="w-full bg-rose-600 text-white py-4 rounded-2xl font-black uppercase">Acessar</button></form></div>`; 
-        }
-
+        function renderLogin() { return `<div class="min-h-screen flex items-center justify-center bg-gray-900 p-8"><form onsubmit="handleLogin(event)" class="bg-white p-12 rounded-[48px] w-full max-w-md"><h2 class="logo-text text-center mb-8">AppEgg Admin</h2><input name="email" class="input-egg border mb-3" placeholder="Email"><input name="pass" type="password" class="input-egg border mb-8" placeholder="Senha"><button class="w-full bg-rose-600 text-white py-4 rounded-2xl font-black uppercase">Acessar</button></form></div>`; }
+        window.handleLogin = async (e) => { e.preventDefault(); const f = new FormData(e.target); try { await signInWithEmailAndPassword(auth, f.get('email'), f.get('pass')); } catch { alert("Erro"); } };
         window.signOut = () => signOut(auth);
     </script>
 </body>
