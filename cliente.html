@@ -9,7 +9,7 @@
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&display=swap');
         body { font-family: 'Inter', sans-serif; background: #fff; padding-bottom: 120px; }
         .logo-text { font-weight: 800; color: #e11d48; font-style: italic; font-size: 1.8rem; }
-        .nav-bottom { position: fixed; bottom: 20px; left: 15px; right: 15px; background: #111; border-radius: 28px; display: flex; justify-content: space-around; padding: 12px; z-index: 100; }
+        .nav-bottom { position: fixed; bottom: 20px; left: 15px; right: 15px; background: #111; border-radius: 28px; display: flex; justify-content: space-around; padding: 12px; z-index: 100; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
         .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; color: #555; font-size: 10px; font-weight: 800; border:none; background:transparent; }
         .nav-item.active { color: #fff; }
         .card-egg { background: white; border: 1px solid #f3f4f6; border-radius: 28px; padding: 15px; margin-bottom: 12px; }
@@ -36,12 +36,11 @@
         const db = getFirestore(appFB);
         const auth = getAuth(appFB);
         const API_BASE = "https://painel-distribuidora-backend.onrender.com/api";
-        const IMG_DEFAULT = "https://via.placeholder.com/300x300?text=Ovos";
+        const IMG_DEFAULT = "https://via.placeholder.com/300x300?text=Ovos+AppEgg";
 
         window.state = { user: null, view: 'loja', produtos: [], pedidos: [], comprando: null, qtd: 1 };
         const state = window.state;
 
-        // 🛡️ FUNÇÃO DE IMAGEM SEGURA (REPLICADA NO CLIENTE)
         window.safeImg = (url) => {
             if (!url || typeof url !== "string" || url.trim() === "" || !url.startsWith("http")) return IMG_DEFAULT;
             return url.trim();
@@ -54,8 +53,13 @@
         });
 
         async function loadProdutos() {
-            const r = await fetch(`${API_BASE}/produtos`);
-            state.produtos = await r.json();
+            try {
+                const r = await fetch(`${API_BASE}/produtos`);
+                const data = await r.json();
+                state.produtos = Array.isArray(data) ? data : [];
+            } catch {
+                state.produtos = [];
+            }
             window.render();
         }
 
@@ -84,7 +88,7 @@
                     <button onclick="state.view='loja';render()" class="nav-item ${state.view==='loja'?'active':''}"><span>🏠</span>LOJA</button>
                     <button onclick="state.view='programar';render()" class="nav-item ${state.view==='programar'?'active':''}"><span>📅</span>AGENDAR</button>
                     <button onclick="state.view='pedidos';render()" class="nav-item ${state.view==='pedidos'?'active':''}"><span>📦</span>PEDIDOS</button>
-                    <button onclick="signOut(auth)" class="nav-item"><span>🚪</span>SAIR</button>
+                    <button onclick="signOut(auth)" class="nav-item text-rose-500"><span>🚪</span>SAIR</button>
                 </nav>
                 ${state.comprando ? renderModalCompra() : ''}
             `;
@@ -94,12 +98,8 @@
             return `
                 <h2 class="font-black uppercase text-xs text-gray-400 mb-4 tracking-widest">Ovos Frescos</h2>
                 ${state.produtos.map((p, i) => `
-                <div class="card-egg flex gap-4 items-center shadow-sm" onclick="window.abrirCompraIndex(${i})">
-                    <img 
-                        src="${safeImg(p.foto_url)}" 
-                        onerror="this.src='${IMG_DEFAULT}'" 
-                        class="w-20 h-20 object-cover rounded-2xl"
-                    >
+                <div class="card-egg flex gap-4 items-center shadow-sm" onclick="window.abrirIndex(${i})">
+                    <img src="${safeImg(p.foto_url)}" onerror="this.src='${IMG_DEFAULT}'" class="w-20 h-20 object-cover rounded-2xl">
                     <div class="flex-1">
                         <h3 class="font-black uppercase text-sm mb-1">${p.nome}</h3>
                         <p class="text-gray-400 text-[10px] font-bold uppercase mb-2">${p.embalagem || 'Cartela'}</p>
@@ -109,20 +109,21 @@
         }
 
         function renderProgramar() {
-            return `<div class="bg-blue-600 p-8 rounded-[40px] text-white mb-8 shadow-xl shadow-blue-100"><h2 class="text-2xl font-black italic mb-2 uppercase">Programar</h2><p class="text-[11px] font-bold opacity-80 uppercase">Agende sua entrega automática.</p></div>${renderLoja()}`;
+            return `<div class="bg-blue-600 p-8 rounded-[40px] text-white mb-8 shadow-xl shadow-blue-100"><h2 class="text-2xl font-black italic mb-2 uppercase">Programar</h2><p class="text-[11px] font-bold opacity-80 uppercase leading-relaxed">Agende sua entrega recorrente.</p></div>${renderLoja()}`;
         }
 
         function renderPedidos() {
-            return `<h2 class="font-black uppercase text-xs tracking-widest text-gray-400 mb-4">Meus Pedidos</h2>
+            return `
+                <h2 class="font-black uppercase text-xs tracking-widest text-gray-400 mb-4">Meus Pedidos</h2>
                 ${state.pedidos.map(p => `
                 <div class="card-egg border-l-4 ${p.status === 'FINALIZADO' ? 'border-emerald-500' : 'border-rose-500'}">
                     <span class="text-[9px] font-black uppercase text-gray-400">${p.status}</span>
                     <h4 class="font-black uppercase text-xs">${p.quantidade}x ${p.produto}</h4>
-                    <p class="text-rose-600 font-bold text-xs">R$ ${Number(p.valorTotal).toFixed(2)}</p>
-                </div>`).join('') || '<p class="text-center py-10 font-black text-gray-300">Vazio</p>'}`;
+                    <p class="text-rose-600 font-bold text-xs">Total: R$ ${Number(p.valorTotal).toFixed(2)}</p>
+                </div>`).join('') || '<p class="text-center py-10 font-black text-gray-300 uppercase">Vazio</p>'}`;
         }
 
-        window.abrirCompraIndex = (i) => { state.comprando = state.produtos[i]; state.qtd = 1; window.render(); };
+        window.abrirIndex = (i) => { state.comprando = state.produtos[i]; state.qtd = 1; window.render(); };
         window.ajustarQtd = (v) => { if(state.qtd + v > 0) { state.qtd += v; window.render(); } };
 
         window.finalizarPedido = async (e) => {
@@ -155,24 +156,24 @@
                         <img src="${safeImg(p.foto_url)}" onerror="this.src='${IMG_DEFAULT}'" class="w-16 h-16 object-cover rounded-xl shadow-sm">
                         <h3 class="font-black uppercase text-xl">${p.nome}</h3>
                     </div>
-                    <form onsubmit="finalizarPedido(event)" class="space-y-3">
-                        <div class="flex items-center justify-between mb-4 bg-gray-50 p-4 rounded-3xl">
+                    <form onsubmit="finalizarPedido(event)" class="space-y-4">
+                        <div class="flex items-center justify-between bg-gray-50 p-4 rounded-3xl">
                             <button type="button" onclick="ajustarQtd(-1)" class="w-14 h-14 bg-white rounded-2xl font-black shadow-sm">-</button>
                             <span class="text-3xl font-black">${state.qtd}</span>
                             <button type="button" onclick="ajustarQtd(1)" class="w-14 h-14 bg-white rounded-2xl font-black shadow-sm">+</button>
                         </div>
-                        <input name="telefone" placeholder="WhatsApp (DDD)" class="w-full p-4 border rounded-2xl font-bold outline-none mb-2" required>
-                        <select name="recorrencia" class="w-full p-4 border rounded-2xl font-bold outline-none text-[10px] uppercase">
+                        <input name="telefone" placeholder="WhatsApp (DDD)" class="w-full p-5 border rounded-2xl font-bold outline-none" required>
+                        <select name="recorrencia" class="w-full p-5 border rounded-2xl font-bold outline-none text-[10px] uppercase">
                             <option value="">Apenas uma vez</option><option value="Semanal">Semanal</option><option value="Mensal">Mensal</option>
                         </select>
-                        <button class="w-full bg-rose-600 text-white py-6 rounded-3xl font-black uppercase">Confirmar</button>
+                        <button class="w-full bg-rose-600 text-white py-6 rounded-3xl font-black uppercase shadow-xl">Confirmar Pedido</button>
                     </form>
                     <button onclick="state.comprando=null;render()" class="w-full py-4 text-gray-400 font-black text-[10px] uppercase">Voltar</button>
                 </div>
             </div>`;
         }
 
-        window.handleLogin = async (e) => { e.preventDefault(); const f = new FormData(e.target); try { await signInWithEmailAndPassword(auth, f.get('email'), f.get('pass')); } catch (err) { alert("Erro login"); } };
+        window.handleLogin = async (e) => { e.preventDefault(); const f = new FormData(e.target); try { await signInWithEmailAndPassword(auth, f.get('email'), f.get('pass')); } catch (err) { alert("Erro"); } };
         window.signOut = () => signOut(auth);
     </script>
 </body>
