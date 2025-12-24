@@ -3,26 +3,23 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AppEgg Admin | Gestão</title>
+<title>AppEgg Admin | Dashboard</title>
 <script src="https://cdn.tailwindcss.com"></script>
-
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
-body { font-family:'Inter',sans-serif;background:#f4f7f6;color:#1f2937 }
+body{font-family:Inter,sans-serif;background:#f4f7f6;color:#1f2937}
+.nav-link{font-size:13px;font-weight:800;text-transform:uppercase;color:#6b7280;padding:14px 24px;border-radius:16px}
+.nav-link.active{color:#e11d48;background:#fff}
 .logo-text{font-weight:900;color:#e11d48;font-size:1.6rem}
-.nav-link{font-size:12px;font-weight:800;text-transform:uppercase;padding:14px 24px;border-radius:16px;color:#6b7280;transition:.2s}
-.nav-link.active{background:#fff;color:#e11d48;border:2px solid #ffe4e6}
-.card{background:#fff;border-radius:28px;border:1px solid #f1f1f1;padding:24px;margin-bottom:20px}
-.btn{padding:14px;border-radius:16px;font-weight:900;text-transform:uppercase;font-size:11px}
+.card{background:#fff;border-radius:32px;box-shadow:0 10px 40px rgba(0,0,0,.03)}
 </style>
 </head>
-
 <body>
 <div id="app-root"></div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-import { getFirestore, collection, onSnapshot, query, orderBy, doc, updateDoc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+import { getFirestore, collection, onSnapshot, query, orderBy, doc, updateDoc } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
 
 const firebaseConfig={
@@ -37,146 +34,92 @@ appId:"1:92187548716:web:d61d18a29aa76aead7c589"
 const app=initializeApp(firebaseConfig);
 const db=getFirestore(app);
 const auth=getAuth(app);
-const API="https://painel-distribuidora-backend.onrender.com/api";
 
-window.state={user:null,view:'pedidos',logs:[],produtos:[]};
+window.state={user:null,view:'pedidos',logs:[]};
 
 onAuthStateChanged(auth,u=>{
 state.user=u;
-if(u){carregarProdutos();ouvirPedidos();}
+if(u)sync();
 render();
 });
 
-async function carregarProdutos(){
-const r=await fetch(`${API}/produtos`);
-state.produtos=await r.json();
-}
-
-function ouvirPedidos(){
-const q=query(collection(db,"vendas_logs"),orderBy("criadoEm","desc"));
-onSnapshot(q,s=>{
+function sync(){
+onSnapshot(query(collection(db,"vendas_logs"),orderBy("criadoEm","desc")),s=>{
 state.logs=s.docs.map(d=>({id:d.id,...d.data()}));
 render();
 });
 }
 
-window.render=()=>{
-const root=document.getElementById("app-root");
-if(!state.user){root.innerHTML=login();return}
-
-root.innerHTML=`
-<nav class="bg-white border-b px-8 h-24 flex justify-between items-center">
-<div class="logo-text">AppEgg Admin</div>
+function render(){
+const r=document.getElementById("app-root");
+if(!state.user){r.innerHTML=login();return;}
+r.innerHTML=`
+<nav class="bg-white h-24 flex justify-between items-center px-8">
+<div class="logo-text">AppEgg</div>
 <div class="flex gap-2">
-<button onclick="state.view='pedidos';render()" class="nav-link ${state.view==='pedidos'?'active':''}">Pedidos</button>
-<button onclick="state.view='estoque';render()" class="nav-link ${state.view==='estoque'?'active':''}">Estoque</button>
-<button onclick="signOut(auth)" class="nav-link text-rose-600">Sair</button>
+<button onclick="signOut(auth)" class="nav-link">Sair</button>
 </div>
 </nav>
-
-<main class="p-8 max-w-6xl mx-auto">
-${state.view==='pedidos'?renderPedidos():renderEstoque()}
-</main>
-`;
-};
-
-/* ================= PEDIDOS ================= */
+<main class="p-8 max-w-5xl mx-auto">
+${renderPedidos()}
+</main>`;
+}
 
 function renderPedidos(){
-return state.logs
-.filter(l=>!['CANCELADO'].includes(l.status))
-.map(l=>`
-<div class="card border-l-8 ${l.status==='FINALIZADO'?'border-emerald-500':'border-blue-500'}">
+const ativos=state.logs.filter(l=>!['FINALIZADO','CANCELADO'].includes(l.status));
+if(!ativos.length)return `<div class="card p-20 text-center font-black text-gray-300 uppercase">Nenhum pedido</div>`;
+return ativos.map(l=>`
+<div class="card p-8 mb-6">
 <div class="flex justify-between mb-4">
 <div>
 <h3 class="font-black uppercase">${l.clienteNome}</h3>
-<p class="text-[10px] text-gray-400">${l.recorrencia||'Pedido Único'}</p>
+<p class="text-xs text-gray-400">${l.produto} • ${l.quantidade} un</p>
 </div>
-<span class="text-[10px] font-black uppercase">${l.status}</span>
+<span class="px-4 py-2 rounded-xl bg-gray-100 text-xs font-black">${l.status}</span>
 </div>
-
-<div class="bg-gray-50 p-4 rounded-xl flex justify-between mb-4">
-<span class="font-black">${l.quantidade}x ${l.produto}</span>
-<span class="text-rose-600 font-black">R$ ${Number(l.valorTotal).toFixed(2)}</span>
-</div>
-
-<div class="grid grid-cols-2 md:grid-cols-4 gap-2">
-<button onclick="mudarStatus('${l.id}','EMBALANDO')" class="btn bg-yellow-100">Embalando</button>
-<button onclick="mudarStatus('${l.id}','SAIU PARA ENTREGA')" class="btn bg-blue-100">Saiu</button>
-<button onclick="mudarStatus('${l.id}','PRONTO PARA RETIRADA')" class="btn bg-purple-100">Retirada</button>
-<button onclick="finalizarPedido('${l.id}')" class="btn bg-emerald-600 text-white">Finalizar</button>
-</div>
-</div>
-`).join('') || `<p class="text-center text-gray-300 font-black">SEM PEDIDOS</p>`;
-}
-
-/* ======== STATUS / ESTOQUE ======== */
-
-window.mudarStatus=async(id,novo)=>{
-const ref=doc(db,"vendas_logs",id);
-const snap=await getDoc(ref);
-const pedido=snap.data();
-
-/* ↓↓↓ RESERVA ESTOQUE SOMENTE AO EMBALAR ↓↓↓ */
-if(novo==='EMBALANDO' && pedido.status==='CRIADO'){
-const prod=state.produtos.find(p=>p.id===pedido.produtoId);
-if(prod){
-await fetch(`${API}/produtos/${prod.id}`,{
-method:"PUT",
-headers:{'Content-Type':'application/json'},
-body:JSON.stringify({...prod,quantidade:prod.quantidade-pedido.quantidade})
-});
-}
-}
-
-await updateDoc(ref,{status:novo,ultimaAtualizacao:serverTimestamp()});
-};
-
-window.finalizarPedido=async(id)=>{
-const ref=doc(db,"vendas_logs",id);
-const snap=await getDoc(ref);
-const p=snap.data();
-
-await updateDoc(ref,{status:'FINALIZADO',horarioConcluido:serverTimestamp()});
-
-/* WHATSAPP SOMENTE AGORA */
-if(p.telefone){
-window.open(`https://wa.me/${p.telefone.replace(/\D/g,'')}?text=${encodeURIComponent('Seu pedido AppEgg foi finalizado 🥚')}`);
-}
-};
-
-/* ================= ESTOQUE ================= */
-
-function renderEstoque(){
-return state.produtos.map(p=>`
-<div class="card flex justify-between items-center">
-<div>
-<h4 class="font-black uppercase">${p.nome}</h4>
-<p class="text-[10px] text-gray-400">${p.quantidade} em estoque</p>
+<div class="flex gap-3">
+${renderAcoes(l)}
 </div>
 </div>
 `).join('');
 }
 
-/* ================= LOGIN ================= */
+function renderAcoes(l){
+if(l.status==='CRIADO')return `<button onclick="setStatus('${l.id}','EMBALANDO')" class="flex-1 bg-blue-600 text-white py-4 rounded-2xl font-black uppercase text-xs">Embalando</button>`;
+if(l.status==='EMBALANDO'){
+return `
+<button onclick="setStatus('${l.id}','SAIU_PARA_ENTREGA')" class="flex-1 bg-emerald-600 text-white py-4 rounded-2xl font-black uppercase text-xs">Saiu p/ Entrega</button>
+<button onclick="setStatus('${l.id}','AGUARDANDO_RETIRADA')" class="flex-1 bg-indigo-600 text-white py-4 rounded-2xl font-black uppercase text-xs">Pronto p/ Retirada</button>`;
+}
+if(l.status==='SAIU_PARA_ENTREGA'||l.status==='AGUARDANDO_RETIRADA'){
+return `<button onclick="setStatus('${l.id}','FINALIZADO')" class="flex-1 bg-gray-900 text-white py-4 rounded-2xl font-black uppercase text-xs">Finalizar</button>`;
+}
+return '';
+}
+
+window.setStatus=async(id,status)=>{
+await updateDoc(doc(db,"vendas_logs",id),{status});
+};
 
 function login(){
 return `
-<div class="min-h-screen flex items-center justify-center bg-gray-900">
-<form onsubmit="doLogin(event)" class="bg-white p-12 rounded-[48px] w-full max-w-md">
-<div class="logo-text text-center mb-6">AppEgg</div>
-<input name="email" class="w-full p-4 border rounded-2xl mb-3" placeholder="Email">
-<input name="pass" type="password" class="w-full p-4 border rounded-2xl mb-6" placeholder="Senha">
-<button class="w-full bg-rose-600 text-white py-5 rounded-2xl font-black uppercase">Entrar</button>
+<div class="min-h-screen flex items-center justify-center bg-gray-900 p-8">
+<form onsubmit="handleLogin(event)" class="bg-white p-12 rounded-[48px] w-full max-w-md">
+<div class="logo-text text-5xl mb-6 text-center">AppEgg</div>
+<input name="email" class="w-full p-4 mb-3 rounded-xl border" placeholder="Email">
+<input name="pass" type="password" class="w-full p-4 mb-6 rounded-xl border" placeholder="Senha">
+<button class="w-full bg-rose-600 text-white py-4 rounded-2xl font-black uppercase">Entrar</button>
 </form>
 </div>`;
 }
 
-window.doLogin=async(e)=>{
+window.handleLogin=async(e)=>{
 e.preventDefault();
 const f=new FormData(e.target);
 await signInWithEmailAndPassword(auth,f.get("email"),f.get("pass"));
 };
+
+window.signOut=()=>signOut(auth);
 </script>
 </body>
 </html>
