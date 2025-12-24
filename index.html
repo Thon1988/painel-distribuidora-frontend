@@ -9,190 +9,217 @@
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
         body { font-family: 'Inter', sans-serif; background: #f9fafb; color: #1f2937; }
         .card { background: #ffffff; border: 1px solid #f3f4f6; border-radius: 24px; box-shadow: 0 4px 15px rgba(0,0,0,0.02); }
-        .nav-link { font-size: 10px; font-weight: 800; text-transform: uppercase; color: #9ca3af; padding: 12px 14px; border-radius: 12px; cursor: pointer; }
+        .nav-link { font-size: 10px; font-weight: 800; text-transform: uppercase; color: #9ca3af; padding: 12px 14px; border-radius: 12px; cursor: pointer; transition: 0.2s; }
         .nav-link.active { color: #e11d48; background: #fff1f2; }
         .logo-text { font-weight: 800; color: #e11d48; font-size: 1.25rem; font-style: italic; }
         .input-egg { width: 100%; padding: 14px; background: #f9fafb; border-radius: 16px; border: 1px solid #f3f4f6; font-weight: 700; font-size: 13px; outline: none; }
+        .badge { padding: 4px 8px; border-radius: 8px; font-size: 9px; font-weight: 900; text-transform: uppercase; }
     </style>
 </head>
 <body>
-<div id="app-root"></div>
+    <div id="app-root"></div>
 
-<script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-    import { getFirestore, collection, onSnapshot, query, orderBy, doc, updateDoc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
-    import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+        import { getFirestore, collection, onSnapshot, query, orderBy, doc, updateDoc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
 
-    const firebaseConfig = {
-        apiKey: "AIzaSyD3Otz9-zdZH-E5Feg9IOGWPzVycoe8gro",
-        authDomain: "distribuidora-de-ovos-aline.firebaseapp.com",
-        projectId: "distribuidora-de-ovos-aline",
-        storageBucket: "distribuidora-de-ovos-aline.firebasestorage.app",
-        messagingSenderId: "92187548716",
-        appId: "1:92187548716:web:d61d18a29aa76aead7c589"
-    };
+        const firebaseConfig = {
+            apiKey: "AIzaSyD3Otz9-zdZH-E5Feg9IOGWPzVycoe8gro",
+            authDomain: "distribuidora-de-ovos-aline.firebaseapp.com",
+            projectId: "distribuidora-de-ovos-aline",
+            storageBucket: "distribuidora-de-ovos-aline.firebasestorage.app",
+            messagingSenderId: "92187548716",
+            appId: "1:92187548716:web:d61d18a29aa76aead7c589"
+        };
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    const auth = getAuth(app);
-    const API_BASE = "https://painel-distribuidora-backend.onrender.com/api";
+        const appFB = initializeApp(firebaseConfig);
+        const db = getFirestore(appFB);
+        const auth = getAuth(appFB);
+        const API_BASE = "https://painel-distribuidora-backend.onrender.com/api";
 
-    window.state = { user:null, view:'pedidos', logs:[], produtos:[], editando: null };
+        window.state = { user: null, view: 'pedidos', logs: [], produtos: [], editando: null, filtroData: 'hoje' };
+        const state = window.state; // Problema 1 corrigido aqui também
 
-    onAuthStateChanged(auth, user => {
-        window.state.user = user;
-        if(user) { loadProdutos(); initRealtime(); }
-        render();
-    });
-
-    async function loadProdutos() {
-        const r = await fetch(`${API_BASE}/produtos`);
-        state.produtos = await r.json();
-        render();
-    }
-
-    function initRealtime() {
-        onSnapshot(query(collection(db,"vendas_logs"), orderBy("criadoEm","desc")), s => {
-            state.logs = s.docs.map(d => ({id:d.id, ...d.data()}));
-            render();
+        onAuthStateChanged(auth, user => {
+            state.user = user;
+            if (user) { loadProdutos(); syncRealtime(); }
+            window.render();
         });
-    }
 
-    function render() {
-        const root = document.getElementById('app-root');
-        if(!window.state.user) {
-            root.innerHTML = `<div class="min-h-screen flex items-center justify-center bg-rose-600"><form onsubmit="login(event)" class="bg-white p-10 rounded-3xl space-y-4"><div class="logo-text text-3xl text-center">AppEgg Admin</div><input name="email" class="w-full p-4 border rounded-xl" placeholder="Email"><input name="pass" type="password" class="w-full p-4 border rounded-xl" placeholder="Senha"><button class="w-full bg-rose-600 text-white py-4 rounded-xl font-black">Entrar</button></form></div>`;
-            return;
+        async function loadProdutos() {
+            try {
+                const r = await fetch(`${API_BASE}/produtos`);
+                state.produtos = await r.json();
+                window.render();
+            } catch(e) { console.error("Erro API", e); }
         }
 
-        root.innerHTML = `
-        <nav class="bg-white border-b px-6 h-20 flex justify-between items-center">
-            <div class="logo-text">AppEgg Admin</div>
-            <div class="flex gap-1">
-                <button class="nav-link ${state.view==='pedidos'?'active':''}" onclick="state.view='pedidos';render()">Pedidos</button>
-                <button class="nav-link ${state.view==='estoque'?'active':''}" onclick="state.view='estoque';render()">Estoque</button>
-                <button class="nav-link ${state.view==='financeiro'?'active':''}" onclick="state.view='financeiro';render()">Financeiro</button>
-                <button class="nav-link" onclick="window.logout()">Sair</button>
-            </div>
-        </nav>
-        <main class="p-6 max-w-5xl mx-auto">
-            ${state.view==='financeiro' ? renderFinanceiro() : state.view==='estoque' ? renderEstoque() : renderPedidos()}
-        </main>`;
-    }
+        function syncRealtime() {
+            onSnapshot(query(collection(db, "vendas_logs"), orderBy("criadoEm", "desc")), s => {
+                state.logs = s.docs.map(d => ({ id: d.id, ...d.data() }));
+                window.render();
+            });
+        }
 
-    function renderPedidos() {
-        const ativos = state.logs.filter(l => !['FINALIZADO','CANCELADO'].includes(l.status));
-        return ativos.map(l => `
-        <div class="card p-6 mb-4 border-l-8 ${l.status==='AGUARDANDO PAGAMENTO'?'border-rose-400':'border-blue-400'}">
-            <div class="flex justify-between items-start mb-2">
-                <h3 class="font-black">${l.clienteNome}</h3>
-                <span class="text-[9px] font-black uppercase bg-gray-100 px-2 py-1 rounded-md">${l.status}</span>
-            </div>
-            <p class="text-xs mb-4 font-bold text-gray-400">${l.quantidade}x ${l.produto} — R$ ${l.valorTotal.toFixed(2)}</p>
-            <div class="flex gap-2">
-                <button onclick="finalizar('${l.id}')" class="flex-1 bg-emerald-600 text-white py-3 rounded-xl font-black text-xs uppercase">Concluir e Avisar</button>
-                <button onclick="cancelar('${l.id}')" class="bg-gray-100 px-4 rounded-xl font-black text-xs text-gray-400 uppercase">Cancelar</button>
-            </div>
-        </div>`).join('') || `<p class="text-center text-gray-300 font-black py-10 uppercase text-xs">Sem pedidos</p>`;
-    }
+        function filtrarPorPeriodo(dados) {
+            const agora = new Date();
+            return dados.filter(l => {
+                if (!l.criadoEm) return false;
+                const dt = new Date(l.criadoEm.seconds * 1000);
+                if (state.filtroData === 'hoje') return dt.toDateString() === agora.toDateString();
+                if (state.filtroData === 'semana') return (agora - dt) / (1000 * 3600 * 24) <= 7;
+                if (state.filtroData === 'mes') return (agora - dt) / (1000 * 3600 * 24) <= 30;
+                return true;
+            });
+        }
 
-    function renderEstoque() {
-        const p = state.editando || { nome: '', preco: '', preco_custo: '', quantidade: '' };
-        return `
-        <div class="card p-6 mb-6">
-            <h3 class="font-black text-xs uppercase mb-4 text-rose-600 italic">Gerenciar Produto</h3>
-            <form onsubmit="salvarProduto(event)" class="grid grid-cols-1 md:grid-cols-4 gap-3">
-                <input name="nome" value="${p.nome}" placeholder="Nome" class="input-egg border md:col-span-2" required>
-                <input name="preco_custo" type="number" step="0.01" value="${p.preco_custo}" placeholder="Custo R$" class="input-egg border" required>
-                <input name="preco" type="number" step="0.01" value="${p.preco}" placeholder="Venda R$" class="input-egg border" required>
-                <input name="quantidade" type="number" value="${p.quantidade}" placeholder="Estoque" class="input-egg border" required>
-                <button class="bg-rose-600 text-white font-black rounded-xl uppercase text-xs py-4 md:col-span-3">Salvar</button>
-                ${state.editando ? `<button type="button" onclick="state.editando=null;render()" class="bg-gray-100 text-gray-400 rounded-xl font-black text-xs">Cancelar</button>` : ''}
-            </form>
-        </div>
-        <div class="grid gap-2">
-            ${state.produtos.map(prod => `
-            <div class="card p-4 flex justify-between items-center">
-                <div><p class="font-black text-xs uppercase">${prod.nome}</p><p class="text-[10px] text-gray-400 font-bold">Estoque: ${prod.quantidade}</p></div>
-                <button onclick='state.editando=${JSON.stringify(prod)};render()' class="text-blue-500 font-black text-[10px] uppercase">Editar</button>
-            </div>`).join('')}
-        </div>`;
-    }
+        window.render = () => {
+            const root = document.getElementById('app-root');
+            if (!state.user) { root.innerHTML = renderLogin(); return; }
 
-    function renderFinanceiro() {
-        const fins = state.logs.filter(l => l.status === 'FINALIZADO');
-        let totalVenda = 0;
-        let totalCusto = 0;
-
-        fins.forEach(l => {
-            totalVenda += (l.valorTotal || 0);
-            const pInfo = state.produtos.find(p => p.nome === l.produto);
-            totalCusto += (pInfo?.preco_custo || l.precoUnidade * 0.7) * l.quantidade; // Fallback 70% custo se não achar
-        });
-
-        return `
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div class="card p-8 text-center bg-rose-600 text-white shadow-xl shadow-rose-100">
-                <p class="text-[10px] uppercase font-black opacity-70">Vendido</p>
-                <h2 class="text-3xl font-black italic">R$ ${totalVenda.toFixed(2)}</h2>
-            </div>
-            <div class="card p-8 text-center bg-gray-800 text-white">
-                <p class="text-[10px] uppercase font-black opacity-70">Custo</p>
-                <h2 class="text-3xl font-black italic">R$ ${totalCusto.toFixed(2)}</h2>
-            </div>
-            <div class="card p-8 text-center bg-emerald-500 text-white shadow-xl shadow-emerald-100">
-                <p class="text-[10px] uppercase font-black opacity-70">Lucro Real</p>
-                <h2 class="text-3xl font-black italic">R$ ${(totalVenda - totalCusto).toFixed(2)}</h2>
-            </div>
-        </div>`;
-    }
-
-    // Ações
-    window.login = async e => {
-        e.preventDefault();
-        await signInWithEmailAndPassword(auth, e.target.email.value, e.target.pass.value);
-    };
-    window.logout = () => signOut(auth);
-
-    window.finalizar = async id => {
-        const snap = await getDoc(doc(db,"vendas_logs",id));
-        const p = snap.data();
-        await updateDoc(doc(db,"vendas_logs",id), { status:'FINALIZADO', horarioConcluido: serverTimestamp() });
-        
-        const msg = `Olá ${p.clienteNome}! Seu pedido de ${p.quantidade}x ${p.produto} foi concluído e já está saindo para entrega! 🥚✨`;
-        window.open(`https://wa.me/${p.telefone || ''}?text=${encodeURIComponent(msg)}`, '_blank');
-    };
-
-    window.cancelar = async id => {
-        const snap = await getDoc(doc(db,"vendas_logs",id));
-        const p = snap.data();
-        const prodRes = await fetch(`${API_BASE}/produtos/${p.produtoId}`);
-        const prod = await prodRes.json();
-        await fetch(`${API_BASE}/produtos/${p.produtoId}`, {
-            method:'PUT',
-            headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({ quantidade: prod.quantidade + p.quantidade })
-        });
-        await updateDoc(doc(db,"vendas_logs",id), { status:'CANCELADO' });
-    };
-
-    window.salvarProduto = async e => {
-        e.preventDefault();
-        const f = new FormData(e.target);
-        const payload = {
-            nome: f.get('nome'),
-            preco: parseFloat(f.get('preco')),
-            preco_custo: parseFloat(f.get('preco_custo')),
-            quantidade: parseInt(f.get('quantidade')),
-            tipo_estoque: 'Unidade'
+            root.innerHTML = `
+                <nav class="bg-white border-b px-6 h-20 flex justify-between items-center sticky top-0 z-50">
+                    <div class="logo-text italic">AppEgg Admin</div>
+                    <div class="flex gap-1 overflow-x-auto">
+                        <button onclick="state.view='pedidos';render()" class="nav-link ${state.view==='pedidos'?'active':''}">Pedidos</button>
+                        <button onclick="state.view='estoque';render()" class="nav-link ${state.view==='estoque'?'active':''}">Estoque</button>
+                        <button onclick="state.view='clientes';render()" class="nav-link ${state.view==='clientes'?'active':''}">Clientes</button>
+                        <button onclick="state.view='financeiro';render()" class="nav-link ${state.view==='financeiro'?'active':''}">Financeiro</button>
+                        <button onclick="signOut(auth)" class="nav-link">Sair</button>
+                    </div>
+                </nav>
+                <main class="p-6 max-w-5xl mx-auto">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="font-black uppercase italic text-xl">${state.view}</h2>
+                        <select onchange="state.filtroData=this.value;render()" class="bg-white border p-3 rounded-xl text-[10px] font-black uppercase shadow-sm">
+                            <option value="hoje" ${state.filtroData==='hoje'?'selected':''}>Hoje</option>
+                            <option value="semana" ${state.filtroData==='semana'?'selected':''}>Últimos 7 dias</option>
+                            <option value="mes" ${state.filtroData==='mes'?'selected':''}>Últimos 30 dias</option>
+                            <option value="todos" ${state.filtroData==='todos'?'selected':''}>Todo o Tempo</option>
+                        </select>
+                    </div>
+                    ${state.view === 'financeiro' ? renderFinanceiro() : 
+                      state.view === 'clientes' ? renderClientes() :
+                      state.view === 'estoque' ? renderEstoque() : renderPedidos()}
+                </main>`;
         };
-        const url = state.editando ? `${API_BASE}/produtos/${state.editando.id}` : `${API_BASE}/produtos`;
-        await fetch(url, { method: state.editando?'PUT':'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
-        state.editando = null;
-        loadProdutos();
-    };
 
-    window.render = render;
-</script>
+        function renderPedidos() {
+            const filtrados = filtrarPorPeriodo(state.logs).filter(l => !['FINALIZADO', 'CANCELADO'].includes(l.status));
+            return filtrados.map(l => `
+                <div class="card p-6 mb-4 border-l-8 ${l.recorrencia ? 'border-blue-500' : 'border-rose-400'}">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h3 class="font-black uppercase text-sm">${l.clienteNome}</h3>
+                            <p class="text-[9px] font-bold text-gray-400 uppercase">${l.pagamento || 'PIX'} • ${l.entrega || 'ENTREGA'} ${l.recorrencia ? '• [PROGRAMADO: '+l.recorrencia+']' : ''}</p>
+                        </div>
+                        <span class="badge bg-rose-50 text-rose-600">${l.status}</span>
+                    </div>
+                    <div class="bg-gray-50 p-4 rounded-xl text-xs font-black italic mb-4 flex justify-between">
+                        <span>${l.quantidade}x ${l.produto}</span>
+                        <span class="text-rose-600">R$ ${Number(l.valorTotal).toFixed(2)}</span>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="finalizarPedido('${l.id}')" class="flex-1 bg-emerald-600 text-white py-4 rounded-xl font-black uppercase text-[10px] shadow-lg">Finalizar e Avisar</button>
+                        <button onclick="cancelarPedido('${l.id}')" class="px-6 bg-gray-100 text-gray-400 rounded-xl font-black text-[10px]">Cancelar</button>
+                    </div>
+                </div>`).join('') || '<p class="text-center font-black py-20 text-gray-300 uppercase">Nenhum pedido pendente</p>';
+        }
+
+        function renderClientes() {
+            const clientesUnicos = [...new Set(state.logs.map(l => l.clienteNome))];
+            return `<div class="grid gap-4">${clientesUnicos.map(c => {
+                const pedidos = state.logs.filter(l => l.clienteNome === c);
+                const totalGasto = pedidos.filter(l => l.status === 'FINALIZADO').reduce((acc, curr) => acc + Number(curr.valorTotal), 0);
+                return `
+                <div class="card p-6 flex justify-between items-center">
+                    <div><h4 class="font-black uppercase text-sm">${c}</h4><p class="text-[10px] font-bold text-gray-400 uppercase">${pedidos.length} Pedidos</p></div>
+                    <div class="text-right"><p class="text-xs font-black text-emerald-600">R$ ${totalGasto.toFixed(2)}</p><p class="text-[9px] font-bold uppercase text-gray-300">Total Comprado</p></div>
+                </div>`;
+            }).join('')}</div>`;
+        }
+
+        function renderFinanceiro() {
+            const filtrados = filtrarPorPeriodo(state.logs).filter(l => l.status === 'FINALIZADO');
+            let venda = 0, custo = 0;
+            filtrados.forEach(l => {
+                venda += Number(l.valorTotal);
+                const p = state.produtos.find(prod => prod.nome === l.produto);
+                custo += (p?.preco_custo || Number(l.precoUnidade) * 0.7) * Number(l.quantidade);
+            });
+            return `
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="card p-10 bg-rose-600 text-white text-center shadow-xl shadow-rose-100">
+                        <p class="text-[10px] font-black opacity-60 uppercase mb-2">Faturamento Bruto</p>
+                        <h2 class="text-4xl font-black italic">R$ ${venda.toFixed(2)}</h2>
+                    </div>
+                    <div class="card p-10 bg-gray-800 text-white text-center">
+                        <p class="text-[10px] font-black opacity-60 uppercase mb-2">Custo de Produtos</p>
+                        <h2 class="text-4xl font-black italic">R$ ${custo.toFixed(2)}</h2>
+                    </div>
+                    <div class="card p-10 bg-emerald-500 text-white text-center shadow-xl shadow-emerald-100">
+                        <p class="text-[10px] font-black opacity-60 uppercase mb-2">Lucro Líquido</p>
+                        <h2 class="text-4xl font-black italic">R$ ${(venda-custo).toFixed(2)}</h2>
+                    </div>
+                </div>`;
+        }
+
+        function renderEstoque() {
+            const p = state.editando || { nome: '', preco: '', preco_custo: '', quantidade: '' };
+            return `
+                <div class="card p-6 mb-8">
+                    <form onsubmit="salvarProduto(event)" class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                        <input name="nome" value="${p.nome}" placeholder="Nome do Ovo" class="input-egg border md:col-span-2" required>
+                        <input name="preco_custo" type="number" step="0.01" value="${p.preco_custo}" placeholder="Custo R$" class="input-egg border" required>
+                        <input name="preco" type="number" step="0.01" value="${p.preco}" placeholder="Venda R$" class="input-egg border" required>
+                        <input name="quantidade" type="number" value="${p.quantidade}" placeholder="Estoque" class="input-egg border" required>
+                        <button class="bg-rose-600 text-white font-black rounded-xl uppercase text-xs py-4 md:col-span-3 shadow-lg">Gravar Produto</button>
+                        ${state.editando ? `<button type="button" onclick="state.editando=null;render()" class="bg-gray-100 rounded-xl font-black text-xs uppercase">Cancelar</button>` : ''}
+                    </form>
+                </div>
+                <div class="grid gap-3">
+                    ${state.produtos.map(prod => `
+                    <div class="card p-5 flex justify-between items-center">
+                        <div><p class="font-black text-xs uppercase">${prod.nome}</p><p class="text-[10px] text-gray-400 font-bold uppercase">Estoque: ${prod.quantidade}</p></div>
+                        <button onclick='state.editando=${JSON.stringify(prod)};render()' class="text-blue-500 font-black text-[10px] uppercase border px-3 py-1 rounded-lg">Editar</button>
+                    </div>`).join('')}
+                </div>`;
+        }
+
+        window.finalizarPedido = async (id) => {
+            const snap = await getDoc(doc(db, "vendas_logs", id));
+            const p = snap.data();
+            await updateDoc(doc(db, "vendas_logs", id), { status: 'FINALIZADO', horarioConcluido: serverTimestamp() });
+            window.open(`https://wa.me/${p.telefone || ''}?text=Olá ${p.clienteNome}! Seu pedido de ${p.produto} foi concluído! 🥚✨`, '_blank');
+        };
+
+        window.cancelarPedido = async (id) => {
+            const snap = await getDoc(doc(db, "vendas_logs", id));
+            const p = snap.data();
+            const resProd = await fetch(`${API_BASE}/produtos/${p.produtoId}`);
+            const prod = await resProd.json();
+            await fetch(`${API_BASE}/produtos/${p.produtoId}`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ quantidade: prod.quantidade + p.quantidade }) });
+            await updateDoc(doc(db, "vendas_logs", id), { status: 'CANCELADO' });
+        };
+
+        window.salvarProduto = async (e) => {
+            e.preventDefault();
+            const f = new FormData(e.target);
+            const p = { nome: f.get('nome'), preco: parseFloat(f.get('preco')), preco_custo: parseFloat(f.get('preco_custo')), quantidade: parseInt(f.get('quantidade')), tipo_estoque: 'Unidade' };
+            const url = state.editando ? `${API_BASE}/produtos/${state.editando.id}` : `${API_BASE}/produtos`;
+            await fetch(url, { method: state.editando ? 'PUT' : 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(p) });
+            state.editando = null;
+            loadProdutos();
+        };
+
+        window.handleLogin = async (e) => {
+            e.preventDefault();
+            const f = new FormData(e.target);
+            try { await signInWithEmailAndPassword(auth, f.get('email'), f.get('pass')); } catch (err) { alert("Erro ao entrar"); }
+        };
+
+        function renderLogin() { return `<div class="min-h-screen flex items-center justify-center bg-rose-600 p-8"><form onsubmit="handleLogin(event)" class="bg-white p-12 rounded-[40px] shadow-2xl w-full max-w-sm"><div class="logo-text text-4xl mb-8 text-center">AppEgg Admin</div><input name="email" class="input-egg border mb-3" placeholder="Seu Email"><input name="pass" type="password" class="input-egg border mb-6" placeholder="Sua Senha"><button class="w-full bg-rose-600 text-white py-5 rounded-2xl font-black uppercase shadow-lg">Entrar</button></form></div>`; }
+    </script>
 </body>
 </html>
