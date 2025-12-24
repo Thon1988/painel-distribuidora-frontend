@@ -1,195 +1,161 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AppEgg | Meus Pedidos</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800;900&display=swap');
-        body { font-family: 'Inter', sans-serif; background: #fff; padding-bottom: 120px; color: #1f2937; }
-        .logo-text { font-weight: 900; color: #e11d48; font-size: 1.8rem; letter-spacing: -1px; }
-        .nav-bottom { position: fixed; bottom: 20px; left: 15px; right: 15px; background: #111; border-radius: 32px; display: flex; justify-content: space-around; padding: 14px; z-index: 100; box-shadow: 0 15px 35px rgba(0,0,0,0.2); }
-        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; color: #666; font-size: 10px; font-weight: 800; border: none; background: transparent; }
-        .nav-item.active { color: #fff; }
-        .card-pedido { background: white; border: 1px solid #f3f4f6; border-radius: 32px; padding: 24px; margin-bottom: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.02); position: relative; }
-        .input-egg { width: 100%; padding: 18px; background: #f9fafb; border-radius: 20px; border: 2px solid transparent; font-weight: 700; font-size: 14px; outline: none; }
-        .status-badge { font-size: 9px; font-weight: 900; padding: 6px 12px; border-radius: 12px; text-transform: uppercase; }
-        .status-CRIADO { background: #fef3c7; color: #92400e; }
-        .status-EMBALANDO { background: #dcfce7; color: #166534; }
-        .status-ENTREGA { background: #dbeafe; color: #1e40af; }
-        .status-FINALIZADO { background: #f3f4f6; color: #374151; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>AppEgg | Cliente</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800;900&display=swap');
+body { font-family:'Inter',sans-serif;background:#fff;padding-bottom:120px;color:#1f2937;}
+.logo-text{font-weight:900;color:#e11d48;font-size:1.8rem}
+.nav-bottom{position:fixed;bottom:20px;left:15px;right:15px;background:#111;border-radius:32px;display:flex;justify-content:space-around;padding:14px;z-index:100}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;color:#666;font-size:10px;font-weight:800}
+.nav-item.active{color:#fff}
+.card{background:#fff;border:1px solid #f3f4f6;border-radius:28px;padding:24px;margin-bottom:16px}
+.input{width:100%;padding:16px;background:#f9fafb;border-radius:18px;font-weight:700}
+.btn{background:#e11d48;color:#fff;padding:18px;border-radius:22px;font-weight:900;text-transform:uppercase;width:100%}
+</style>
 </head>
 <body>
-    <div id="app-root"></div>
+<div id="app-root"></div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-        import { getFirestore, collection, addDoc, serverTimestamp, onSnapshot, query, where, orderBy } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
-        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+import { getFirestore, collection, addDoc, serverTimestamp, onSnapshot, query, where, orderBy } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyD3Otz9-zdZH-E5Feg9IOGWPzVycoe8gro",
-            authDomain: "distribuidora-de-ovos-aline.firebaseapp.com",
-            projectId: "distribuidora-de-ovos-aline",
-            storageBucket: "distribuidora-de-ovos-aline.firebasestorage.app",
-            messagingSenderId: "92187548716",
-            appId: "1:92187548716:web:d61d18a29aa76aead7c589"
-        };
+const firebaseConfig={apiKey:"AIzaSyD3Otz9-zdZH-E5Feg9IOGWPzVycoe8gro",authDomain:"distribuidora-de-ovos-aline.firebaseapp.com",projectId:"distribuidora-de-ovos-aline",storageBucket:"distribuidora-de-ovos-aline.firebasestorage.app",messagingSenderId:"92187548716",appId:"1:92187548716:web:d61d18a29aa76aead7c589"};
+const app=initializeApp(firebaseConfig);
+const db=getFirestore(app);
+const auth=getAuth(app);
 
-        const appFB = initializeApp(firebaseConfig);
-        const db = getFirestore(appFB);
-        const auth = getAuth(appFB);
-        const API_BASE = "https://painel-distribuidora-backend.onrender.com/api";
-        const IMG_DEFAULT = "https://via.placeholder.com/300x300?text=AppEgg+Ovos";
+window.state={user:null,view:'loja',produtos:[],pedidos:[],comprando:null,qtd:1,mostrarData:false};
 
-        window.state = { user: null, view: 'loja', produtos: [], pedidos: [], comprando: null, qtd: 1, recorrenciaSel: '' };
+onAuthStateChanged(auth,u=>{state.user=u;if(u){carregarProdutos();ouvirPedidos()}render()});
 
-        onAuthStateChanged(auth, user => {
-            window.state.user = user;
-            if (user) { loadProdutos(); syncPedidos(); }
-            window.render();
-        });
+async function carregarProdutos(){
+const r=await fetch("https://painel-distribuidora-backend.onrender.com/api/produtos");
+state.produtos=await r.json();render();
+}
 
-        async function loadProdutos() {
-            try {
-                const r = await fetch(`${API_BASE}/produtos`);
-                window.state.produtos = await r.json();
-                window.render();
-            } catch (err) { console.error("Erro API", err); }
-        }
+function ouvirPedidos(){
+const q=query(collection(db,"vendas_logs"),where("clienteId","==",auth.currentUser.uid),orderBy("criadoEm","desc"));
+onSnapshot(q,s=>{state.pedidos=s.docs.map(d=>({id:d.id,...d.data()}));render()});
+}
 
-        function syncPedidos() {
-            if(!auth.currentUser) return;
-            const q = query(collection(db, "vendas_logs"), where("clienteId", "==", auth.currentUser.uid), orderBy("criadoEm", "desc"));
-            onSnapshot(q, s => {
-                window.state.pedidos = s.docs.map(d => ({ id: d.id, ...d.data() }));
-                window.render();
-            });
-        }
+window.render=()=>{
+const root=document.getElementById("app-root");
+if(!state.user){root.innerHTML=login();return}
 
-        window.render = () => {
-            const root = document.getElementById('app-root');
-            if (!window.state.user) { root.innerHTML = renderLogin(); return; }
+root.innerHTML=`
+<div class="p-6 max-w-lg mx-auto">
+<header class="flex justify-between items-center mb-8">
+<div class="logo-text">AppEgg</div>
+<div class="text-[10px] font-black text-gray-400">@${state.user.email.split('@')[0]}</div>
+</header>
+${state.view==='loja'?loja():pedidos()}
+</div>
 
-            root.innerHTML = `
-                <div class="p-6 max-w-lg mx-auto">
-                    <header class="flex justify-between items-center mb-10">
-                        <div class="logo-text">AppEgg</div>
-                        <div class="bg-gray-100 px-4 py-2 rounded-2xl font-black text-[10px] text-gray-500 uppercase">@${window.state.user.email.split('@')[0]}</div>
-                    </header>
-                    ${window.state.view === 'loja' ? renderLoja() : renderPedidos()}
-                </div>
-                <nav class="nav-bottom">
-                    <button onclick="window.state.view='loja';window.render()" class="nav-item ${window.state.view==='loja'?'active':''}"><span>🏠</span>LOJA</button>
-                    <button onclick="window.state.view='pedidos';window.render()" class="nav-item ${window.state.view==='pedidos'?'active':''}"><span>📦</span>PEDIDOS</button>
-                    <button onclick="signOut(auth)" class="nav-item text-rose-500"><span>🚪</span>SAIR</button>
-                </nav>
-                ${window.state.comprando ? renderModalCompra() : ''}
-            `;
-        };
+<nav class="nav-bottom">
+<button onclick="state.view='loja';render()" class="nav-item ${state.view==='loja'?'active':''}">🏠<span>LOJA</span></button>
+<button onclick="state.view='pedidos';render()" class="nav-item ${state.view==='pedidos'?'active':''}">📦<span>PEDIDOS</span></button>
+<button onclick="signOut(auth)" class="nav-item">🚪<span>SAIR</span></button>
+</nav>
 
-        function renderLoja() {
-            return `
-                <h2 class="font-black uppercase text-[10px] text-gray-400 mb-6">Produtos</h2>
-                <div class="space-y-3">
-                    ${window.state.produtos.map((p, i) => `
-                        <div class="card-pedido flex gap-5 items-center" onclick="window.abrirCompra(${i})">
-                            <img src="${p.foto_url || IMG_DEFAULT}" class="w-20 h-20 object-cover rounded-[20px]">
-                            <div>
-                                <h3 class="font-black uppercase text-sm text-gray-800">${p.nome}</h3>
-                                <p class="text-rose-600 font-black text-lg">R$ ${Number(p.preco).toFixed(2)}</p>
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>`;
-        }
+${state.comprando?modalCompra():''}
+`;
+};
 
-        function renderPedidos() {
-            return `
-                <h2 class="font-black uppercase text-[10px] text-gray-400 mb-6">Meus Pedidos</h2>
-                <div class="space-y-4">
-                    ${window.state.pedidos.map(p => `
-                        <div class="card-pedido">
-                            <div class="flex justify-between items-start">
-                                <div>
-                                    <h4 class="font-black uppercase text-sm">${p.quantidade}x ${p.produto}</h4>
-                                    <p class="text-[10px] font-bold text-gray-400">${p.dataProximaRemessa ? '📅 Remessa: '+p.dataProximaRemessa : 'Compra Única'}</p>
-                                </div>
-                                <span class="status-badge status-${(p.status || 'CRIADO').replace(/ /g, '')}">${p.status || 'CRIADO'}</span>
-                            </div>
-                        </div>
-                    `).join('') || '<p class="text-center py-20 text-gray-300 font-black uppercase">Nenhum pedido</p>'}
-                </div>`;
-        }
+function loja(){
+return state.produtos.map((p,i)=>`
+<div class="card" onclick="state.comprando=state.produtos[${i}];state.qtd=1;render()">
+<h3 class="font-black uppercase">${p.nome}</h3>
+<p class="text-rose-600 font-black">R$ ${Number(p.preco).toFixed(2)}</p>
+</div>`).join('');
+}
 
-        window.abrirCompra = (i) => { window.state.comprando = window.state.produtos[i]; window.state.qtd = 1; window.state.recorrenciaSel = ''; window.render(); };
+function pedidos(){
+return state.pedidos.map(p=>`
+<div class="card border-l-8 ${p.status==='FINALIZADO'?'border-emerald-500':'border-blue-500'}">
+<div class="flex justify-between">
+<span class="font-black uppercase text-xs">${p.status}</span>
+<span class="text-[10px] text-gray-400">#${p.id.slice(-4)}</span>
+</div>
+<p class="font-black mt-2">${p.quantidade}x ${p.produto}</p>
+${p.dataProximaRemessa?`<p class="text-[10px] text-gray-400">Próxima: ${p.dataProximaRemessa}</p>`:''}
+</div>`).join('')||'<p class="text-center text-gray-300 font-black">SEM PEDIDOS</p>';
+}
 
-        window.confirmarPedido = async (e) => {
-            e.preventDefault();
-            const f = new FormData(e.target);
-            const p = window.state.comprando;
-            const qtd = window.state.qtd;
+function modalCompra(){
+const p=state.comprando;
+return `
+<div class="fixed inset-0 bg-black/70 flex items-end z-50">
+<div class="bg-white w-full p-8 rounded-t-[40px]">
+<h3 class="font-black text-xl mb-4">${p.nome}</h3>
 
-            try {
-                // 1. Salvar no Firebase
-                await addDoc(collection(db, "vendas_logs"), {
-                    clienteId: auth.currentUser.uid,
-                    clienteNome: auth.currentUser.email.split('@')[0],
-                    produtoId: p.id,
-                    produto: p.nome,
-                    quantidade: qtd,
-                    valorTotal: p.preco * qtd,
-                    recorrencia: f.get('recorrencia'),
-                    dataProximaRemessa: f.get('dataRemessa') || null,
-                    telefone: f.get('telefone'),
-                    status: 'CRIADO',
-                    criadoEm: serverTimestamp()
-                });
+<form onsubmit="finalizar(event)" class="space-y-4">
+<div class="flex justify-between bg-gray-50 p-4 rounded-2xl">
+<button type="button" onclick="state.qtd=Math.max(1,state.qtd-1);render()">-</button>
+<span class="font-black text-xl">${state.qtd}</span>
+<button type="button" onclick="state.qtd++;render()">+</button>
+</div>
 
-                // 2. Baixar estoque na API
-                await fetch(`${API_BASE}/produtos/${p.id}`, {
-                    method: 'PUT',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ ...p, quantidade: p.quantidade - qtd })
-                });
+<select name="recorrencia" class="input" onchange="state.mostrarData=this.value!=='';render()">
+<option value="">Apenas uma vez</option>
+<option value="Semanal">Semanal</option>
+<option value="Quinzenal">Quinzenal</option>
+<option value="Mensal">Mensal</option>
+</select>
 
-                window.state.comprando = null;
-                window.state.view = 'pedidos';
-                window.render();
-            } catch (err) { alert("Erro ao processar pedido."); }
-        };
+${state.mostrarData?`<input type="date" name="data" class="input" required>`:''}
 
-        function renderModalCompra() {
-            const p = window.state.comprando;
-            return `
-            <div class="fixed inset-0 bg-black/80 flex items-end z-[200]">
-                <form onsubmit="window.confirmarPedido(event)" class="bg-white w-full p-10 rounded-t-[48px] space-y-4">
-                    <h3 class="font-black uppercase text-xl">${p.nome}</h3>
-                    <div class="flex items-center justify-between bg-gray-50 p-4 rounded-3xl">
-                        <button type="button" onclick="window.state.qtd=Math.max(1, window.state.qtd-1);window.render()" class="w-12 h-12 bg-white rounded-xl font-black">-</button>
-                        <span class="text-2xl font-black">${window.state.qtd}</span>
-                        <button type="button" onclick="window.state.qtd++;window.render()" class="w-12 h-12 bg-white rounded-xl font-black">+</button>
-                    </div>
-                    <input name="telefone" placeholder="WhatsApp" class="input-egg" required>
-                    <select name="recorrencia" onchange="window.state.recorrenciaSel=this.value;window.render()" class="input-egg">
-                        <option value="">Apenas uma vez</option>
-                        <option value="Semanal">Semanal</option>
-                        <option value="Quinzenal">Quinzenal</option>
-                        <option value="Mensal">Mensal</option>
-                    </select>
-                    ${['Semanal', 'Quinzenal', 'Mensal'].includes(window.state.recorrenciaSel) ? `
-                        <input type="date" name="dataRemessa" class="input-egg" required>
-                    ` : ''}
-                    <button class="w-full bg-rose-600 text-white py-6 rounded-3xl font-black uppercase">Confirmar</button>
-                    <button type="button" onclick="window.state.comprando=null;window.render()" class="w-full text-gray-400 font-bold uppercase text-[10px]">Cancelar</button>
-                </form>
-            </div>`;
-        }
+<button class="btn">Confirmar Pedido</button>
+</form>
 
-        window.handleLogin = async (e) => { e.preventDefault(); const f = new FormData(e.target); try { await signInWithEmailAndPassword(auth, f.get('email'), f.get('pass')); } catch { alert("Erro"); } };
-        function renderLogin() { return `<div class="min-h-screen flex items-center justify-center p-10"><form onsubmit="handleLogin(event)" class="w-full max-w-sm space-y-4"><div class="logo-text text-center text-4xl mb-10">AppEgg</div><input name="email" class="input-egg border" placeholder="Email"><input name="pass" type="password" class="input-egg border" placeholder="Senha"><button class="w-full bg-rose-600 text-white py-6 rounded-3xl font-black uppercase">Entrar</button></form></div>`; }
-    </script>
+<button onclick="state.comprando=null;render()" class="w-full mt-4 text-gray-400 font-black">Cancelar</button>
+</div>
+</div>`;
+}
+
+window.finalizar=async(e)=>{
+e.preventDefault();
+const f=new FormData(e.target);
+const p=state.comprando;
+
+await addDoc(collection(db,"vendas_logs"),{
+clienteId:auth.currentUser.uid,
+clienteNome:auth.currentUser.email.split('@')[0],
+produtoId:p.id,
+produto:p.nome,
+quantidade:state.qtd,
+valorTotal:p.preco*state.qtd,
+recorrencia:f.get("recorrencia"),
+dataProximaRemessa:f.get("data")||null,
+status:"CRIADO",
+criadoEm:serverTimestamp()
+});
+
+state.comprando=null;
+state.view="pedidos";
+render();
+};
+
+function login(){
+return `<div class="min-h-screen flex items-center justify-center">
+<form onsubmit="loginDo(event)" class="space-y-3">
+<input name="email" class="input" placeholder="Email">
+<input name="pass" type="password" class="input" placeholder="Senha">
+<button class="btn">Entrar</button>
+</form>
+</div>`;
+}
+
+window.loginDo=async(e)=>{
+e.preventDefault();
+const f=new FormData(e.target);
+await signInWithEmailAndPassword(auth,f.get("email"),f.get("pass"));
+};
+</script>
 </body>
 </html>
