@@ -79,14 +79,14 @@
                     </div>
                 </nav>
                 <main class="p-8 max-w-6xl mx-auto">
-                    ${state.view === 'pedidos' ? renderPedidosAdmin() : state.view === 'estoque' ? 'Gerencie no estoque' : renderDashboard()}
+                    ${state.view === 'pedidos' ? renderPedidosAdmin() : state.view === 'estoque' ? renderEstoque() : renderDashboard()}
                 </main>`;
         };
 
         function renderPedidosAdmin() {
             const pendentes = state.logs.filter(l => l.status !== 'FINALIZADO');
             return `
-                <h2 class="text-3xl font-black mb-8 uppercase">Gestão de Pedidos</h2>
+                <h2 class="text-3xl font-black mb-8 uppercase italic">Gestão de Pedidos</h2>
                 <div class="grid gap-6">
                     ${pendentes.map(l => `
                         <div class="card p-8 border-l-[12px] ${l.status === 'CRIADO' ? 'border-gray-300' : 'border-blue-500'}">
@@ -95,7 +95,7 @@
                                     <h3 class="font-black uppercase text-lg">${l.clienteNome}</h3>
                                     <p class="text-[10px] font-bold text-gray-400">PEDIDO #${l.id.slice(-4)}</p>
                                 </div>
-                                <span class="bg-blue-50 text-blue-600 px-4 py-2 rounded-xl font-black text-[10px] uppercase">${l.status}</span>
+                                <span class="bg-blue-50 text-blue-600 px-4 py-2 rounded-xl font-black text-[10px] uppercase italic">${l.status}</span>
                             </div>
                             <div class="text-sm font-bold mb-6">${l.quantidade}x ${l.produto}</div>
                             <div class="flex flex-wrap gap-2">
@@ -109,9 +109,11 @@
                 </div>`;
         }
 
-        function renderDashboard() { return `<h1 class="text-4xl font-black">Bem-vindo, Admin</h1>`; }
+        function renderEstoque() { return `<h2 class="text-3xl font-black uppercase italic mb-8">Estoque Atual</h2><div class="grid gap-4">${state.produtos.map(p => `<div class="card p-6 flex justify-between"><b>${p.nome}</b> <span>${p.quantidade} un</span></div>`).join('')}</div>`; }
+        function renderDashboard() { return `<h1 class="text-4xl font-black italic">Dashboard AppEgg</h1>`; }
         function renderLogin() { return `<div class="min-h-screen flex items-center justify-center bg-gray-900"><form onsubmit="handleLogin(event)" class="bg-white p-12 rounded-[48px] w-full max-w-md"><div class="logo-text text-center mb-10">AppEgg</div><input name="email" class="w-full p-4 border rounded-2xl mb-4" placeholder="Email"><input name="pass" type="password" class="w-full p-4 border rounded-2xl mb-8" placeholder="Senha"><button class="w-full bg-rose-600 text-white py-4 rounded-2xl font-black uppercase">Entrar</button></form></div>`; }
-        window.handleLogin = async (e) => { e.preventDefault(); const f = new FormData(e.target); try { await signInWithEmailAndPassword(auth, f.get('email'), f.get('pass')); } catch { alert("Erro"); } };
+        window.handleLogin = async (e) => { e.preventDefault(); const f = new FormData(e.target); try { await signInWithEmailAndPassword(auth, f.get('email'), f.get('pass')); } catch { alert("Erro de Login"); } };
+        window.signOut = () => signOut(auth);
     </script>
 </body>
 </html>

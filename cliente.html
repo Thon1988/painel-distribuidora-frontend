@@ -12,9 +12,11 @@
         .nav-bottom { position: fixed; bottom: 20px; left: 15px; right: 15px; background: #111; border-radius: 32px; display: flex; justify-content: space-around; padding: 14px; z-index: 100; box-shadow: 0 15px 35px rgba(0,0,0,0.2); }
         .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; color: #666; font-size: 10px; font-weight: 800; border: none; background: transparent; }
         .nav-item.active { color: #fff; }
-        .card-pedido { background: white; border: 1px solid #f3f4f6; border-radius: 32px; padding: 24px; margin-bottom: 16px; }
+        .card-pedido { background: white; border: 1px solid #f3f4f6; border-radius: 32px; padding: 24px; margin-bottom: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.02); }
         .status-badge { padding: 6px 12px; border-radius: 12px; font-size: 9px; font-weight: 900; text-transform: uppercase; }
         .input-egg { width: 100%; padding: 18px; background: #f9fafb; border-radius: 20px; border: 2px solid transparent; font-weight: 700; font-size: 14px; outline: none; }
+        .btn-refazer { background: #111; color: white; padding: 12px; border-radius: 16px; font-weight: 900; text-transform: uppercase; font-size: 10px; flex: 1; text-align: center; }
+        .btn-agendar { background: #2563eb; color: white; padding: 12px; border-radius: 16px; font-weight: 900; text-transform: uppercase; font-size: 10px; flex: 1; text-align: center; }
     </style>
 </head>
 <body>
@@ -39,7 +41,7 @@
         const auth = getAuth(appFB);
         const API_BASE = "https://painel-distribuidora-backend.onrender.com/api";
 
-        window.state = { user: null, view: 'loja', produtos: [], pedidos: [], comprando: null, qtd: 1, mostrarCalendario: false };
+        window.state = { user: null, view: 'loja', produtos: [], pedidos: [], comprando: null, qtd: 1, mostrarCalendario: false, filtroData: 'todos' };
         const state = window.state;
 
         onAuthStateChanged(auth, user => {
@@ -85,27 +87,45 @@
         };
 
         function renderLoja() {
-            return `<div class="space-y-3">${state.produtos.map((p, i) => `
-                <div class="card-pedido flex gap-5 items-center" onclick="window.state.comprando=window.state.produtos[${i}];render()">
-                    <img src="${p.foto_url}" class="w-20 h-20 object-cover rounded-[20px]">
+            return `<div class="space-y-3">${state.produtos.map((p, i) => 
+                `<div class="card-pedido flex gap-5 items-center" onclick="window.abrirCompra(${i}, false)">
+                    <img src="${p.foto_url}" class="w-24 h-24 object-cover rounded-[24px]">
                     <div class="flex-1">
-                        <h3 class="font-black uppercase text-sm">${p.nome}</h3>
-                        <p class="text-rose-600 font-black">R$ ${Number(p.preco).toFixed(2)}</p>
+                        <h3 class="font-black uppercase text-sm italic">${p.nome}</h3>
+                        <p class="text-rose-600 font-black text-xl italic">R$ ${Number(p.preco).toFixed(2)}</p>
                     </div>
                 </div>`).join('')}</div>`;
         }
 
         function renderPedidos() {
-            return `<div class="space-y-4">${state.pedidos.map(p => `
-                <div class="card-pedido border-l-8 ${p.status === 'FINALIZADO' ? 'border-emerald-500' : 'border-blue-500'}">
+            return `
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="font-black uppercase text-[10px] tracking-widest text-gray-400">Histórico</h2>
+                    <select onchange="state.filtroData=this.value;render()" class="bg-gray-50 font-black uppercase text-[9px] p-2 rounded-xl outline-none border">
+                        <option value="todos">Tudo</option>
+                        <option value="hoje">Hoje</option>
+                    </select>
+                </div>
+                <div class="space-y-4">${state.pedidos.map(p => 
+                `<div class="card-pedido border-l-8 ${p.status === 'FINALIZADO' ? 'border-emerald-500' : 'border-blue-500'}">
                     <div class="flex justify-between items-center mb-4">
-                        <span class="status-badge bg-blue-50 text-blue-600">${p.status}</span>
+                        <span class="status-badge bg-blue-50 text-blue-600 font-black italic">${p.status}</span>
                         <span class="text-[9px] font-black text-gray-300">#${p.id.slice(-4)}</span>
                     </div>
-                    <h4 class="font-black uppercase text-xs">${p.quantidade}x ${p.produto}</h4>
-                    <p class="text-[10px] font-bold text-gray-400 mt-1">Status: ${p.status === 'CRIADO' ? 'Aguardando Aprovação' : p.status}</p>
+                    <h4 class="font-black uppercase text-sm">${p.quantidade}x ${p.produto}</h4>
+                    <p class="text-[10px] font-bold text-gray-400 mt-1 uppercase italic">Próxima Remessa: ${p.dataProximaRemessa || 'N/A'}</p>
+                    <div class="flex gap-2 mt-6">
+                        <button onclick="window.acaoRapida('${p.produtoId}', ${p.quantidade}, false)" class="btn-refazer">Refazer</button>
+                        <button onclick="window.acaoRapida('${p.produtoId}', ${p.quantidade}, true)" class="btn-agendar">Agendar</button>
+                    </div>
                 </div>`).join('')}</div>`;
         }
+
+        window.abrirCompra = (i, agendar) => { state.comprando = state.produtos[i]; state.qtd = 1; state.mostrarCalendario = agendar; window.render(); };
+        window.acaoRapida = (prodId, qtd, agendar) => {
+            const p = state.produtos.find(x => x.id === prodId);
+            if(p) { state.comprando = p; state.qtd = qtd; state.mostrarCalendario = agendar; window.render(); }
+        };
 
         window.finalizarPedido = async (e) => {
             e.preventDefault();
@@ -125,6 +145,7 @@
                 criadoEm: serverTimestamp()
             });
 
+            // RESERVA DE ESTOQUE
             const novaQtd = p.quantidade - state.qtd;
             await fetch(`${API_BASE}/produtos/${p.id}`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({...p, quantidade: novaQtd}) });
 
@@ -135,21 +156,22 @@
             const p = state.comprando;
             return `
             <div class="fixed inset-0 bg-black/80 flex items-end z-[200]">
-                <div class="bg-white w-full p-10 rounded-t-[48px]">
-                    <h3 class="font-black uppercase text-xl mb-6">${p.nome}</h3>
+                <div class="bg-white w-full p-10 rounded-t-[48px] overflow-y-auto max-h-[90vh]">
+                    <h3 class="font-black uppercase text-xl mb-6 italic">${p.nome}</h3>
                     <form onsubmit="finalizarPedido(event)" class="space-y-4">
                         <div class="flex items-center justify-between bg-gray-50 p-4 rounded-2xl">
-                            <button type="button" onclick="state.qtd=Math.max(1,state.qtd-1);render()" class="w-12 h-12 bg-white rounded-xl font-black">-</button>
+                            <button type="button" onclick="state.qtd=Math.max(1,state.qtd-1);render()" class="w-12 h-12 bg-white rounded-xl font-black shadow-sm">-</button>
                             <span class="text-2xl font-black">${state.qtd}</span>
-                            <button type="button" onclick="state.qtd++;render()" class="w-12 h-12 bg-white rounded-xl font-black">+</button>
+                            <button type="button" onclick="state.qtd++;render()" class="w-12 h-12 bg-white rounded-xl font-black shadow-sm">+</button>
                         </div>
                         <select name="recorrencia" onchange="state.mostrarCalendario=this.value!=='';render()" class="input-egg text-xs uppercase font-black">
-                            <option value="">Apenas uma vez</option>
-                            <option value="Semanal">Semanal</option>
+                            <option value="" ${!state.mostrarCalendario?'selected':''}>Apenas uma vez</option>
+                            <option value="Semanal" ${state.mostrarCalendario?'selected':''}>Semanal</option>
+                            <option value="Quinzenal">Quinzenal</option>
                             <option value="Mensal">Mensal</option>
                         </select>
-                        ${state.mostrarCalendario ? '<input type="date" name="data_remessa" class="input-egg" required>' : ''}
-                        <button class="w-full bg-rose-600 text-white py-5 rounded-2xl font-black uppercase text-xs mt-4">Confirmar Pedido</button>
+                        ${state.mostrarCalendario ? `<input type="date" name="data_remessa" class="input-egg" required min="${new Date().toISOString().split('T')[0]}">` : ''}
+                        <button class="w-full bg-rose-600 text-white py-5 rounded-2xl font-black uppercase text-xs mt-4 shadow-xl">Confirmar Pedido</button>
                     </form>
                     <button onclick="state.comprando=null;render()" class="w-full py-4 text-gray-400 font-black text-[10px] uppercase">Cancelar</button>
                 </div>
@@ -157,7 +179,7 @@
         }
 
         function renderLogin() { return `<div class="min-h-screen flex items-center justify-center bg-white p-8"><div class="w-full max-w-sm"><div class="logo-text text-5xl mb-12 text-center">AppEgg</div><form onsubmit="handleLogin(event)" class="space-y-3"><input name="email" class="input-egg" placeholder="Email"><input name="pass" type="password" class="input-egg" placeholder="Senha"><button class="w-full bg-rose-600 text-white py-5 rounded-2xl font-black uppercase text-xs mt-4">Entrar</button></form></div></div>`; }
-        window.handleLogin = async (e) => { e.preventDefault(); const f = new FormData(e.target); try { await signInWithEmailAndPassword(auth, f.get('email'), f.get('pass')); } catch { alert("Erro"); } };
+        window.handleLogin = async (e) => { e.preventDefault(); const f = new FormData(e.target); try { await signInWithEmailAndPassword(auth, f.get('email'), f.get('pass')); } catch { alert("Erro de Login"); } };
         window.signOut = () => signOut(auth);
     </script>
 </body>
