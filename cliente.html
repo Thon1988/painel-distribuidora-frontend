@@ -3,20 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AppEgg | Meus Pedidos</title>
+    <title>AppEgg | Comprar Ovos</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800;900&display=swap');
-        body { font-family: 'Inter', sans-serif; background: #fff; padding-bottom: 120px; color: #1f2937; }
-        .logo-text { font-weight: 900; color: #e11d48; font-size: 1.8rem; letter-spacing: -1px; }
-        .nav-bottom { position: fixed; bottom: 20px; left: 15px; right: 15px; background: #111; border-radius: 32px; display: flex; justify-content: space-around; padding: 14px; z-index: 100; box-shadow: 0 15px 35px rgba(0,0,0,0.2); }
-        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; color: #666; font-size: 10px; font-weight: 800; border: none; background: transparent; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&display=swap');
+        body { font-family: 'Inter', sans-serif; background: #fff; padding-bottom: 120px; }
+        .logo-text { font-weight: 800; color: #e11d48; font-style: italic; }
+        .nav-bottom { position: fixed; bottom: 20px; left: 15px; right: 15px; background: #111; border-radius: 28px; display: flex; justify-content: space-around; padding: 12px; z-index: 100; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; color: #555; font-size: 9px; font-weight: 800; border:none; background:transparent; }
         .nav-item.active { color: #fff; }
-        .card-pedido { background: white; border: 1px solid #f3f4f6; border-radius: 32px; padding: 24px; margin-bottom: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.02); }
-        .status-badge { padding: 6px 12px; border-radius: 12px; font-size: 9px; font-weight: 900; text-transform: uppercase; }
-        .input-egg { width: 100%; padding: 18px; background: #f9fafb; border-radius: 20px; border: 2px solid transparent; font-weight: 700; font-size: 14px; outline: none; }
-        .btn-refazer { background: #111; color: white; padding: 12px; border-radius: 16px; font-weight: 900; text-transform: uppercase; font-size: 10px; flex: 1; text-align: center; }
-        .btn-agendar { background: #2563eb; color: white; padding: 12px; border-radius: 16px; font-weight: 900; text-transform: uppercase; font-size: 10px; flex: 1; text-align: center; }
+        .card-egg { background: white; border: 1px solid #f3f4f6; border-radius: 28px; padding: 15px; margin-bottom: 12px; }
+        .input-egg { width: 100%; padding: 18px; background: #f9fafb; border-radius: 20px; border: 1px solid #f3f4f6; font-weight: 700; outline: none; }
     </style>
 </head>
 <body>
@@ -40,9 +37,11 @@
         const db = getFirestore(appFB);
         const auth = getAuth(appFB);
         const API_BASE = "https://painel-distribuidora-backend.onrender.com/api";
+        const IMG_DEFAULT = "https://images.unsplash.com/photo-1582722872445-41fe501ea146?w=400&auto=format";
 
-        window.state = { user: null, view: 'loja', produtos: [], pedidos: [], comprando: null, qtd: 1, mostrarCalendario: false, filtroData: 'todos' };
-        const state = window.state;
+        // 1️⃣ CORREÇÃO: Definir e referenciar state via window
+        window.state = { user: null, view: 'loja', produtos: [], pedidos: [], comprando: null, qtd: 1, filtroHistorico: 'todos' };
+        const state = window.state; 
 
         onAuthStateChanged(auth, user => {
             state.user = user;
@@ -51,9 +50,11 @@
         });
 
         async function loadProdutos() {
-            const r = await fetch(`${API_BASE}/produtos`);
-            state.produtos = await r.json();
-            window.render();
+            try {
+                const r = await fetch(`${API_BASE}/produtos`);
+                state.produtos = await r.json();
+                window.render();
+            } catch(e) { console.error("Erro Produtos", e); }
         }
 
         function syncPedidos() {
@@ -70,116 +71,129 @@
             if (!state.user) { root.innerHTML = renderLogin(); return; }
 
             root.innerHTML = `
-                <div class="p-6 max-w-lg mx-auto">
-                    <header class="flex justify-between items-center mb-10">
-                        <div class="logo-text">AppEgg</div>
-                        <div class="font-black text-[10px] uppercase text-gray-400">@${state.user.email.split('@')[0]}</div>
+                <div class="p-6">
+                    <header class="flex justify-between items-center mb-8">
+                        <div class="logo-text text-3xl italic">AppEgg</div>
+                        <div class="bg-rose-50 px-4 py-2 rounded-full"><span class="text-[10px] font-black text-rose-600 uppercase">Olá, ${state.user.email.split('@')[0]}</span></div>
                     </header>
-                    ${state.view === 'loja' ? renderLoja() : renderPedidos()}
+                    ${state.view === 'loja' ? renderLoja() : state.view === 'programar' ? renderProgramar() : renderPedidos()}
                 </div>
                 <nav class="nav-bottom">
                     <button onclick="state.view='loja';render()" class="nav-item ${state.view==='loja'?'active':''}"><span>🏠</span>LOJA</button>
+                    <button onclick="state.view='programar';render()" class="nav-item ${state.view==='programar'?'active':''}"><span>📅</span>AGENDAR</button>
                     <button onclick="state.view='pedidos';render()" class="nav-item ${state.view==='pedidos'?'active':''}"><span>📦</span>PEDIDOS</button>
-                    <button onclick="signOut(auth)" class="nav-item text-rose-500"><span>🚪</span>SAIR</button>
+                    <button onclick="signOut(auth)" class="nav-item"><span>🚪</span>SAIR</button>
                 </nav>
                 ${state.comprando ? renderModalCompra() : ''}
             `;
         };
 
         function renderLoja() {
-            return `<div class="space-y-3">${state.produtos.map((p, i) => 
-                `<div class="card-pedido flex gap-5 items-center" onclick="window.abrirCompra(${i}, false)">
-                    <img src="${p.foto_url}" class="w-24 h-24 object-cover rounded-[24px]">
+            // 2️⃣ CORREÇÃO: Clique via Index (Seguro) e 3️⃣ CORREÇÃO: Renderizar Imagem
+            return `<h2 class="font-black uppercase text-xs text-gray-400 mb-4 tracking-widest">Escolha seus Ovos</h2>
+                ${state.produtos.map((p, i) => `
+                <div class="card-egg flex gap-4 items-center shadow-sm" onclick="window.abrirCompraIndex(${i})">
+                    <img src="${p.foto_url || IMG_DEFAULT}" onerror="this.src='${IMG_DEFAULT}'" class="w-20 h-20 object-cover rounded-2xl">
                     <div class="flex-1">
-                        <h3 class="font-black uppercase text-sm italic">${p.nome}</h3>
-                        <p class="text-rose-600 font-black text-xl italic">R$ ${Number(p.preco).toFixed(2)}</p>
+                        <h3 class="font-black uppercase text-sm mb-1">${p.nome}</h3>
+                        <p class="text-rose-600 font-black text-lg">R$ ${Number(p.preco).toFixed(2)}</p>
                     </div>
-                </div>`).join('')}</div>`;
+                    <div class="bg-gray-100 p-2 rounded-xl">➔</div>
+                </div>`).join('')}`;
+        }
+
+        function renderProgramar() {
+            return `
+                <div class="bg-blue-600 p-8 rounded-[40px] text-white mb-8 shadow-xl">
+                    <h2 class="text-2xl font-black italic mb-2 uppercase text-white">Programação</h2>
+                    <p class="text-[11px] font-bold opacity-80 uppercase leading-relaxed text-white">Escolha um produto e agende a entrega.</p>
+                </div>
+                ${renderLoja()}`;
         }
 
         function renderPedidos() {
+            const agora = new Date();
+            const filtrados = state.pedidos.filter(p => {
+                if(!p.criadoEm) return false;
+                const dt = new Date(p.criadoEm.seconds * 1000);
+                if(state.filtroHistorico === 'mes') return (agora - dt) / (1000 * 3600 * 24) <= 30;
+                return true;
+            });
             return `
                 <div class="flex justify-between items-center mb-6">
-                    <h2 class="font-black uppercase text-[10px] tracking-widest text-gray-400">Histórico</h2>
-                    <select onchange="state.filtroData=this.value;render()" class="bg-gray-50 font-black uppercase text-[9px] p-2 rounded-xl outline-none border">
+                    <h2 class="font-black uppercase text-xs tracking-widest text-gray-400">Meus Pedidos</h2>
+                    <select onchange="state.filtroHistorico=this.value;render()" class="text-[10px] font-black uppercase border rounded-lg p-2">
                         <option value="todos">Tudo</option>
-                        <option value="hoje">Hoje</option>
+                        <option value="mes" ${state.filtroHistorico==='mes'?'selected':''}>Últimos 30 dias</option>
                     </select>
                 </div>
-                <div class="space-y-4">${state.pedidos.map(p => 
-                `<div class="card-pedido border-l-8 ${p.status === 'FINALIZADO' ? 'border-emerald-500' : 'border-blue-500'}">
-                    <div class="flex justify-between items-center mb-4">
-                        <span class="status-badge bg-blue-50 text-blue-600 font-black italic">${p.status}</span>
-                        <span class="text-[9px] font-black text-gray-300">#${p.id.slice(-4)}</span>
-                    </div>
-                    <h4 class="font-black uppercase text-sm">${p.quantidade}x ${p.produto}</h4>
-                    <p class="text-[10px] font-bold text-gray-400 mt-1 uppercase italic">Próxima Remessa: ${p.dataProximaRemessa || 'N/A'}</p>
-                    <div class="flex gap-2 mt-6">
-                        <button onclick="window.acaoRapida('${p.produtoId}', ${p.quantidade}, false)" class="btn-refazer">Refazer</button>
-                        <button onclick="window.acaoRapida('${p.produtoId}', ${p.quantidade}, true)" class="btn-agendar">Agendar</button>
-                    </div>
-                </div>`).join('')}</div>`;
+                ${filtrados.map(p => `
+                <div class="card-egg border-l-4 ${p.status === 'FINALIZADO' ? 'border-emerald-500' : 'border-rose-500'}">
+                    <div class="flex justify-between items-start mb-2"><span class="text-[9px] font-black uppercase text-gray-400">${p.status}</span></div>
+                    <h4 class="font-black uppercase text-xs">${p.quantidade}x ${p.produto}</h4>
+                    <p class="text-rose-600 font-bold text-xs">Total: R$ ${Number(p.valorTotal).toFixed(2)}</p>
+                    ${p.recorrencia ? `<span class="text-[8px] font-black text-blue-500 uppercase">📅 Agenda: ${p.recorrencia}</span>` : ''}
+                </div>`).join('') || '<p class="text-center py-10 uppercase font-black text-gray-300">Vazio</p>'}`;
         }
 
-        window.abrirCompra = (i, agendar) => { state.comprando = state.produtos[i]; state.qtd = 1; state.mostrarCalendario = agendar; window.render(); };
-        window.acaoRapida = (prodId, qtd, agendar) => {
-            const p = state.produtos.find(x => x.id === prodId);
-            if(p) { state.comprando = p; state.qtd = qtd; state.mostrarCalendario = agendar; window.render(); }
-        };
+        window.abrirCompraIndex = (i) => { state.comprando = state.produtos[i]; state.qtd = 1; window.render(); };
+        window.ajustarQtd = (v) => { if(state.qtd + v > 0) { state.qtd += v; window.render(); } };
 
         window.finalizarPedido = async (e) => {
             e.preventDefault();
             const f = new FormData(e.target);
             const p = state.comprando;
-            
-            await addDoc(collection(db, "vendas_logs"), {
-                clienteId: auth.currentUser.uid,
-                clienteNome: auth.currentUser.email.split('@')[0],
-                produtoId: p.id,
-                produto: p.nome,
-                quantidade: state.qtd,
-                valorTotal: p.preco * state.qtd,
-                recorrencia: f.get('recorrencia'),
-                dataProximaRemessa: f.get('data_remessa') || null,
-                status: 'CRIADO',
-                criadoEm: serverTimestamp()
-            });
-
-            // RESERVA DE ESTOQUE
-            const novaQtd = p.quantidade - state.qtd;
-            await fetch(`${API_BASE}/produtos/${p.id}`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({...p, quantidade: novaQtd}) });
-
-            state.comprando = null; state.view = 'pedidos'; window.render();
+            try {
+                await addDoc(collection(db, "vendas_logs"), {
+                    clienteId: auth.currentUser.uid,
+                    clienteNome: auth.currentUser.email.split('@')[0],
+                    produtoId: p.id,
+                    produto: p.nome,
+                    quantidade: state.qtd,
+                    precoUnidade: p.preco,
+                    valorTotal: p.preco * state.qtd,
+                    recorrencia: f.get('recorrencia'),
+                    status: 'AGUARDANDO PAGAMENTO',
+                    criadoEm: serverTimestamp()
+                });
+                await fetch(`${API_BASE}/produtos/${p.id}`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ quantidade: p.quantidade - state.qtd }) });
+                state.comprando = null; state.view = 'pedidos'; window.render();
+            } catch(e) { alert("Erro ao salvar pedido"); }
         };
 
         function renderModalCompra() {
             const p = state.comprando;
             return `
             <div class="fixed inset-0 bg-black/80 flex items-end z-[200]">
-                <div class="bg-white w-full p-10 rounded-t-[48px] overflow-y-auto max-h-[90vh]">
-                    <h3 class="font-black uppercase text-xl mb-6 italic">${p.nome}</h3>
-                    <form onsubmit="finalizarPedido(event)" class="space-y-4">
-                        <div class="flex items-center justify-between bg-gray-50 p-4 rounded-2xl">
-                            <button type="button" onclick="state.qtd=Math.max(1,state.qtd-1);render()" class="w-12 h-12 bg-white rounded-xl font-black shadow-sm">-</button>
-                            <span class="text-2xl font-black">${state.qtd}</span>
-                            <button type="button" onclick="state.qtd++;render()" class="w-12 h-12 bg-white rounded-xl font-black shadow-sm">+</button>
+                <div class="bg-white w-full p-8 rounded-t-[40px] shadow-2xl">
+                    <div class="flex gap-4 mb-6">
+                        <img src="${p.foto_url || IMG_DEFAULT}" class="w-16 h-16 object-cover rounded-xl">
+                        <div>
+                            <h3 class="font-black uppercase italic text-xl">${p.nome}</h3>
+                            <p class="text-rose-600 font-bold">R$ ${p.preco.toFixed(2)} / un</p>
                         </div>
-                        <select name="recorrencia" onchange="state.mostrarCalendario=this.value!=='';render()" class="input-egg text-xs uppercase font-black">
-                            <option value="" ${!state.mostrarCalendario?'selected':''}>Apenas uma vez</option>
-                            <option value="Semanal" ${state.mostrarCalendario?'selected':''}>Semanal</option>
-                            <option value="Quinzenal">Quinzenal</option>
-                            <option value="Mensal">Mensal</option>
+                    </div>
+                    <div class="flex items-center justify-between mb-8 bg-gray-50 p-4 rounded-3xl">
+                        <button onclick="ajustarQtd(-1)" class="w-14 h-14 bg-white rounded-2xl font-black shadow-sm">-</button>
+                        <span class="text-3xl font-black">${state.qtd}</span>
+                        <button onclick="ajustarQtd(1)" class="w-14 h-14 bg-white rounded-2xl font-black shadow-sm">+</button>
+                    </div>
+                    <form onsubmit="finalizarPedido(event)" class="space-y-4">
+                        <select name="recorrencia" class="input-egg font-black uppercase text-[10px]">
+                            <option value="">Apenas esta vez</option>
+                            <option value="Semanal">Toda Semana</option>
+                            <option value="Quinzenal">A cada 15 dias</option>
+                            <option value="Mensal">Todo Mês</option>
                         </select>
-                        ${state.mostrarCalendario ? `<input type="date" name="data_remessa" class="input-egg" required min="${new Date().toISOString().split('T')[0]}">` : ''}
-                        <button class="w-full bg-rose-600 text-white py-5 rounded-2xl font-black uppercase text-xs mt-4 shadow-xl">Confirmar Pedido</button>
+                        <button class="w-full bg-rose-600 text-white py-6 rounded-3xl font-black uppercase shadow-xl">Confirmar • R$ ${(p.preco * state.qtd).toFixed(2)}</button>
                     </form>
-                    <button onclick="state.comprando=null;render()" class="w-full py-4 text-gray-400 font-black text-[10px] uppercase">Cancelar</button>
+                    <button onclick="state.comprando=null;render()" class="w-full py-4 text-gray-400 font-black text-[10px] uppercase">Voltar</button>
                 </div>
             </div>`;
         }
 
-        function renderLogin() { return `<div class="min-h-screen flex items-center justify-center bg-white p-8"><div class="w-full max-w-sm"><div class="logo-text text-5xl mb-12 text-center">AppEgg</div><form onsubmit="handleLogin(event)" class="space-y-3"><input name="email" class="input-egg" placeholder="Email"><input name="pass" type="password" class="input-egg" placeholder="Senha"><button class="w-full bg-rose-600 text-white py-5 rounded-2xl font-black uppercase text-xs mt-4">Entrar</button></form></div></div>`; }
-        window.handleLogin = async (e) => { e.preventDefault(); const f = new FormData(e.target); try { await signInWithEmailAndPassword(auth, f.get('email'), f.get('pass')); } catch { alert("Erro de Login"); } };
+        function renderLogin() { return `<div class="min-h-screen flex flex-col justify-center p-8 bg-white"><div class="logo-text text-6xl mb-12 italic text-center">AppEgg</div><form onsubmit="handleLogin(event)" class="space-y-4"><input name="email" class="input-egg border" placeholder="Seu E-mail"><input name="pass" type="password" class="input-egg border" placeholder="Sua Senha"><button class="w-full bg-rose-600 text-white py-6 rounded-[25px] font-black uppercase shadow-2xl">Entrar</button></form></div>`; }
+        window.handleLogin = async (e) => { e.preventDefault(); const f = new FormData(e.target); try { await signInWithEmailAndPassword(auth, f.get('email'), f.get('pass')); } catch (err) { alert("Erro no login"); } };
         window.signOut = () => signOut(auth);
     </script>
 </body>
