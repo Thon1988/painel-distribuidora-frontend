@@ -2,260 +2,160 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AppEgg | Pedidos</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AppEgg | Pedir Ovos</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&display=swap');
-        body { font-family: 'Inter', sans-serif; background: #fff; color: #111; overflow-x: hidden; }
-        .logo-text { font-weight: 800; color: #e11d48; letter-spacing: -0.05em; font-style: italic; }
-        .nav-bottom { position: fixed; bottom: 20px; left: 15px; right: 15px; background: #111827; border-radius: 24px; display: flex; justify-content: space-around; padding: 10px; z-index: 100; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
-        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 12px; border-radius: 18px; color: #9ca3af; background: none; border: none; }
-        .nav-item.active { background: #e11d48; color: white; }
-        .nav-text { font-size: 10px; font-weight: 800; text-transform: uppercase; }
-        .card { background: white; border: 1px solid #f3f4f6; border-radius: 32px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.03); }
-        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 200; display: flex; align-items: flex-end; }
-        .modal-content { background: white; width: 100%; padding: 30px; border-radius: 40px 40px 0 0; max-height: 90vh; overflow-y: auto; }
-        .timeline-dot { width: 8px; height: 8px; border-radius: 50%; background: #e11d48; position: relative; z-index: 10; }
-        .timeline-step { position: relative; padding-left: 20px; border-left: 2px solid #f3f4f6; margin-left: 3px; padding-bottom: 15px; }
-        .timeline-step:last-child { border-left: 2px solid transparent; }
-        .btn-qty { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 14px; background: #f3f4f6; font-weight: 800; }
+        body { font-family: 'Inter', sans-serif; background: #ffffff; color: #111; }
+        .logo-text { font-weight: 800; color: #e11d48; font-style: italic; }
+        .card-egg { background: white; border: 1px solid #f3f4f6; border-radius: 24px; padding: 16px; margin-bottom: 12px; }
+        .input-cliente { width: 100%; padding: 16px; background: #f9fafb; border-radius: 16px; border: 1px solid #f3f4f6; font-weight: 700; outline: none; }
+        .nav-bottom { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid #f3f4f6; display: flex; justify-content: space-around; padding: 15px; }
     </style>
 </head>
 <body>
-    <div id="app-root"></div>
+<div id="app-root"></div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-        import { getFirestore, collection, addDoc, serverTimestamp, onSnapshot, query, where, orderBy, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
-        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+    import { getFirestore, collection, addDoc, serverTimestamp, onSnapshot, query, where, orderBy } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+    import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyD3Otz9-zdZH-E5Feg9IOGWPzVycoe8gro",
-            authDomain: "distribuidora-de-ovos-aline.firebaseapp.com",
-            projectId: "distribuidora-de-ovos-aline",
-            storageBucket: "distribuidora-de-ovos-aline.firebasestorage.app",
-            messagingSenderId: "92187548716",
-            appId: "1:92187548716:web:d61d18a29aa76aead7c589"
-        };
+    const firebaseConfig = {
+        apiKey: "AIzaSyD3Otz9-zdZH-E5Feg9IOGWPzVycoe8gro",
+        authDomain: "distribuidora-de-ovos-aline.firebaseapp.com",
+        projectId: "distribuidora-de-ovos-aline",
+        storageBucket: "distribuidora-de-ovos-aline.firebasestorage.app",
+        messagingSenderId: "92187548716",
+        appId: "1:92187548716:web:d61d18a29aa76aead7c589"
+    };
 
-        const appFB = initializeApp(firebaseConfig);
-        const db = getFirestore(appFB);
-        const auth = getAuth(appFB);
-        const API_BASE = "https://painel-distribuidora-backend.onrender.com/api";
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+    const API_BASE = "https://painel-distribuidora-backend.onrender.com/api";
 
-        window.state = { user: null, produtos: [], tela: 'catalogo', meusPedidos: [], config: {}, comprando: null, visualizandoPedido: null, qtd: 1 };
+    window.state = { user: null, view: 'loja', produtos: [], pedidos: [], comprando: null, qtd: 1 };
 
-        onAuthStateChanged(auth, async (user) => {
-            window.state.user = user;
-            if (user) { 
-                const snap = await getDoc(doc(db, "config", "loja"));
-                window.state.config = snap.data() || { pixChave: "NÃO CADASTRADA" };
-                initApp(); 
-                monitorarPedidos(); 
-            }
-            window.render();
+    onAuthStateChanged(auth, user => {
+        window.state.user = user;
+        if(user) { loadProdutos(); syncPedidos(); }
+        render();
+    });
+
+    async function loadProdutos() {
+        const r = await fetch(`${API_BASE}/produtos`);
+        state.produtos = await r.json();
+        render();
+    }
+
+    function syncPedidos() {
+        const q = query(collection(db, "vendas_logs"), where("clienteId", "==", auth.currentUser.uid), orderBy("criadoEm", "desc"));
+        onSnapshot(q, s => {
+            state.pedidos = s.docs.map(d => ({id:d.id, ...d.data()}));
+            render();
+        });
+    }
+
+    function render() {
+        const root = document.getElementById('app-root');
+        if(!window.state.user) {
+            root.innerHTML = `<div class="p-8 mt-20"><div class="logo-text text-4xl mb-8">AppEgg</div><form onsubmit="handleLogin(event)" class="space-y-4"><input name="email" placeholder="E-mail" class="input-cliente"><input name="pass" type="password" placeholder="Senha" class="input-cliente"><button class="w-full bg-rose-600 text-white py-4 rounded-xl font-black">ENTRAR</button></form></div>`;
+            return;
+        }
+
+        root.innerHTML = `
+            <div class="p-4 pb-24">
+                <div class="logo-text text-2xl mb-6">AppEgg</div>
+                ${state.view === 'pedidos' ? renderPedidos() : renderLoja()}
+            </div>
+            <nav class="nav-bottom">
+                <button onclick="state.view='loja';render()" class="font-black text-xs">LOJA</button>
+                <button onclick="state.view='pedidos';render()" class="font-black text-xs">PEDIDOS</button>
+                <button onclick="window.logout()" class="font-black text-xs text-gray-400">SAIR</button>
+            </nav>
+            ${state.comprando ? renderModal() : ''}
+        `;
+    }
+
+    function renderLoja() {
+        return state.produtos.map(p => `
+            <div class="card-egg flex justify-between items-center" onclick='window.abrirCompra(${JSON.stringify(p)})'>
+                <div><h3 class="font-black uppercase">${p.nome}</h3><p class="text-rose-600 font-bold">R$ ${p.preco.toFixed(2)}</p></div>
+                <button class="bg-gray-900 text-white px-4 py-2 rounded-lg font-black text-[10px]">COMPRAR</button>
+            </div>`).join('');
+    }
+
+    function renderPedidos() {
+        return state.pedidos.map(p => `
+            <div class="card-egg">
+                <p class="text-[9px] font-black uppercase text-rose-600">${p.status}</p>
+                <h4 class="font-black text-xs uppercase">${p.quantidade}x ${p.produto}</h4>
+                <p class="font-bold text-gray-400 text-[10px]">R$ ${p.valorTotal.toFixed(2)}</p>
+            </div>`).join('');
+    }
+
+    function renderModal() {
+        const p = state.comprando;
+        return `
+        <div class="fixed inset-0 bg-black/80 flex items-end z-50">
+            <div class="bg-white w-full p-8 rounded-t-[40px]">
+                <h3 class="font-black text-xl uppercase mb-2">${p.nome}</h3>
+                <div class="flex items-center gap-6 my-6">
+                    <button onclick="window.qtd(-1)" class="w-12 h-12 bg-gray-100 rounded-xl font-black">-</button>
+                    <span class="text-2xl font-black">${state.qtd}</span>
+                    <button onclick="window.qtd(1)" class="w-12 h-12 bg-gray-100 rounded-xl font-black">+</button>
+                </div>
+                <form onsubmit="confirmarPedido(event)" class="space-y-4">
+                    <select name="recorrencia" class="input-cliente font-black text-xs">
+                        <option value="">Compra Única</option>
+                        <option value="Semanal">Toda Semana</option>
+                        <option value="Quinzenal">A cada 15 dias</option>
+                    </select>
+                    <button class="w-full bg-rose-600 text-white py-5 rounded-2xl font-black uppercase">Finalizar • R$ ${(p.preco * state.qtd).toFixed(2)}</button>
+                </form>
+                <button onclick="state.comprando=null;render()" class="w-full py-4 text-gray-400 font-black text-xs">CANCELAR</button>
+            </div>
+        </div>`;
+    }
+
+    window.handleLogin = async e => { e.preventDefault(); await signInWithEmailAndPassword(auth, e.target.email.value, e.target.pass.value); };
+    window.logout = () => signOut(auth);
+    window.abrirCompra = p => { state.comprando = p; state.qtd = 1; render(); };
+    window.qtd = v => { if(state.qtd+v > 0) { state.qtd += v; render(); }};
+
+    window.confirmarPedido = async e => {
+        e.preventDefault();
+        const p = state.comprando;
+        const rec = new FormData(e.target).get('recorrencia');
+        
+        // A CORREÇÃO DA ANÁLISE:
+        await addDoc(collection(db, "vendas_logs"), {
+            clienteId: auth.currentUser.uid,
+            clienteNome: auth.currentUser.email.split('@')[0],
+            produtoId: p.id,
+            produto: p.nome,
+            quantidade: state.qtd,
+            precoUnidade: p.preco, // Adicionado para relatórios
+            valorTotal: p.preco * state.qtd,
+            recorrencia: rec,
+            status: 'AGUARDANDO PAGAMENTO', // Padronizado
+            criadoEm: serverTimestamp()
         });
 
-        const formatTime = (ts) => {
-            if (!ts) return "--:--";
-            const date = ts.seconds ? new Date(ts.seconds * 1000) : new Date(ts);
-            return date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-        };
+        await fetch(`${API_BASE}/produtos/${p.id}`, {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ quantidade: p.quantidade - state.qtd })
+        });
 
-        window.render = () => {
-            const root = document.getElementById('app-root');
-            if (!window.state.user) {
-                root.innerHTML = `<div class="p-10 min-h-screen flex flex-col justify-center text-center">
-                    <div class="logo-text text-5xl mb-12 italic">AppEgg</div>
-                    <form onsubmit="window.actions.login(event)" class="space-y-4">
-                        <input name="email" type="email" placeholder="E-mail" class="w-full p-5 bg-gray-50 rounded-2xl font-bold border outline-none" required>
-                        <input name="pass" type="password" placeholder="Senha" class="w-full p-5 bg-gray-50 rounded-2xl font-bold border outline-none" required>
-                        <button class="w-full py-5 bg-rose-600 text-white rounded-2xl font-black uppercase shadow-xl mt-4">Entrar</button>
-                    </form>
-                </div>`;
-                return;
-            }
+        state.comprando = null;
+        state.view = 'pedidos';
+        render();
+    };
 
-            let content = window.state.tela === 'catalogo' ? renderCatalogo() : renderPedidos();
-
-            root.innerHTML = `
-                <div class="pb-40">${content}</div>
-                ${window.state.comprando ? renderModalCompra() : ''}
-                ${window.state.visualizandoPedido ? renderModalDetalhes() : ''}
-                <nav class="nav-bottom">
-                    <button onclick="window.state.tela='catalogo';window.state.visualizandoPedido=null;window.render()" class="nav-item ${window.state.tela==='catalogo'?'active':''}">
-                        <span class="text-xl">🥚</span><span class="nav-text">Loja</span>
-                    </button>
-                    <button onclick="window.state.tela='meusPedidos';window.render()" class="nav-item ${window.state.tela==='meusPedidos'?'active':''}">
-                        <span class="text-xl">📦</span><span class="nav-text">Meus Pedidos</span>
-                    </button>
-                    <button onclick="window.actions.logout()" class="nav-item">
-                        <span class="text-xl">🚪</span><span class="nav-text">Sair</span>
-                    </button>
-                </nav>`;
-        };
-
-        function renderCatalogo() {
-            return `<header class="p-6 border-b sticky top-0 bg-white z-40 flex justify-between items-center"><div class="logo-text text-2xl">AppEgg</div></header>
-                <div class="p-4 grid grid-cols-2 gap-4">
-                    ${window.state.produtos.map((p, idx) => `
-                    <div class="card flex flex-col items-center">
-                        <img src="${p.foto_url}" class="h-20 mb-3 object-contain">
-                        <h3 class="font-black text-[10px] uppercase text-center h-8 leading-tight mb-1">${p.nome}</h3>
-                        <p class="text-[9px] font-bold text-gray-400 mb-2 uppercase">${p.quantidade > 0 ? p.quantidade + ' em estoque' : 'Esgotado'}</p>
-                        <p class="text-rose-600 font-black text-sm mb-4">R$ ${parseFloat(p.preco).toFixed(2)}</p>
-                        <button onclick="window.actions.abrirCompra(${idx})" ${p.quantidade <= 0 ? 'disabled' : ''} class="w-full ${p.quantidade <= 0 ? 'bg-gray-100 text-gray-400' : 'bg-gray-900 text-white'} py-3 rounded-2xl text-[9px] font-black uppercase">Comprar</button>
-                    </div>`).join('')}
-                </div>`;
-        }
-
-        function renderModalCompra() {
-            const p = window.state.comprando;
-            const total = p.preco * window.state.qtd;
-            return `<div class="modal"><div class="modal-content">
-                <div class="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-6"></div>
-                <h3 class="text-xl font-black uppercase italic mb-1">${p.nome}</h3>
-                <p class="text-gray-400 text-[10px] font-bold uppercase mb-6">Valor Unitário: R$ ${parseFloat(p.preco).toFixed(2)}</p>
-                
-                <div class="flex items-center justify-between bg-gray-50 p-4 rounded-3xl mb-8">
-                    <button onclick="window.actions.ajustarQtd(-1)" class="btn-qty text-2xl">−</button>
-                    <span class="text-2xl font-black">${window.state.qtd}</span>
-                    <button onclick="window.actions.ajustarQtd(1)" class="btn-qty text-2xl">+</button>
-                </div>
-
-                <form onsubmit="window.actions.finalizarPedido(event)" class="space-y-4">
-                    <div class="grid grid-cols-2 gap-4">
-                        <select name="entrega" class="w-full p-4 bg-gray-100 rounded-2xl font-bold text-xs outline-none">
-                            <option value="RETIRADA">Retirada</option>
-                            <option value="ENTREGA">Entrega</option>
-                        </select>
-                        <select name="pagamento" class="w-full p-4 bg-gray-100 rounded-2xl font-bold text-xs outline-none">
-                            <option value="PIX">PIX</option>
-                            <option value="DINHEIRO">Dinheiro</option>
-                        </select>
-                    </div>
-                    <button class="w-full py-5 bg-rose-600 text-white rounded-2xl font-black uppercase shadow-lg mt-4">Confirmar Pedido • R$ ${total.toFixed(2)}</button>
-                </form>
-            </div></div>`;
-        }
-
-        function renderPedidos() {
-            return `<div class="p-6"><h2 class="text-3xl font-black uppercase mb-8 italic text-rose-600">Meus Pedidos</h2><div class="space-y-4">
-                ${window.state.meusPedidos.map((p, idx) => `
-                    <div onclick="window.state.visualizandoPedido=window.state.meusPedidos[${idx}];window.render()" class="card flex justify-between items-center cursor-pointer border-l-4 ${p.status === 'FINALIZADO' ? 'border-emerald-500' : 'border-rose-500'}">
-                        <div class="flex-1">
-                            <span class="text-[9px] font-black text-rose-600 uppercase tracking-widest">${p.status}</span>
-                            <p class="text-[11px] font-bold text-gray-800 uppercase truncate">${p.quantidade}x ${p.produto}</p>
-                        </div>
-                        <div class="text-right">
-                            <p class="text-sm font-black">R$ ${Number(p.valorTotal).toFixed(2)}</p>
-                            <p class="text-[9px] text-gray-400 font-bold">${formatTime(p.criadoEm)}</p>
-                        </div>
-                    </div>`).join('') || '<p class="text-center font-black py-20 text-gray-300 uppercase">Nenhum pedido encontrado</p>'}
-            </div></div>`;
-        }
-
-        function renderModalDetalhes() {
-            const p = window.state.visualizandoPedido;
-            return `<div class="modal"><div class="modal-content">
-                <div class="flex justify-between items-start mb-6">
-                    <div>
-                        <span class="text-[10px] font-black text-rose-600 uppercase tracking-widest">${p.status}</span>
-                        <h3 class="text-lg font-black uppercase">${p.quantidade}x ${p.produto}</h3>
-                    </div>
-                    <button onclick="window.state.visualizandoPedido=null;window.render()" class="text-2xl">✕</button>
-                </div>
-
-                ${p.status === 'AGUARDANDO PAGAMENTO' && p.pagamento === 'PIX' && !p.confirmacaoPagamento ? `
-                    <div class="bg-emerald-50 p-6 rounded-[24px] border border-emerald-100 mb-6 text-center">
-                        <p class="text-[10px] font-black uppercase text-emerald-600 mb-2">Pague com PIX</p>
-                        <p class="text-xs font-bold break-all mb-4 bg-white p-3 rounded-xl border border-emerald-200">${window.state.config.pixChave}</p>
-                        <button onclick="window.actions.copiarPix('${window.state.config.pixChave}')" class="w-full bg-emerald-600 text-white py-3 rounded-xl font-black text-[10px] uppercase mb-2">Copiar Chave</button>
-                        <button onclick="window.actions.jaPaguei('${p.id}')" class="w-full bg-gray-900 text-white py-3 rounded-xl font-black text-[10px] uppercase italic">Informar Pagamento</button>
-                    </div>
-                ` : ''}
-
-                <div class="space-y-0 mb-8 border-t pt-6">
-                    <div class="timeline-step"><div class="absolute left-[-4px] timeline-dot"></div><p class="text-[9px] font-black uppercase text-gray-400">Solicitado: <span class="text-gray-900">${formatTime(p.criadoEm)}</span></p></div>
-                    <div class="timeline-step"><div class="absolute left-[-4px] timeline-dot ${!p.horarioEmbalando?'bg-gray-100':''}"></div><p class="text-[9px] font-black uppercase text-gray-400">Embalando: <span class="text-gray-900">${formatTime(p.horarioEmbalando)}</span></p></div>
-                    <div class="timeline-step"><div class="absolute left-[-4px] timeline-dot ${!p.horarioSaiu?'bg-gray-100':''}"></div><p class="text-[9px] font-black uppercase text-gray-400">${p.entrega === 'RETIRADA' ? 'Disponível' : 'Em Rota'}: <span class="text-gray-900">${formatTime(p.horarioSaiu)}</span></p></div>
-                    <div class="timeline-step"><div class="absolute left-[-4px] timeline-dot ${!p.horarioConcluido?'bg-gray-100':''}"></div><p class="text-[9px] font-black uppercase text-gray-400">Concluído: <span class="text-gray-900">${formatTime(p.horarioConcluido)}</span></p></div>
-                </div>
-
-                <a href="https://wa.me/5511985706243?text=Oi, preciso de ajuda com meu pedido" target="_blank" class="flex items-center justify-center gap-2 w-full py-4 bg-gray-100 text-gray-600 rounded-2xl font-black text-[10px] uppercase">
-                    💬 Suporte via WhatsApp
-                </a>
-            </div></div>`;
-        }
-
-        window.actions = {
-            login: async (e) => {
-                e.preventDefault();
-                try { await signInWithEmailAndPassword(auth, e.target.email.value, e.target.pass.value); } catch (err) { alert("Erro ao entrar."); }
-            },
-            logout: async () => { await signOut(auth); },
-            abrirCompra: (idx) => { window.state.comprando = window.state.produtos[idx]; window.state.qtd = 1; window.render(); },
-            ajustarQtd: (val) => {
-                const nova = window.state.qtd + val;
-                if(nova >= 1 && nova <= window.state.comprando.quantidade) {
-                    window.state.qtd = nova; window.render();
-                }
-            },
-            finalizarPedido: async (e) => {
-                e.preventDefault();
-                const p = window.state.comprando;
-                const f = new FormData(e.target);
-                const qtd = window.state.qtd;
-
-                await addDoc(collection(db, "vendas_logs"), {
-                    clienteNome: window.state.user.email.split('@')[0].toUpperCase(),
-                    clienteWhatsapp: window.state.user.email,
-                    produto: p.nome,
-                    quantidade: qtd,
-                    precoUnidade: p.preco,
-                    valorTotal: p.preco * qtd,
-                    pagamento: f.get('pagamento'),
-                    entrega: f.get('entrega'),
-                    status: 'AGUARDANDO PAGAMENTO',
-                    confirmacaoPagamento: false,
-                    criadoEm: serverTimestamp()
-                });
-
-                await fetch(`${API_BASE}/produtos/${p.id}`, {
-                    method: 'PUT',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ quantidade: p.quantidade - qtd })
-                });
-
-                window.state.comprando = null;
-                window.state.tela = 'meusPedidos';
-                window.render();
-                initApp();
-            },
-            copiarPix: (chave) => { navigator.clipboard.writeText(chave); alert("PIX Copiado!"); },
-            jaPaguei: async (id) => {
-                await updateDoc(doc(db, "vendas_logs", id), { 
-                    confirmacaoPagamento: true,
-                    horarioPagamento: serverTimestamp()
-                });
-                alert("Confirmado! O vendedor verificará o pagamento.");
-            }
-        };
-
-        async function initApp() {
-            const r = await fetch(`${API_BASE}/produtos`);
-            window.state.produtos = await r.json();
-            window.render();
-        }
-
-        function monitorarPedidos() {
-            const q = query(collection(db, "vendas_logs"), where("clienteWhatsapp", "==", window.state.user.email), orderBy("criadoEm", "desc"));
-            onSnapshot(q, (s) => {
-                window.state.meusPedidos = s.docs.map(d => ({id: d.id, ...d.data()}));
-                window.render();
-            });
-        }
-    </script>
+    window.render = render;
+</script>
 </body>
 </html>
