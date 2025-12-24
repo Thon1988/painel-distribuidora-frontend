@@ -3,17 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AppEgg | Pedir Ovos</title>
+    <title>AppEgg | Ovos Frescos</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&display=swap');
         body { font-family: 'Inter', sans-serif; background: #fff; padding-bottom: 120px; }
-        .logo-text { font-weight: 800; color: #e11d48; font-style: italic; }
-        .nav-bottom { position: fixed; bottom: 20px; left: 15px; right: 15px; background: #111; border-radius: 28px; display: flex; justify-content: space-around; padding: 12px; z-index: 100; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
-        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; color: #555; font-size: 9px; font-weight: 800; border:none; background:transparent; }
+        .logo-text { font-weight: 800; color: #e11d48; font-style: italic; font-size: 1.8rem; }
+        .nav-bottom { position: fixed; bottom: 20px; left: 15px; right: 15px; background: #111; border-radius: 28px; display: flex; justify-content: space-around; padding: 12px; z-index: 100; }
+        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; color: #555; font-size: 10px; font-weight: 800; border:none; background:transparent; }
         .nav-item.active { color: #fff; }
         .card-egg { background: white; border: 1px solid #f3f4f6; border-radius: 28px; padding: 15px; margin-bottom: 12px; }
-        .input-egg { width: 100%; padding: 18px; background: #f9fafb; border-radius: 20px; border: 1px solid #f3f4f6; font-weight: 700; outline: none; }
     </style>
 </head>
 <body>
@@ -37,10 +36,16 @@
         const db = getFirestore(appFB);
         const auth = getAuth(appFB);
         const API_BASE = "https://painel-distribuidora-backend.onrender.com/api";
-        const IMG_DEFAULT = "https://images.unsplash.com/photo-1582722872445-41fe501ea146?w=400&auto=format";
+        const IMG_DEFAULT = "https://via.placeholder.com/300x300?text=Ovos";
 
         window.state = { user: null, view: 'loja', produtos: [], pedidos: [], comprando: null, qtd: 1 };
         const state = window.state;
+
+        // 🛡️ FUNÇÃO DE IMAGEM SEGURA (REPLICADA NO CLIENTE)
+        window.safeImg = (url) => {
+            if (!url || typeof url !== "string" || url.trim() === "" || !url.startsWith("http")) return IMG_DEFAULT;
+            return url.trim();
+        };
 
         onAuthStateChanged(auth, user => {
             state.user = user;
@@ -49,11 +54,9 @@
         });
 
         async function loadProdutos() {
-            try {
-                const r = await fetch(`${API_BASE}/produtos`);
-                state.produtos = await r.json();
-                window.render();
-            } catch(e) { console.error(e); }
+            const r = await fetch(`${API_BASE}/produtos`);
+            state.produtos = await r.json();
+            window.render();
         }
 
         function syncPedidos() {
@@ -72,8 +75,8 @@
             root.innerHTML = `
                 <div class="p-6">
                     <header class="flex justify-between items-center mb-8">
-                        <div class="logo-text text-3xl italic">AppEgg</div>
-                        <div class="bg-rose-50 px-4 py-2 rounded-full"><span class="text-[10px] font-black text-rose-600 uppercase">@${state.user.email.split('@')[0]}</span></div>
+                        <div class="logo-text">AppEgg</div>
+                        <div class="bg-rose-50 px-4 py-2 rounded-full font-black text-rose-600 text-[10px] uppercase">@${state.user.email.split('@')[0]}</div>
                     </header>
                     ${state.view === 'loja' ? renderLoja() : state.view === 'programar' ? renderProgramar() : renderPedidos()}
                 </div>
@@ -88,33 +91,38 @@
         };
 
         function renderLoja() {
-            return `<h2 class="font-black uppercase text-xs text-gray-400 mb-4 tracking-widest">Catálogo</h2>
+            return `
+                <h2 class="font-black uppercase text-xs text-gray-400 mb-4 tracking-widest">Ovos Frescos</h2>
                 ${state.produtos.map((p, i) => `
-                <div class="card-egg flex gap-4 items-center shadow-sm" onclick="window.abrirIndex(${i})">
-                    <img src="${p.foto_url || IMG_DEFAULT}" onerror="this.src='${IMG_DEFAULT}'" class="w-20 h-20 object-cover rounded-2xl">
+                <div class="card-egg flex gap-4 items-center shadow-sm" onclick="window.abrirCompraIndex(${i})">
+                    <img 
+                        src="${safeImg(p.foto_url)}" 
+                        onerror="this.src='${IMG_DEFAULT}'" 
+                        class="w-20 h-20 object-cover rounded-2xl"
+                    >
                     <div class="flex-1">
                         <h3 class="font-black uppercase text-sm mb-1">${p.nome}</h3>
-                        <p class="text-gray-400 text-[10px] font-bold uppercase mb-2">${p.embalagem || 'Pente'}</p>
+                        <p class="text-gray-400 text-[10px] font-bold uppercase mb-2">${p.embalagem || 'Cartela'}</p>
                         <p class="text-rose-600 font-black text-lg">R$ ${Number(p.preco).toFixed(2)}</p>
                     </div>
                 </div>`).join('')}`;
         }
 
         function renderProgramar() {
-            return `<div class="bg-blue-600 p-8 rounded-[40px] text-white mb-8 shadow-xl shadow-blue-100"><h2 class="text-2xl font-black italic mb-2 uppercase">Programar</h2><p class="text-[11px] font-bold opacity-80 uppercase">Receba seus ovos automaticamente.</p></div>${renderLoja()}`;
+            return `<div class="bg-blue-600 p-8 rounded-[40px] text-white mb-8 shadow-xl shadow-blue-100"><h2 class="text-2xl font-black italic mb-2 uppercase">Programar</h2><p class="text-[11px] font-bold opacity-80 uppercase">Agende sua entrega automática.</p></div>${renderLoja()}`;
         }
 
         function renderPedidos() {
-            return `<h2 class="font-black uppercase text-xs tracking-widest text-gray-400 mb-4">Pedidos</h2>
+            return `<h2 class="font-black uppercase text-xs tracking-widest text-gray-400 mb-4">Meus Pedidos</h2>
                 ${state.pedidos.map(p => `
                 <div class="card-egg border-l-4 ${p.status === 'FINALIZADO' ? 'border-emerald-500' : 'border-rose-500'}">
                     <span class="text-[9px] font-black uppercase text-gray-400">${p.status}</span>
                     <h4 class="font-black uppercase text-xs">${p.quantidade}x ${p.produto}</h4>
-                    <p class="text-rose-600 font-bold text-xs">Total: R$ ${Number(p.valorTotal).toFixed(2)}</p>
-                </div>`).join('') || '<p class="text-center py-10 uppercase font-black text-gray-300">Vazio</p>'}`;
+                    <p class="text-rose-600 font-bold text-xs">R$ ${Number(p.valorTotal).toFixed(2)}</p>
+                </div>`).join('') || '<p class="text-center py-10 font-black text-gray-300">Vazio</p>'}`;
         }
 
-        window.abrirIndex = (i) => { state.comprando = state.produtos[i]; state.qtd = 1; window.render(); };
+        window.abrirCompraIndex = (i) => { state.comprando = state.produtos[i]; state.qtd = 1; window.render(); };
         window.ajustarQtd = (v) => { if(state.qtd + v > 0) { state.qtd += v; window.render(); } };
 
         window.finalizarPedido = async (e) => {
@@ -143,25 +151,28 @@
             return `
             <div class="fixed inset-0 bg-black/80 flex items-end z-[200]">
                 <div class="bg-white w-full p-8 rounded-t-[40px] shadow-2xl">
-                    <div class="flex gap-4 mb-4"><img src="${p.foto_url || IMG_DEFAULT}" class="w-16 h-16 object-cover rounded-xl"><h3 class="font-black uppercase text-xl">${p.nome}</h3></div>
-                    <div class="flex items-center justify-between mb-6 bg-gray-50 p-4 rounded-3xl">
-                        <button onclick="ajustarQtd(-1)" class="w-14 h-14 bg-white rounded-2xl font-black">-</button>
-                        <span class="text-3xl font-black">${state.qtd}</span>
-                        <button onclick="ajustarQtd(1)" class="w-14 h-14 bg-white rounded-2xl font-black">+</button>
+                    <div class="flex gap-4 mb-4 items-center">
+                        <img src="${safeImg(p.foto_url)}" onerror="this.src='${IMG_DEFAULT}'" class="w-16 h-16 object-cover rounded-xl shadow-sm">
+                        <h3 class="font-black uppercase text-xl">${p.nome}</h3>
                     </div>
                     <form onsubmit="finalizarPedido(event)" class="space-y-3">
-                        <input name="telefone" placeholder="WhatsApp (DDD)" class="input-egg border" required>
-                        <select name="recorrencia" class="input-egg border font-black uppercase text-[10px]">
-                            <option value="">Apenas uma vez</option><option value="Semanal">Toda Semana</option><option value="Mensal">Todo Mês</option>
+                        <div class="flex items-center justify-between mb-4 bg-gray-50 p-4 rounded-3xl">
+                            <button type="button" onclick="ajustarQtd(-1)" class="w-14 h-14 bg-white rounded-2xl font-black shadow-sm">-</button>
+                            <span class="text-3xl font-black">${state.qtd}</span>
+                            <button type="button" onclick="ajustarQtd(1)" class="w-14 h-14 bg-white rounded-2xl font-black shadow-sm">+</button>
+                        </div>
+                        <input name="telefone" placeholder="WhatsApp (DDD)" class="w-full p-4 border rounded-2xl font-bold outline-none mb-2" required>
+                        <select name="recorrencia" class="w-full p-4 border rounded-2xl font-bold outline-none text-[10px] uppercase">
+                            <option value="">Apenas uma vez</option><option value="Semanal">Semanal</option><option value="Mensal">Mensal</option>
                         </select>
-                        <button class="w-full bg-rose-600 text-white py-6 rounded-3xl font-black uppercase shadow-xl">Confirmar Pedido</button>
+                        <button class="w-full bg-rose-600 text-white py-6 rounded-3xl font-black uppercase">Confirmar</button>
                     </form>
                     <button onclick="state.comprando=null;render()" class="w-full py-4 text-gray-400 font-black text-[10px] uppercase">Voltar</button>
                 </div>
             </div>`;
         }
 
-        window.handleLogin = async (e) => { e.preventDefault(); const f = new FormData(e.target); try { await signInWithEmailAndPassword(auth, f.get('email'), f.get('pass')); } catch (err) { alert("Erro"); } };
+        window.handleLogin = async (e) => { e.preventDefault(); const f = new FormData(e.target); try { await signInWithEmailAndPassword(auth, f.get('email'), f.get('pass')); } catch (err) { alert("Erro login"); } };
         window.signOut = () => signOut(auth);
     </script>
 </body>

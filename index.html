@@ -3,19 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AppEgg Admin | V1 Estável</title>
+    <title>AppEgg Admin | Gestão Master</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
         body { font-family: 'Inter', sans-serif; background: #f9fafb; color: #1f2937; }
         .card { background: #ffffff; border: 1px solid #f3f4f6; border-radius: 24px; box-shadow: 0 4px 15px rgba(0,0,0,0.02); }
-        .nav-link { font-size: 10px; font-weight: 800; text-transform: uppercase; color: #9ca3af; padding: 12px 14px; border-radius: 12px; cursor: pointer; transition: 0.2s; }
+        /* 1️⃣ ABAS MAIORES */
+        .nav-link { font-size: 13px; font-weight: 800; text-transform: uppercase; color: #9ca3af; padding: 14px 20px; border-radius: 14px; cursor: pointer; transition: 0.2s; white-space: nowrap; }
         .nav-link.active { color: #e11d48; background: #fff1f2; }
-        .logo-text { font-weight: 800; color: #e11d48; font-size: 1.25rem; font-style: italic; }
-        .input-egg { width: 100%; padding: 14 :px; background: #f9fafb; border-radius: 16px; border: 1px solid #f3f4f6; font-weight: 700; font-size: 13px; outline: none; }
-        .badge { padding: 4px 8px; border-radius: 8px; font-size: 9px; font-weight: 900; text-transform: uppercase; }
-        .progress-bar { height: 8px; border-radius: 4px; background: #f3f4f6; overflow: hidden; }
-        .progress-fill { height: 100%; background: #e11d48; }
+        .logo-text { font-weight: 800; color: #e11d48; font-size: 1.4rem; font-style: italic; }
+        .input-egg { width: 100%; padding: 14px; background: #f9fafb; border-radius: 16px; border: 1px solid #f3f4f6; font-weight: 700; font-size: 13px; outline: none; }
     </style>
 </head>
 <body>
@@ -39,9 +37,16 @@
         const db = getFirestore(appFB);
         const auth = getAuth(appFB);
         const API_BASE = "https://painel-distribuidora-backend.onrender.com/api";
+        const IMG_DEFAULT = "https://via.placeholder.com/300x300?text=Ovos";
 
         window.state = { user: null, view: 'pedidos', logs: [], produtos: [], editando: null, filtroData: 'hoje' };
         const state = window.state;
+
+        // 2️⃣ FUNÇÃO DE IMAGEM SEGURA
+        window.safeImg = (url) => {
+            if (!url || typeof url !== "string" || url.trim() === "" || !url.startsWith("http")) return IMG_DEFAULT;
+            return url.trim();
+        };
 
         onAuthStateChanged(auth, user => {
             state.user = user;
@@ -50,11 +55,9 @@
         });
 
         async function loadProdutos() {
-            try {
-                const r = await fetch(`${API_BASE}/produtos`);
-                state.produtos = await r.json();
-                window.render();
-            } catch(e) { console.error("Erro API", e); }
+            const r = await fetch(`${API_BASE}/produtos`);
+            state.produtos = await r.json();
+            window.render();
         }
 
         function syncRealtime() {
@@ -64,194 +67,141 @@
             });
         }
 
-        function filtrarPorPeriodo(dados) {
-            const agora = new Date();
-            return dados.filter(l => {
-                if (!l.criadoEm) return false;
-                const dt = new Date(l.criadoEm.seconds * 1000);
-                if (state.filtroData === 'hoje') return dt.toDateString() === agora.toDateString();
-                if (state.filtroData === 'semana') return (agora - dt) / (1000 * 3600 * 24) <= 7;
-                if (state.filtroData === 'mes') return (agora - dt) / (1000 * 3600 * 24) <= 30;
-                return true;
-            });
-        }
-
         window.render = () => {
             const root = document.getElementById('app-root');
             if (!state.user) { root.innerHTML = renderLogin(); return; }
 
             root.innerHTML = `
-                <nav class="bg-white border-b px-6 h-20 flex justify-between items-center sticky top-0 z-50">
-                    <div class="logo-text italic">AppEgg Admin</div>
-                    <div class="flex gap-1">
+                <nav class="bg-white border-b px-6 h-24 flex justify-between items-center sticky top-0 z-50">
+                    <div class="logo-text">AppEgg</div>
+                    <div class="flex gap-2 overflow-x-auto no-scrollbar">
                         <button onclick="state.view='pedidos';render()" class="nav-link ${state.view==='pedidos'?'active':''}">Pedidos</button>
                         <button onclick="state.view='estoque';render()" class="nav-link ${state.view==='estoque'?'active':''}">Estoque</button>
                         <button onclick="state.view='financeiro';render()" class="nav-link ${state.view==='financeiro'?'active':''}">Financeiro</button>
-                        <button onclick="signOut(auth)" class="nav-link">Sair</button>
+                        <button onclick="signOut(auth)" class="nav-link text-rose-600">Sair</button>
                     </div>
                 </nav>
                 <main class="p-6 max-w-5xl mx-auto">
-                    <div class="flex justify-between items-center mb-6">
-                        <h2 class="font-black uppercase italic text-xl">${state.view}</h2>
-                        <select onchange="state.filtroData=this.value;render()" class="bg-white border p-3 rounded-xl text-[10px] font-black uppercase shadow-sm outline-none">
-                            <option value="hoje" ${state.filtroData==='hoje'?'selected':''}>Hoje</option>
-                            <option value="semana" ${state.filtroData==='semana'?'selected':''}>7 dias</option>
-                            <option value="mes" ${state.filtroData==='mes'?'selected':''}>30 dias</option>
-                            <option value="todos" ${state.filtroData==='todos'?'selected':''}>Tudo</option>
-                        </select>
-                    </div>
                     ${state.view === 'financeiro' ? renderFinanceiro() : 
                       state.view === 'estoque' ? renderEstoque() : renderPedidos()}
                 </main>`;
         };
 
         function renderPedidos() {
-            const filtrados = filtrarPorPeriodo(state.logs).filter(l => !['FINALIZADO', 'CANCELADO'].includes(l.status));
-            return filtrados.map(l => `
+            const f = state.logs.filter(l => !['FINALIZADO', 'CANCELADO'].includes(l.status));
+            return f.map(l => `
                 <div class="card p-6 mb-4 border-l-8 ${l.recorrencia ? 'border-blue-500' : 'border-rose-400'}">
                     <div class="flex justify-between items-start mb-4">
-                        <div>
-                            <h3 class="font-black uppercase text-sm">${l.clienteNome}</h3>
-                            <p class="text-[9px] font-bold text-gray-400 uppercase">${l.telefone || 'Sem Tel'} • ${l.recorrencia || 'Venda Única'}</p>
-                        </div>
-                        <span class="badge bg-rose-50 text-rose-600">${l.status}</span>
+                        <div><h3 class="font-black uppercase text-sm">${l.clienteNome}</h3><p class="text-[9px] font-bold text-gray-400 uppercase">${l.telefone || 'S/ Tel'}</p></div>
+                        <span class="text-[9px] font-black uppercase px-2 py-1 bg-rose-50 text-rose-600 rounded-md">${l.status}</span>
                     </div>
                     <div class="bg-gray-50 p-4 rounded-xl text-xs font-black italic mb-4 flex justify-between">
                         <span>${l.quantidade}x ${l.produto}</span>
                         <span class="text-rose-600">R$ ${Number(l.valorTotal).toFixed(2)}</span>
                     </div>
                     <div class="flex gap-2">
-                        <button onclick="finalizarPedido('${l.id}')" class="flex-1 bg-emerald-600 text-white py-4 rounded-xl font-black uppercase text-[10px] shadow-lg">Finalizar e Avisar</button>
-                        <button onclick="cancelarPedido('${l.id}')" class="px-6 bg-gray-100 text-gray-400 rounded-xl font-black text-[10px]">Cancelar</button>
+                        <button onclick="finalizarPedido('${l.id}')" class="flex-1 bg-emerald-600 text-white py-4 rounded-xl font-black uppercase text-[10px]">Finalizar e Avisar</button>
                     </div>
-                </div>`).join('') || '<p class="text-center font-black py-20 text-gray-300 uppercase">Fila vazia</p>';
+                </div>`).join('') || '<p class="text-center py-20 font-black text-gray-300">NADA PENDENTE</p>';
         }
-
-        function renderFinanceiro() {
-            const filtrados = filtrarPorPeriodo(state.logs).filter(l => l.status === 'FINALIZADO');
-            let vendaT = 0, custoT = 0;
-            const perf = {};
-
-            filtrados.forEach(l => {
-                const vVenda = Number(l.valorTotal);
-                const prod = state.produtos.find(p => p.nome === l.produto);
-                
-                // ✅ AJUSTE 1: Fallback Triplo para Custo (Blindado contra NaN)
-                const baseCusto = prod?.preco_custo ?? (Number(l.precoUnidade) || (vVenda / (Number(l.quantidade) || 1)) * 0.7);
-                const vCusto = baseCusto * Number(l.quantidade);
-                
-                vendaT += vVenda;
-                custoT += vCusto;
-
-                if (!perf[l.produto]) perf[l.produto] = { total: 0, lucro: 0 };
-                perf[l.produto].total += vVenda;
-                perf[l.produto].lucro += (vVenda - vCusto);
-            });
-
-            const lucroT = vendaT - custoT;
-
-            return `
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                    <div class="card p-6 bg-rose-600 text-white"><p class="text-[8px] font-black opacity-60 uppercase mb-1">Vendas</p><h2 class="text-2xl font-black italic">R$ ${vendaT.toFixed(2)}</h2></div>
-                    <div class="card p-6 bg-gray-800 text-white"><p class="text-[8px] font-black opacity-60 uppercase mb-1">Custos</p><h2 class="text-2xl font-black italic">R$ ${custoT.toFixed(2)}</h2></div>
-                    <div class="card p-6 bg-emerald-500 text-white"><p class="text-[8px] font-black opacity-60 uppercase mb-1">Lucro</p><h2 class="text-2xl font-black italic">R$ ${lucroT.toFixed(2)}</h2></div>
-                </div>
-                <div class="card p-6 mb-6">
-                    <h3 class="font-black uppercase text-xs mb-6 text-gray-400">Ranking de Lucratividade</h3>
-                    <div class="space-y-4">
-                        ${Object.entries(perf).sort((a,b) => b[1].lucro - a[1].lucro).map(([nome, d]) => {
-                            const perc = (d.lucro / (lucroT || 1)) * 100;
-                            return `<div><div class="flex justify-between text-[10px] font-black uppercase mb-1"><span>${nome}</span><span class="text-emerald-600">R$ ${d.lucro.toFixed(2)}</span></div>
-                            <div class="progress-bar"><div class="progress-fill" style="width: ${perc}%"></div></div></div>`;
-                        }).join('') || '<p class="text-center text-xs font-black text-gray-300 py-4 uppercase">Sem vendas</p>'}
-                    </div>
-                </div>
-                <button onclick="gerarCSV()" class="w-full bg-white border-2 border-dashed border-gray-200 py-4 rounded-2xl font-black uppercase text-[10px] text-gray-400">⬇️ Exportar CSV para Excel</button>`;
-        }
-
-        window.gerarCSV = () => {
-            const f = filtrarPorPeriodo(state.logs).filter(l => l.status === 'FINALIZADO');
-            let csv = "Data,Cliente,Produto,Qtd,Total\n";
-            f.forEach(l => {
-                const dt = new Date(l.criadoEm.seconds * 1000).toLocaleDateString();
-                csv += `${dt},${l.clienteNome},${l.produto},${l.quantidade},${l.valorTotal}\n`;
-            });
-            const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
-            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'relatorio_appegg.csv'; a.click();
-        };
 
         function renderEstoque() {
-            const p = state.editando || { nome: 'Ovo Branco', preco: '', preco_custo: '', quantidade: '', foto_url: '', embalagem: 'Pente 30' };
+            const p = state.editando || { nome: 'Ovo Branco', preco: '', preco_custo: '', quantidade: '', foto_url: '', embalagem: 'Cartela 30' };
             return `
                 <div class="card p-6 mb-8">
-                    <form onsubmit="salvarProd(event)" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                        <select name="nome" class="input-egg border" required>
-                            <option value="Ovo Branco" ${p.nome==='Ovo Branco'?'selected':''}>Ovo Branco</option>
-                            <option value="Ovo Vermelho" ${p.nome==='Ovo Vermelho'?'selected':''}>Ovo Vermelho</option>
-                            <option value="Ovo Caipira" ${p.nome==='Ovo Caipira'?'selected':''}>Ovo Caipira</option>
-                            <option value="Ovo Jumbo" ${p.nome==='Ovo Jumbo'?'selected':''}>Ovo Jumbo</option>
-                            <option value="Ovo de Codorna" ${p.nome==='Ovo de Codorna'?'selected':''}>Ovo de Codorna</option>
+                    <form onsubmit="salvarProduto(event)" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                        <select name="nome" class="input-egg border">
+                            <option value="Ovo Branco" ${p.nome.includes('Branco')?'selected':''}>Ovo Branco</option>
+                            <option value="Ovo Vermelho" ${p.nome.includes('Vermelho')?'selected':''}>Ovo Vermelho</option>
+                            <option value="Ovo Caipira" ${p.nome.includes('Caipira')?'selected':''}>Ovo Caipira</option>
+                            <option value="Ovo Jumbo" ${p.nome.includes('Jumbo')?'selected':''}>Ovo Jumbo</option>
                         </select>
-                        <select name="embalagem" class="input-egg border" required>
-                            <option value="Pente 30" ${p.embalagem==='Pente 30'?'selected':''}>Pente 30</option>
-                            <option value="Dúzia 12" ${p.embalagem==='Dúzia 12'?'selected':''}>Dúzia 12</option>
+                        <select name="embalagem" class="input-egg border">
+                            <option value="Cartela 30" ${p.embalagem==='Cartela 30'?'selected':''}>Cartela 30</option>
                             <option value="Cartela 20" ${p.embalagem==='Cartela 20'?'selected':''}>Cartela 20</option>
-                            <option value="Caixa 360" ${p.embalagem==='Caixa 360'?'selected':''}>Caixa 360</option>
+                            <option value="Dúzia 12" ${p.embalagem==='Dúzia 12'?'selected':''}>Dúzia 12</option>
+                            <option value="Caixa 360" ${p.embalagem==='Caixa 360'?'selected':''}>Caixa 360 (12 Dz)</option>
                         </select>
                         <input name="preco_custo" type="number" step="0.01" value="${p.preco_custo}" placeholder="Custo R$" class="input-egg border" required>
                         <input name="preco" type="number" step="0.01" value="${p.preco}" placeholder="Venda R$" class="input-egg border" required>
                         <input name="quantidade" type="number" value="${p.quantidade}" placeholder="Estoque" class="input-egg border" required>
-                        <input name="foto_url" value="${p.foto_url}" placeholder="URL da Foto" class="input-egg border">
-                        <button class="bg-rose-600 text-white font-black rounded-xl uppercase text-xs py-4 lg:col-span-2">Salvar Produto</button>
+                        <input name="foto_url" value="${p.foto_url || ''}" placeholder="URL da Foto" class="input-egg border">
+                        <button class="bg-rose-600 text-white font-black rounded-xl uppercase text-xs py-4 lg:col-span-2">Gravar Produto</button>
                         ${state.editando ? `<button type="button" onclick="state.editando=null;render()" class="bg-gray-100 rounded-xl font-black text-xs uppercase">Cancelar</button>` : ''}
                     </form>
                 </div>
                 <div class="grid gap-3">
                     ${state.produtos.map((prod, i) => `
-                    <div class="card p-4 flex justify-between items-center ${prod.quantidade < 10 ? 'border-l-4 border-red-500' : ''}">
+                    <div class="card p-4 flex justify-between items-center">
                         <div class="flex items-center gap-3">
-                            <img src="${prod.foto_url || 'https://via.placeholder.com/50'}" class="w-10 h-10 rounded-lg object-cover">
-                            <div><p class="font-black text-xs uppercase">${prod.nome}</p><p class="text-[9px] text-gray-400 font-bold uppercase">${prod.embalagem} | Estoque: ${prod.quantidade}</p></div>
+                            <img src="${safeImg(prod.foto_url)}" onerror="this.src='${IMG_DEFAULT}'" class="w-12 h-12 rounded-xl object-cover">
+                            <div><p class="font-black text-xs uppercase">${prod.nome}</p><p class="text-[9px] text-gray-400 font-bold uppercase">${prod.embalagem} | Qtd: ${prod.quantidade}</p></div>
                         </div>
-                        <button onclick="editarIndex(${i})" class="text-blue-500 font-black text-[10px] uppercase border px-3 py-1 rounded-lg">Editar</button>
+                        <button onclick="window.editarProdutoIndex(${i})" class="text-blue-600 font-black text-[10px] uppercase px-4 py-2 border rounded-xl">Editar</button>
                     </div>`).join('')}
                 </div>`;
         }
 
-        window.editarIndex = (i) => { state.editando = state.produtos[i]; window.render(); };
+        window.editarProdutoIndex = (i) => { state.editando = state.produtos[i]; window.render(); };
+
+        window.salvarProduto = async (e) => {
+            e.preventDefault();
+            const f = new FormData(e.target);
+            const payload = { 
+                nome: f.get('nome'), 
+                preco: parseFloat(f.get('preco')), 
+                preco_custo: parseFloat(f.get('preco_custo')), 
+                quantidade: parseInt(f.get('quantidade')),
+                foto_url: f.get('foto_url')?.trim() || null, // 3️⃣ NORMALIZAÇÃO AO SALVAR
+                embalagem: f.get('embalagem')
+            };
+            const url = state.editando ? `${API_BASE}/produtos/${state.editando.id}` : `${API_BASE}/produtos`;
+            await fetch(url, { method: state.editando ? 'PUT' : 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+            state.editando = null;
+            loadProdutos();
+        };
+
+        function renderFinanceiro() {
+            const f = state.logs.filter(l => l.status === 'FINALIZADO');
+            let v = 0, c = 0;
+            f.forEach(l => {
+                v += Number(l.valorTotal);
+                const p = state.produtos.find(prod => prod.nome === l.produto);
+                const base = p?.preco_custo ?? (l.precoUnidade ?? (l.valorTotal / l.quantidade) * 0.7);
+                c += base * Number(l.quantidade);
+            });
+            return `
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div class="card p-6 bg-rose-600 text-white"><p class="text-[9px] font-black uppercase mb-1">Vendas</p><h2 class="text-2xl font-black italic">R$ ${v.toFixed(2)}</h2></div>
+                    <div class="card p-6 bg-gray-800 text-white"><p class="text-[9px] font-black uppercase mb-1">Custos</p><h2 class="text-2xl font-black italic">R$ ${c.toFixed(2)}</h2></div>
+                    <div class="card p-6 bg-emerald-500 text-white"><p class="text-[9px] font-black uppercase mb-1">Lucro</p><h2 class="text-2xl font-black italic">R$ ${(v-c).toFixed(2)}</h2></div>
+                </div>
+                <button onclick="gerarCSV()" class="w-full bg-white border-2 border-dashed border-gray-200 py-5 rounded-2xl font-black uppercase text-[11px] text-gray-400">Exportar Relatório Excel</button>`;
+        }
+
+        window.gerarCSV = () => {
+            const logs = state.logs.filter(l => l.status === 'FINALIZADO');
+            let csv = "Data,Cliente,Produto,Qtd,Total\n";
+            logs.forEach(l => { csv += `${new Date(l.criadoEm.seconds*1000).toLocaleDateString()},${l.clienteNome},${l.produto},${l.quantidade},${l.valorTotal}\n`; });
+            const blob = new Blob(["\ufeff" + csv], { type: 'text/csv' });
+            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'appegg_vendas.csv'; a.click();
+        };
 
         window.finalizarPedido = async (id) => {
             const snap = await getDoc(doc(db, "vendas_logs", id));
             const p = snap.data();
             await updateDoc(doc(db, "vendas_logs", id), { status: 'FINALIZADO', horarioConcluido: serverTimestamp() });
-            window.open(`https://wa.me/${p.telefone?.replace(/\D/g,'') || ''}?text=${encodeURIComponent('Seu pedido na AppEgg foi concluído! 🥚✨')}`, '_blank');
-        };
-
-        window.cancelarPedido = async (id) => {
-            const snap = await getDoc(doc(db, "vendas_logs", id));
-            const p = snap.data();
-            const resProd = await fetch(`${API_BASE}/produtos/${p.produtoId}`);
-            const prod = await resProd.json();
-            await fetch(`${API_BASE}/produtos/${p.produtoId}`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ quantidade: prod.quantidade + p.quantidade }) });
-            await updateDoc(doc(db, "vendas_logs", id), { status: 'CANCELADO' });
-        };
-
-        window.salvarProd = async (e) => {
-            e.preventDefault();
-            const f = new FormData(e.target);
-            const p = { nome: f.get('nome'), preco: parseFloat(f.get('preco')), preco_custo: parseFloat(f.get('preco_custo')), quantidade: parseInt(f.get('quantidade')), foto_url: f.get('foto_url'), embalagem: f.get('embalagem') };
-            const url = state.editando ? `${API_BASE}/produtos/${state.editando.id}` : `${API_BASE}/produtos`;
-            await fetch(url, { method: state.editando ? 'PUT' : 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(p) });
-            state.editando = null; loadProdutos();
+            window.open(`https://wa.me/${p.telefone?.replace(/\D/g,'') || ''}?text=${encodeURIComponent('Seu pedido na AppEgg foi concluído! 🥚')}`, '_blank');
         };
 
         window.handleLogin = async (e) => {
             e.preventDefault();
             const f = new FormData(e.target);
-            try { await signInWithEmailAndPassword(auth, f.get('email'), f.get('pass')); } catch (err) { alert("Erro de Login"); }
+            try { await signInWithEmailAndPassword(auth, f.get('email'), f.get('pass')); } catch (err) { alert("Login Falhou"); }
         };
 
-        function renderLogin() { return `<div class="min-h-screen flex items-center justify-center bg-rose-600 p-8"><form onsubmit="handleLogin(event)" class="bg-white p-12 rounded-[40px] shadow-2xl w-full max-w-sm"><div class="logo-text text-4xl mb-8 text-center">AppEgg Admin</div><input name="email" class="input-egg border mb-3" placeholder="Email"><input name="pass" type="password" class="input-egg border mb-6" placeholder="Senha"><button class="w-full bg-rose-600 text-white py-5 rounded-2xl font-black uppercase shadow-lg">Entrar</button></form></div>`; }
+        function renderLogin() { return `<div class="min-h-screen flex items-center justify-center bg-rose-600 p-8"><form onsubmit="handleLogin(event)" class="bg-white p-12 rounded-[40px] shadow-2xl w-full max-w-sm"><div class="logo-text text-4xl mb-8 text-center">AppEgg</div><input name="email" class="input-egg border mb-3" placeholder="Email"><input name="pass" type="password" class="input-egg border mb-6" placeholder="Senha"><button class="w-full bg-rose-600 text-white py-5 rounded-2xl font-black uppercase">Entrar</button></form></div>`; }
+        window.signOut = () => signOut(auth);
     </script>
 </body>
 </html>
