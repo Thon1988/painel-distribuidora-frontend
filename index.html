@@ -3,17 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AppEgg Admin | Dashboard Pro</title>
+    <title>AppEgg Admin</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
-        body { font-family: 'Inter', sans-serif; background: #f4f7f6; color: #1f2937; }
-        .nav-link { font-size: 13px; font-weight: 800; text-transform: uppercase; color: #6b7280; padding: 14px 24px; border-radius: 16px; cursor: pointer; transition: 0.3s; border: 2px solid transparent; }
-        .nav-link.active { color: #e11d48; background: #fff; border-color: #ffe4e6; }
-        .logo-text { font-weight: 900; color: #e11d48; font-size: 1.6rem; letter-spacing: -1px; }
-        .card { background: #ffffff; border-radius: 32px; box-shadow: 0 10px 40px rgba(0,0,0,0.03); border: 1px solid rgba(0,0,0,0.02); }
-        .input-egg { width: 100%; padding: 16px; background: #f9fafb; border-radius: 20px; border: 1px solid #eee; font-weight: 700; outline: none; }
-        .btn-status { padding: 10px; border-radius: 12px; font-size: 9px; font-weight: 900; text-transform: uppercase; transition: 0.2s; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        body { font-family: 'Inter', sans-serif; background: #f4f7f6; }
+        .logo-text { font-weight: 900; color: #e11d48; font-size: 1.6rem; }
+        .card { background: #fff; border-radius: 32px; padding: 32px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
+        .btn-action { padding: 12px; border-radius: 12px; font-size: 10px; font-weight: 900; text-transform: uppercase; transition: 0.2s; }
     </style>
 </head>
 <body>
@@ -21,8 +18,8 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, query, orderBy, doc, updateDoc, getDoc, serverTimestamp, deleteDoc } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
-        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+        import { getFirestore, collection, onSnapshot, query, orderBy, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+        import { getAuth, onAuthStateChanged, signOut, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyD3Otz9-zdZH-E5Feg9IOGWPzVycoe8gro",
@@ -36,117 +33,62 @@
         const appFB = initializeApp(firebaseConfig);
         const db = getFirestore(appFB);
         const auth = getAuth(appFB);
-        const API_BASE = "https://painel-distribuidora-backend.onrender.com/api";
 
-        window.state = { user: null, view: 'dashboard', logs: [], produtos: [], filtroData: 'todos' };
-        const state = window.state;
+        window.state = { user: null, logs: [] };
 
         onAuthStateChanged(auth, user => {
-            state.user = user;
-            if (user) { loadProdutos(); syncRealtime(); }
+            window.state.user = user;
+            if (user) {
+                onSnapshot(query(collection(db, "vendas_logs"), orderBy("criadoEm", "desc")), s => {
+                    window.state.logs = s.docs.map(d => ({ id: d.id, ...d.data() }));
+                    window.render();
+                });
+            }
             window.render();
         });
-
-        async function loadProdutos() {
-            const r = await fetch(`${API_BASE}/produtos`);
-            state.produtos = await r.json();
-            window.render();
-        }
-
-        function syncRealtime() {
-            onSnapshot(query(collection(db, "vendas_logs"), orderBy("criadoEm", "desc")), s => {
-                state.logs = s.docs.map(d => ({ id: d.id, ...d.data() }));
-                window.render();
-            });
-        }
-
-        window.render = () => {
-            const root = document.getElementById('app-root');
-            if (!state.user) { root.innerHTML = renderLogin(); return; }
-
-            root.innerHTML = `
-                <nav class="bg-white border-b px-8 h-24 flex justify-between items-center sticky top-0 z-50">
-                    <div class="logo-text">AppEgg Admin</div>
-                    <div class="flex gap-2">
-                        <button onclick="state.view='dashboard';render()" class="nav-link ${state.view==='dashboard'?'active':''}">Dash</button>
-                        <button onclick="state.view='pedidos';render()" class="nav-link ${state.view==='pedidos'?'active':''}">Pedidos</button>
-                        <button onclick="state.view='estoque';render()" class="nav-link ${state.view==='estoque'?'active':''}">Estoque</button>
-                        <button onclick="signOut(auth)" class="nav-link text-rose-600">Sair</button>
-                    </div>
-                </nav>
-                <main class="p-8 max-w-6xl mx-auto">
-                    ${state.view === 'dashboard' ? renderDashboard() : state.view === 'estoque' ? renderEstoque() : renderPedidos()}
-                </main>`;
-        };
-
-        function renderDashboard() {
-            const pendentes = state.logs.filter(l => l.status !== 'FINALIZADO').length;
-            return `
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-                    <div class="card p-8 bg-rose-600 text-white">
-                        <p class="text-[10px] font-black uppercase opacity-70">Pedidos Ativos</p>
-                        <h3 class="text-3xl font-black">${pendentes}</h3>
-                    </div>
-                    <div class="card p-8">
-                        <p class="text-[10px] font-black uppercase text-gray-400">Total em Estoque</p>
-                        <h3 class="text-3xl font-black">${state.produtos.reduce((acc, p) => acc + p.quantidade, 0)}</h3>
-                    </div>
-                </div>
-            `;
-        }
-
-        function renderPedidos() {
-            return state.logs.filter(l => l.status !== 'FINALIZADO').map(l => `
-                <div class="card p-8 mb-6 border-l-[12px] border-rose-500">
-                    <div class="flex justify-between items-start mb-6">
-                        <div>
-                            <h3 class="font-black uppercase text-lg">${l.clienteNome}</h3>
-                            <p class="text-[11px] font-bold text-gray-400 uppercase">${l.telefone}</p>
-                            ${l.dataProximaRemessa ? `<p class="bg-blue-100 text-blue-700 px-2 py-1 rounded mt-2 text-[10px] font-black inline-block">ENTREGA AGENDADA: ${l.dataProximaRemessa}</p>` : ''}
-                        </div>
-                        <div class="bg-gray-100 px-4 py-2 rounded-2xl font-black text-[10px] uppercase text-gray-500">${l.status}</div>
-                    </div>
-                    <div class="bg-gray-50 p-6 rounded-[24px] mb-6 flex justify-between items-center">
-                        <span class="font-black text-sm uppercase">${l.quantidade}x ${l.produto}</span>
-                        <span class="text-rose-600 font-black text-lg">R$ ${Number(l.valorTotal).toFixed(2)}</span>
-                    </div>
-                    <div class="flex flex-wrap gap-2">
-                        <button onclick="atualizarStatus('${l.id}', 'EMBALANDO')" class="btn-status bg-amber-100 text-amber-700">Embalando</button>
-                        <button onclick="atualizarStatus('${l.id}', 'SAIU PARA ENTREGA')" class="btn-status bg-blue-100 text-blue-700">Saiu p/ Entrega</button>
-                        <button onclick="finalizarPedido('${l.id}')" class="btn-status bg-emerald-600 text-white">Finalizar</button>
-                        <button onclick="excluirPedido('${l.id}')" class="btn-status bg-gray-200 text-gray-500">Excluir</button>
-                    </div>
-                </div>`).join('') || '<div class="text-center py-20 card font-black text-gray-300 uppercase">Sem pedidos</div>';
-        }
 
         window.atualizarStatus = async (id, status) => {
             await updateDoc(doc(db, "vendas_logs", id), { status: status });
         };
 
-        window.finalizarPedido = async (id) => {
-            const snap = await getDoc(doc(db, "vendas_logs", id));
-            const p = snap.data();
-            await updateDoc(doc(db, "vendas_logs", id), { status: 'FINALIZADO' });
-            window.open(`https://wa.me/${p.telefone?.replace(/\D/g,'')}?text=Seu pedido AppEgg foi entregue! 🥚`);
+        window.excluirPedido = async (id) => {
+            if(confirm("Deseja apagar este registro?")) await deleteDoc(doc(db, "vendas_logs", id));
         };
 
-        window.excluirPedido = async (id) => { if(confirm("Excluir?")) await deleteDoc(doc(db, "vendas_logs", id)); };
+        window.render = () => {
+            const root = document.getElementById('app-root');
+            if (!window.state.user) { root.innerHTML = renderLogin(); return; }
 
-        function renderEstoque() {
-            return `<div class="card p-10"><h2 class="font-black mb-6">ESTOQUE ATUAL</h2>
-            <div class="space-y-4">
-                ${state.produtos.map(p => `
-                    <div class="flex justify-between items-center border-b pb-4">
-                        <span class="font-black uppercase text-sm">${p.nome}</span>
-                        <span class="bg-gray-900 text-white px-4 py-2 rounded-xl font-black">${p.quantidade} un</span>
-                    </div>
-                `).join('')}
-            </div></div>`;
-        }
+            root.innerHTML = `
+                <nav class="bg-white p-6 border-b flex justify-between items-center">
+                    <div class="logo-text">AppEgg Admin</div>
+                    <button onclick="signOut(auth)" class="text-rose-600 font-black uppercase text-xs">Sair</button>
+                </nav>
+                <div class="p-8 max-w-4xl mx-auto space-y-6">
+                    <h2 class="font-black uppercase text-gray-400 text-xs">Gerenciamento de Pedidos</h2>
+                    ${window.state.logs.map(l => `
+                        <div class="card border-l-[12px] ${l.status === 'FINALIZADO' ? 'border-gray-300' : 'border-rose-500'}">
+                            <div class="flex justify-between items-start mb-4">
+                                <div>
+                                    <h3 class="font-black uppercase">${l.clienteNome}</h3>
+                                    <p class="text-xs text-gray-400">${l.produto} (${l.quantidade}x)</p>
+                                    ${l.dataProximaRemessa ? `<p class="text-blue-600 font-black text-[10px] mt-2 uppercase">Agendado para: ${l.dataProximaRemessa}</p>` : ''}
+                                </div>
+                                <span class="bg-gray-100 px-3 py-1 rounded-lg text-[10px] font-black uppercase">${l.status || 'CRIADO'}</span>
+                            </div>
+                            <div class="flex flex-wrap gap-2 mt-6">
+                                <button onclick="window.atualizarStatus('${l.id}', 'EMBALANDO')" class="btn-action bg-amber-100 text-amber-700">Embalando</button>
+                                <button onclick="window.atualizarStatus('${l.id}', 'SAIU PARA ENTREGA')" class="btn-action bg-blue-100 text-blue-700">Sair p/ Entrega</button>
+                                <button onclick="window.atualizarStatus('${l.id}', 'FINALIZADO')" class="btn-action bg-emerald-600 text-white">Finalizar</button>
+                                <button onclick="window.excluirPedido('${l.id}')" class="btn-action bg-gray-100 text-gray-400">Excluir</button>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>`;
+        };
 
-        window.handleLogin = async (e) => { e.preventDefault(); const f = new FormData(e.target); try { await signInWithEmailAndPassword(auth, f.get('email'), f.get('pass')); } catch (err) { alert("Erro"); } };
-        function renderLogin() { return `<div class="min-h-screen flex items-center justify-center bg-gray-900 p-8"><form onsubmit="handleLogin(event)" class="bg-white p-12 rounded-[48px] w-full max-w-md"><div class="logo-text text-center text-4xl mb-8">AppEgg Admin</div><input name="email" class="input-egg border mb-3" placeholder="Email"><input name="pass" type="password" class="input-egg border mb-8" placeholder="Senha"><button class="w-full bg-rose-600 text-white py-6 rounded-3xl font-black uppercase text-sm">Entrar</button></form></div>`; }
-        window.signOut = () => signOut(auth);
+        window.handleLogin = async (e) => { e.preventDefault(); const f = new FormData(e.target); try { await signInWithEmailAndPassword(auth, f.get('email'), f.get('pass')); } catch { alert("Erro"); } };
+        function renderLogin() { return `<div class="min-h-screen flex items-center justify-center p-10 bg-gray-900"><form onsubmit="handleLogin(event)" class="bg-white p-10 rounded-[40px] w-full max-w-sm space-y-4"><div class="logo-text text-center text-3xl mb-8">AppEgg Admin</div><input name="email" class="w-full p-4 bg-gray-50 rounded-2xl border" placeholder="Email"><input name="pass" type="password" class="w-full p-4 bg-gray-50 rounded-2xl border" placeholder="Senha"><button class="w-full bg-rose-600 text-white py-5 rounded-2xl font-black uppercase">Entrar</button></form></div>`; }
     </script>
 </body>
 </html>
