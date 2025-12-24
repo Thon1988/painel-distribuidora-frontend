@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AppEgg | Cliente</title>
+    <title>AppEgg | Pedidos</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&display=swap');
@@ -85,7 +85,7 @@
                 ${window.state.visualizandoPedido ? renderModalDetalhes() : ''}
                 <nav class="nav-bottom">
                     <button onclick="window.state.tela='catalogo';window.state.visualizandoPedido=null;window.render()" class="nav-item ${window.state.tela==='catalogo'?'active':''}">
-                        <span class="text-xl">🥚</span><span class="nav-text">Comprar</span>
+                        <span class="text-xl">🥚</span><span class="nav-text">Loja</span>
                     </button>
                     <button onclick="window.state.tela='meusPedidos';window.render()" class="nav-item ${window.state.tela==='meusPedidos'?'active':''}">
                         <span class="text-xl">📦</span><span class="nav-text">Meus Pedidos</span>
@@ -116,7 +116,7 @@
             return `<div class="modal"><div class="modal-content">
                 <div class="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-6"></div>
                 <h3 class="text-xl font-black uppercase italic mb-1">${p.nome}</h3>
-                <p class="text-gray-400 text-[10px] font-bold uppercase mb-6">Unidade: R$ ${parseFloat(p.preco).toFixed(2)}</p>
+                <p class="text-gray-400 text-[10px] font-bold uppercase mb-6">Valor Unitário: R$ ${parseFloat(p.preco).toFixed(2)}</p>
                 
                 <div class="flex items-center justify-between bg-gray-50 p-4 rounded-3xl mb-8">
                     <button onclick="window.actions.ajustarQtd(-1)" class="btn-qty text-2xl">−</button>
@@ -127,15 +127,15 @@
                 <form onsubmit="window.actions.finalizarPedido(event)" class="space-y-4">
                     <div class="grid grid-cols-2 gap-4">
                         <select name="entrega" class="w-full p-4 bg-gray-100 rounded-2xl font-bold text-xs outline-none">
-                            <option value="RETIRADA">Retirar no Local</option>
-                            <option value="ENTREGA">Entrega em Casa</option>
+                            <option value="RETIRADA">Retirada</option>
+                            <option value="ENTREGA">Entrega</option>
                         </select>
                         <select name="pagamento" class="w-full p-4 bg-gray-100 rounded-2xl font-bold text-xs outline-none">
                             <option value="PIX">PIX</option>
                             <option value="DINHEIRO">Dinheiro</option>
                         </select>
                     </div>
-                    <button class="w-full py-5 bg-rose-600 text-white rounded-2xl font-black uppercase shadow-lg mt-4">Finalizar • R$ ${total.toFixed(2)}</button>
+                    <button class="w-full py-5 bg-rose-600 text-white rounded-2xl font-black uppercase shadow-lg mt-4">Confirmar Pedido • R$ ${total.toFixed(2)}</button>
                 </form>
             </div></div>`;
         }
@@ -152,7 +152,7 @@
                             <p class="text-sm font-black">R$ ${Number(p.valorTotal).toFixed(2)}</p>
                             <p class="text-[9px] text-gray-400 font-bold">${formatTime(p.criadoEm)}</p>
                         </div>
-                    </div>`).join('') || '<p class="text-center font-black py-20 text-gray-300 uppercase">Sem histórico de pedidos</p>'}
+                    </div>`).join('') || '<p class="text-center font-black py-20 text-gray-300 uppercase">Nenhum pedido encontrado</p>'}
             </div></div>`;
         }
 
@@ -169,21 +169,21 @@
 
                 ${p.status === 'AGUARDANDO PAGAMENTO' && p.pagamento === 'PIX' && !p.confirmacaoPagamento ? `
                     <div class="bg-emerald-50 p-6 rounded-[24px] border border-emerald-100 mb-6 text-center">
-                        <p class="text-[10px] font-black uppercase text-emerald-600 mb-2">Chave PIX da Loja</p>
+                        <p class="text-[10px] font-black uppercase text-emerald-600 mb-2">Pague com PIX</p>
                         <p class="text-xs font-bold break-all mb-4 bg-white p-3 rounded-xl border border-emerald-200">${window.state.config.pixChave}</p>
                         <button onclick="window.actions.copiarPix('${window.state.config.pixChave}')" class="w-full bg-emerald-600 text-white py-3 rounded-xl font-black text-[10px] uppercase mb-2">Copiar Chave</button>
-                        <button onclick="window.actions.jaPaguei('${p.id}')" class="w-full bg-gray-900 text-white py-3 rounded-xl font-black text-[10px] uppercase italic">Já realizei o pagamento</button>
+                        <button onclick="window.actions.jaPaguei('${p.id}')" class="w-full bg-gray-900 text-white py-3 rounded-xl font-black text-[10px] uppercase italic">Informar Pagamento</button>
                     </div>
                 ` : ''}
 
                 <div class="space-y-0 mb-8 border-t pt-6">
-                    <div class="timeline-step"><div class="absolute left-[-4px] timeline-dot"></div><p class="text-[9px] font-black uppercase text-gray-400">Pedido: <span class="text-gray-900">${formatTime(p.criadoEm)}</span></p></div>
+                    <div class="timeline-step"><div class="absolute left-[-4px] timeline-dot"></div><p class="text-[9px] font-black uppercase text-gray-400">Solicitado: <span class="text-gray-900">${formatTime(p.criadoEm)}</span></p></div>
                     <div class="timeline-step"><div class="absolute left-[-4px] timeline-dot ${!p.horarioEmbalando?'bg-gray-100':''}"></div><p class="text-[9px] font-black uppercase text-gray-400">Embalando: <span class="text-gray-900">${formatTime(p.horarioEmbalando)}</span></p></div>
                     <div class="timeline-step"><div class="absolute left-[-4px] timeline-dot ${!p.horarioSaiu?'bg-gray-100':''}"></div><p class="text-[9px] font-black uppercase text-gray-400">${p.entrega === 'RETIRADA' ? 'Disponível' : 'Em Rota'}: <span class="text-gray-900">${formatTime(p.horarioSaiu)}</span></p></div>
-                    <div class="timeline-step"><div class="absolute left-[-4px] timeline-dot ${!p.horarioConcluido?'bg-gray-100':''}"></div><p class="text-[9px] font-black uppercase text-gray-400">Finalizado: <span class="text-gray-900">${formatTime(p.horarioConcluido)}</span></p></div>
+                    <div class="timeline-step"><div class="absolute left-[-4px] timeline-dot ${!p.horarioConcluido?'bg-gray-100':''}"></div><p class="text-[9px] font-black uppercase text-gray-400">Concluído: <span class="text-gray-900">${formatTime(p.horarioConcluido)}</span></p></div>
                 </div>
 
-                <a href="https://wa.me/5511985706243?text=Oi, preciso de suporte com meu pedido de ${p.produto}" target="_blank" class="flex items-center justify-center gap-2 w-full py-4 bg-gray-100 text-gray-600 rounded-2xl font-black text-[10px] uppercase">
+                <a href="https://wa.me/5511985706243?text=Oi, preciso de ajuda com meu pedido" target="_blank" class="flex items-center justify-center gap-2 w-full py-4 bg-gray-100 text-gray-600 rounded-2xl font-black text-[10px] uppercase">
                     💬 Suporte via WhatsApp
                 </a>
             </div></div>`;
@@ -192,7 +192,7 @@
         window.actions = {
             login: async (e) => {
                 e.preventDefault();
-                try { await signInWithEmailAndPassword(auth, e.target.email.value, e.target.pass.value); } catch (err) { alert("Credenciais incorretas."); }
+                try { await signInWithEmailAndPassword(auth, e.target.email.value, e.target.pass.value); } catch (err) { alert("Erro ao entrar."); }
             },
             logout: async () => { await signOut(auth); },
             abrirCompra: (idx) => { window.state.comprando = window.state.produtos[idx]; window.state.qtd = 1; window.render(); },
@@ -239,7 +239,7 @@
                     confirmacaoPagamento: true,
                     horarioPagamento: serverTimestamp()
                 });
-                alert("O Admin foi notificado do seu pagamento!");
+                alert("Confirmado! O vendedor verificará o pagamento.");
             }
         };
 
