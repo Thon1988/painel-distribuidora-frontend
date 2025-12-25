@@ -3,431 +3,334 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AppEgg Admin | Dashboard Pro</title>
+    <title>AppEgg Admin | Gestão de Distribuição Pro</title>
+    <!-- Tailwind CSS para Design Responsivo -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js para indicadores financeiros -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
         
-        body { font-family: 'Inter', sans-serif; background: #f4f7f6; color: #1f2937; }
-        .nav-link { font-size: 13px; font-weight: 800; text-transform: uppercase; color: #6b7280; padding: 14px 24px; border-radius: 16px; cursor: pointer; transition: all 0.3s ease; white-space: nowrap; border: 2px solid transparent; }
-        @media (min-width: 1024px) { .nav-link:hover { background: #fff; color: #e11d48; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.05); } }
+        body { font-family: 'Inter', sans-serif; background: #f8fafc; color: #1e293b; overflow-x: hidden; }
+        
+        /* Navegação Estilo Premium */
+        .nav-link { 
+            font-size: 12px; font-weight: 800; text-transform: uppercase; color: #64748b; 
+            padding: 14px 24px; border-radius: 16px; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+            white-space: nowrap; border: 2px solid transparent; display: flex; align-items: center; justify-content: center;
+        }
+        .nav-link:hover { background: #fff; color: #e11d48; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
         .nav-link.active { color: #e11d48; background: #fff; border-color: #ffe4e6; box-shadow: 0 4px 12px rgba(225, 29, 72, 0.08); }
-        .logo-text { font-weight: 900; color: #e11d48; font-size: 1.6rem; letter-spacing: -1px; }
-        .card { background: #ffffff; border-radius: 32px; box-shadow: 0 10px 40px rgba(0,0,0,0.03); border: 1px solid rgba(0,0,0,0.02); }
-        .input-egg { width: 100%; padding: 16px; background: #f9fafb; border-radius: 20px; border: 1px solid #eee; font-weight: 700; font-size: 14px; outline: none; transition: 0.2s; }
-        .input-egg:focus { border-color: #e11d48; background: #fff; }
-        .stat-card { padding: 32px; border-radius: 32px; transition: transform 0.3s; }
-        .stat-card:hover { transform: scale(1.02); }
-        .progress-bar { height: 10px; border-radius: 20px; background: #f3f4f6; overflow: hidden; }
-        .progress-fill { height: 100%; background: linear-gradient(90deg, #e11d48, #fb7185); transition: 1s cubic-bezier(0.4, 0, 0.2, 1); }
+        
+        /* Design System AppEgg - 32px Arredondamento */
+        .logo-text { font-weight: 900; color: #e11d48; font-size: 1.6rem; letter-spacing: -1.5px; }
+        .card { background: #ffffff; border-radius: 32px; box-shadow: 0 10px 30px rgba(0,0,0,0.02); border: 1px solid rgba(226, 232, 240, 0.8); transition: all 0.3s ease; }
+        .card:hover { transform: translateY(-4px); box-shadow: 0 20px 40px rgba(0,0,0,0.04); }
+        
+        .input-egg { 
+            width: 100%; padding: 16px 20px; background: #f1f5f9; border-radius: 20px; 
+            border: 2px solid transparent; font-weight: 700; font-size: 14px; outline: none; 
+            transition: all 0.2s; appearance: none; 
+        }
+        .input-egg:focus { border-color: #e11d48; background: #fff; box-shadow: 0 0 0 4px rgba(225, 29, 72, 0.05); }
+        
+        /* Área de Upload Realista */
+        .upload-area { 
+            width: 100%; height: 200px; background: #f8fafc; border: 2px dashed #cbd5e1; 
+            border-radius: 24px; display: flex; align-items: center; justify-content: center; 
+            overflow: hidden; cursor: pointer; transition: 0.3s; position: relative;
+        }
+        .upload-area:hover { border-color: #e11d48; background: #fff; }
+        .upload-area img { width: 100%; height: 100%; object-fit: cover; }
+
+        .modal-blur { background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(10px); }
         .no-scrollbar::-webkit-scrollbar { display: none; }
+        
+        .fade-in { animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .stat-card { padding: 32px; border-radius: 32px; }
+        .progress-bar { height: 8px; border-radius: 10px; background: #f1f5f9; overflow: hidden; }
+        .progress-fill { height: 100%; background: #e11d48; transition: 1s cubic-bezier(0.4, 0, 0.2, 1); }
+        
+        .pulse-order { animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
     </style>
 </head>
-<body>
+<body class="no-scrollbar">
     <div id="app-root"></div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, query, orderBy, doc, updateDoc, getDoc, serverTimestamp, deleteDoc } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
-        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+        import { getFirestore, collection, onSnapshot, query, orderBy, doc, updateDoc, getDoc, setDoc, serverTimestamp, deleteDoc } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyD3Otz9-zdZH-E5Feg9IOGWPzVycoe8gro",
-            authDomain: "distribuidora-de-ovos-aline.firebaseapp.com",
-            projectId: "distribuidora-de-ovos-aline",
-            storageBucket: "distribuidora-de-ovos-aline.firebasestorage.app",
-            messagingSenderId: "92187548716",
-            appId: "1:92187548716:web:d61d18a29aa76aead7c589"
-        };
-
+        // Configuração dinámica via ambiente
+        const firebaseConfig = JSON.parse(__firebase_config);
         const appFB = initializeApp(firebaseConfig);
         const db = getFirestore(appFB);
         const auth = getAuth(appFB);
-        const API_BASE = "https://painel-distribuidora-backend.onrender.com/api";
-        const IMG_DEFAULT = "https://via.placeholder.com/300x300?text=AppEgg+Ovos";
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'app-egg-pro-total';
 
-        window.state = { user: null, view: 'dashboard', logs: [], produtos: [], editando: null, filtroData: 'hoje' };
-        const state = window.state;
-
-        window.safeImg = (url) => {
-            if (!url || typeof url !== "string" || url.trim() === "" || !url.startsWith("http")) return IMG_DEFAULT;
-            return url.trim();
+        const FALLBACKS = {
+            branco: "https://images.unsplash.com/photo-1582722872445-41ca501ea14b?auto=format&fit=crop&w=600", 
+            vermelho: "https://images.unsplash.com/photo-1516448620398-c5f44bf9f441?q=60&w=600",
+            codorna: "https://images.unsplash.com/photo-1591123720164-de1348028a82?q=60&w=600",
+            caipira: "https://images.unsplash.com/photo-1498654203941-344718507204?q=60&w=600",
+            jumbo: "https://images.unsplash.com/photo-1506755855567-92ff770e8d30?q=60&w=600",
+            geral: "https://images.unsplash.com/photo-1522302302302?q=60&w=600"
         };
 
-        onAuthStateChanged(auth, user => {
-            state.user = user;
-            if (user) { loadProdutos(); syncRealtime(); }
-            window.render();
-        });
+        const CATEGORIES = ["Ovo Branco Extra", "Ovo Branco Grande", "Ovo Branco Médio", "Ovo Branco Pequeno", "Ovo Vermelho Extra", "Ovo Vermelho Grande", "Ovo Vermelho Médio", "Ovo Caipira", "Ovo de Codorna", "Ovo Jumbo", "Cesto de Ovos"];
+        const PACKAGING = ["Cartela 30", "Cartela 20", "Dúzia 12", "Caixa 360"];
 
-        async function loadProdutos() {
-            try {
-                const r = await fetch(`${API_BASE}/produtos`);
-                const data = await r.json();
-                state.produtos = Array.isArray(data) ? data : [];
-            } catch { state.produtos = []; }
-            window.render();
-        }
+        window.state = { 
+            user: null, 
+            view: 'dashboard', 
+            logs: [], 
+            produtos: [], 
+            activeModal: null, 
+            editData: null, 
+            loading: true, 
+            saving: false, 
+            filtroData: 'mes'
+        };
 
-        function syncRealtime() {
-            // Removendo serverTimestamp local do filtro para não quebrar a ordem visual se usar new Date() no client
-            onSnapshot(query(collection(db, "vendas_logs"), orderBy("criadoEm", "desc")), s => {
-                state.logs = s.docs.map(d => ({ id: d.id, ...d.data() }));
-                window.render();
-            });
-        }
-
-        function filtrarDados(dados) {
-            const agora = new Date();
-            return dados.filter(l => {
-                if (!l.criadoEm) return false;
-                // Suporte hibrido (Date string ou Firestore Timestamp)
-                const seconds = l.criadoEm.seconds || (new Date(l.criadoEm).getTime() / 1000);
-                const dt = new Date(seconds * 1000);
-                
-                if (state.filtroData === 'hoje') return dt.toDateString() === agora.toDateString();
-                if (state.filtroData === 'semana') return (agora - dt) / (1000 * 3600 * 24) <= 7;
-                if (state.filtroData === 'mes') return (agora - dt) / (1000 * 3600 * 24) <= 30;
-                return true;
-            });
-        }
+        // --- ATRIBUIÇÃO GLOBAL DE FUNÇÕES ---
 
         window.render = () => {
             const root = document.getElementById('app-root');
-            if (!state.user) { root.innerHTML = renderLogin(); return; }
+            if (!window.state.user) { root.innerHTML = renderLogin(); return; }
 
             root.innerHTML = `
                 <nav class="bg-white border-b px-8 h-24 flex justify-between items-center sticky top-0 z-50">
-                    <div class="logo-text cursor-pointer" onclick="state.view='dashboard';render()">AppEgg</div>
+                    <div class="logo-text cursor-pointer" onclick="window.setView('dashboard')">AppEgg</div>
                     <div class="flex gap-2 overflow-x-auto no-scrollbar">
-                        <button onclick="state.view='pedidos';render()" class="nav-link ${state.view==='pedidos'?'active':''}">Pedidos</button>
-                        <button onclick="state.view='estoque';render()" class="nav-link ${state.view==='estoque'?'active':''}">Estoque</button>
-                        <button onclick="state.view='financeiro';render()" class="nav-link ${state.view==='financeiro'?'active':''}">Financeiro</button>
-                        <button onclick="signOut(auth)" class="nav-link text-rose-600 hover:bg-rose-50">Sair</button>
+                        <button onclick="window.setView('dashboard')" class="nav-link ${window.state.view==='dashboard'?'active':''}" title="Início">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                        </button>
+                        <button onclick="window.setView('estoque')" class="nav-link ${window.state.view==='estoque'?'active':''}">Estoque</button>
+                        <button onclick="window.setView('pedidos')" class="nav-link ${window.state.view==='pedidos'?'active':''}">Pedidos</button>
+                        <button onclick="window.setView('financeiro')" class="nav-link ${window.state.view==='financeiro'?'active':''}">Financeiro</button>
+                        <button onclick="window.handleSignOut()" class="nav-link text-rose-600 hover:bg-rose-50 font-black">Sair</button>
                     </div>
                 </nav>
-                <main class="p-8 max-w-6xl mx-auto">
-                    ${renderHeaderContextual()}
-                    ${state.view === 'dashboard' ? renderDashboard() :
-                      state.view === 'financeiro' ? renderFinanceiro() : 
-                      state.view === 'estoque' ? renderEstoque() : renderPedidos()}
-                </main>`;
+                <main class="p-8 max-w-7xl mx-auto fade-in">
+                    ${window.state.view === 'dashboard' ? renderDashboard() :
+                      window.state.view === 'estoque' ? renderEstoque() : 
+                      window.state.view === 'financeiro' ? renderFinanceiro() : renderPedidos()}
+                </main>
+                <div id="modal-wrapper">${renderModal()}</div>`;
         };
 
-        function renderHeaderContextual() {
-            if (state.view === 'dashboard') return '';
-            return `
-                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4">
-                    <h2 class="text-3xl font-black uppercase tracking-tighter text-gray-800">${state.view}</h2>
-                    ${['pedidos', 'financeiro'].includes(state.view) ? `
-                        <div class="flex items-center gap-3 bg-white p-2 rounded-2xl shadow-sm border">
-                            <span class="text-[10px] font-black uppercase text-gray-400 ml-3">Filtrar:</span>
-                            <select onchange="state.filtroData=this.value;render()" class="bg-transparent font-black uppercase text-xs outline-none p-2 cursor-pointer">
-                                <option value="hoje" ${state.filtroData==='hoje'?'selected':''}>Hoje</option>
-                                <option value="semana" ${state.filtroData==='semana'?'selected':''}>7 Dias</option>
-                                <option value="mes" ${state.filtroData==='mes'?'selected':''}>30 Dias</option>
-                                <option value="todos" ${state.filtroData==='todos'?'selected':''}>Tudo</option>
-                            </select>
-                        </div>
-                    ` : ''}
-                </div>`;
-        }
+        window.previewBase64 = (e, imgId, phId, hiddenId) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            if (file.size > 1024 * 1024) return alert("Imagem muito grande (Máximo 1MB)");
+            const reader = new FileReader();
+            reader.onload = ev => {
+                const b64 = ev.target.result;
+                document.getElementById(hiddenId).value = b64;
+                const img = document.getElementById(imgId);
+                if (img) { img.src = b64; img.classList.remove('hidden'); }
+                const ph = document.getElementById(phId);
+                if (ph) ph.classList.add('hidden');
+            };
+            reader.readAsDataURL(file);
+        };
+
+        window.setView = (v) => { window.state.view = v; window.render(); };
+        window.handleSignOut = () => signOut(auth);
+        window.closeModal = () => { window.state.activeModal = null; window.state.editData = null; window.render(); };
+        window.openModal = (type, data = null) => { window.state.activeModal = type; window.state.editData = data; window.render(); };
+        
+        window.abrirModalProdutoEdit = (id) => {
+            const p = window.state.produtos.find(x => String(x.id) === String(id));
+            if (!p) return;
+            window.openModal('editProduto', p);
+        };
+
+        window.handleFormSubmit = async (e, type, id) => {
+            e.preventDefault();
+            if (window.state.saving || !window.state.user) return;
+
+            const payload = {
+                nome: document.getElementById('p-tipo-nome').value,
+                categoria: document.getElementById('p-tipo-nome').value,
+                embalagem: document.getElementById('p-emb').value,
+                preco: Number(document.getElementById('p-venda').value),
+                preco_custo: Number(document.getElementById('p-custo').value),
+                quantidade: Number(document.getElementById('p-qtd').value),
+                foto_url: document.getElementById('b64-p').value, 
+                atualizado: serverTimestamp()
+            };
+
+            window.state.saving = true; window.render();
+
+            try {
+                // Sincronizando rigorosamente na coleção 'estoque'
+                const docId = id || crypto.randomUUID();
+                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'estoque', docId), payload, { merge: true });
+                window.state.saving = false; window.closeModal();
+            } catch (err) { window.state.saving = false; window.render(); alert("Erro ao salvar."); }
+        };
+
+        window.eliminarProd = async (id) => { if (confirm("Remover produto?")) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'estoque', id)); };
+        window.mudarStatus = async (id, status) => { await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'vendas_logs', id), { status }); };
+        window.handleLogin = async (e) => { e.preventDefault(); try { await signInWithEmailAndPassword(auth, document.getElementById('l-email').value, document.getElementById('l-pass').value); } catch (err) { alert("Acesso negado."); } };
+
+        const startSnapshots = () => {
+            // Regra 1 e 2: Caminho rígido e ordenação manual para evitar erros de índice
+            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'estoque'), s => {
+                const list = s.docs.map(d => ({ id: d.id, ...d.data() }));
+                window.state.produtos = list.sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
+                window.render();
+            });
+            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'vendas_logs'), s => {
+                const data = s.docs.map(d => ({ id: d.id, ...d.data() }));
+                window.state.logs = data.sort((a, b) => (b.criadoEm?.seconds || 0) - (a.criadoEm?.seconds || 0));
+                window.render();
+            });
+        };
+
+        onAuthStateChanged(auth, user => { window.state.user = user; if (user) startSnapshots(); window.state.loading = false; window.render(); });
+        const initAuth = async () => { if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) await signInWithCustomToken(auth, __initial_auth_token).catch(() => signInAnonymously(auth)); else await signInAnonymously(auth); };
+        initAuth();
 
         function renderDashboard() {
-            const filtrados = filtrarDados(state.logs).filter(l => l.status === 'FINALIZADO');
-            let totalVendas = filtrados.reduce((acc, curr) => acc + Number(curr.valorTotal), 0);
-            
+            const totalStock = window.state.produtos.reduce((acc, p) => acc + (Number(p.quantidade) || 0), 0);
+            const activeOrders = window.state.logs.filter(l => !['FINALIZADO','CANCELADO'].includes(l.status));
             return `
-                <div class="mb-12">
-                    <h1 class="text-4xl font-black text-gray-900 mb-2 tracking-tighter">Bem-vindo ao AppEgg</h1>
-                    <p class="text-gray-500 font-medium">Sua central de inteligência para distribuição de ovos.</p>
-                </div>
-                
+                <div class="mb-12"><h1 class="text-4xl font-[950] text-gray-900 mb-2 tracking-tighter uppercase italic">AppEgg <span class="text-rose-600 italic">Admin</span></h1><p class="text-gray-500 font-medium italic">Distribuição em tempo real.</p></div>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-                    <div class="stat-card bg-rose-600 text-white shadow-xl shadow-rose-200">
-                        <p class="text-[10px] font-black uppercase opacity-70 mb-2">Vendas ${state.filtroData}</p>
-                        <h3 class="text-3xl font-black">R$ ${totalVendas.toFixed(2)}</h3>
-                    </div>
-                    <div class="stat-card bg-white border">
-                        <p class="text-[10px] font-black uppercase text-gray-400 mb-2">Pedidos Pendentes</p>
-                        <h3 class="text-3xl font-black text-gray-800">${state.logs.filter(l => !['FINALIZADO','CANCELADO'].includes(l.status)).length}</h3>
-                    </div>
-                    <div class="stat-card bg-gray-900 text-white">
-                        <p class="text-[10px] font-black uppercase opacity-60 mb-2">Itens em Estoque</p>
-                        <h3 class="text-3xl font-black">${state.produtos.reduce((acc, p) => acc + p.quantidade, 0)}</h3>
-                    </div>
+                    <div class="stat-card bg-rose-600 text-white shadow-xl shadow-rose-100"><p class="text-[10px] font-black uppercase opacity-70 mb-2 tracking-widest italic text-white">Pedidos Ativos</p><h3 class="text-3xl font-black text-white tracking-tighter ${activeOrders.length > 0 ? 'pulse-order' : ''}">${activeOrders.length} Pendentes</h3></div>
+                    <div class="stat-card bg-white border"><p class="text-[10px] font-black uppercase text-gray-400 mb-2 tracking-widest italic">Variedades</p><h3 class="text-3xl font-black text-gray-800 tracking-tighter">${window.state.produtos.length} Itens</h3></div>
+                    <div class="stat-card bg-gray-900 text-white shadow-2xl shadow-gray-200"><p class="text-[10px] font-black uppercase opacity-60 mb-2 tracking-widest italic text-white">Estoque Total</p><h3 class="text-3xl font-black text-white tracking-tighter">${totalStock} un</h3></div>
                 </div>
-
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     <div class="card p-8">
-                        <div class="flex justify-between items-center mb-8">
-                            <h4 class="font-black uppercase text-sm text-gray-400">Ações Rápidas</h4>
+                        <div class="flex justify-between items-center mb-6">
+                            <h4 class="font-black text-slate-800 uppercase text-xs tracking-[0.2em] italic">Últimos Pedidos</h4>
+                            <button onclick="window.setView('pedidos')" class="text-[10px] font-black text-rose-600 uppercase tracking-widest">Ver Todos ></button>
                         </div>
-                        <div class="grid grid-cols-2 gap-4">
-                            <button onclick="state.view='pedidos';render()" class="p-6 bg-rose-50 rounded-3xl text-rose-600 font-black text-xs uppercase hover:bg-rose-100 transition">Ver Pedidos</button>
-                            <button onclick="state.view='estoque';render()" class="p-6 bg-blue-50 rounded-3xl text-blue-600 font-black text-xs uppercase hover:bg-blue-100 transition">Gerir Estoque</button>
-                        </div>
-                    </div>
-                    <div class="card p-8">
-                        <h4 class="font-black uppercase text-sm text-gray-400 mb-6">Alerta de Estoque Baixo</h4>
                         <div class="space-y-4">
-                            ${state.produtos.filter(p => p.quantidade < 15).map(p => `
-                                <div class="flex justify-between items-center">
-                                    <span class="text-xs font-bold uppercase text-gray-700">${p.nome}</span>
-                                    <span class="px-3 py-1 bg-red-100 text-red-600 rounded-full font-black text-[10px]">${p.quantidade} un</span>
-                                </div>
-                            `).join('') || '<p class="text-[10px] font-bold text-gray-300">ESTOQUE SAUDÁVEL</p>'}
+                            ${activeOrders.slice(0, 4).map(l => `<div class="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex justify-between items-center"><div><p class="font-black text-slate-800 uppercase text-[11px] tracking-tight">${l.clienteNome || 'Cliente'}</p><p class="text-[10px] text-slate-400 font-bold uppercase italic">${l.quantidade}x ${l.produto}</p></div><span class="px-3 py-1 bg-rose-100 text-rose-600 rounded-full font-black text-[8px] uppercase tracking-widest">${l.status}</span></div>`).join('') || '<p class="text-slate-300 font-bold uppercase text-[10px] text-center py-10 tracking-[0.3em]">Tudo em dia!</p>'}
                         </div>
                     </div>
-                </div>
-            `;
-        }
-
-        function renderPedidos() {
-            // Mostra tudo que NAO está finalizado/cancelado para dar andamento
-            const filtrados = filtrarDados(state.logs).filter(l => !['FINALIZADO', 'CANCELADO'].includes(l.status));
-            
-            return filtrados.map(l => `
-                <div class="card p-8 mb-6 border-l-[12px] ${l.recorrencia ? 'border-blue-500' : 'border-rose-500'}">
-                    <div class="flex justify-between items-start mb-6">
-                        <div>
-                            <h3 class="font-black uppercase text-lg tracking-tight">${l.clienteNome}</h3>
-                            <p class="text-[11px] font-bold text-gray-400 uppercase tracking-widest">${l.telefone || 'Sem telefone'}</p>
-                            ${l.dataEntrega ? `<p class="text-[10px] text-rose-600 font-black uppercase mt-1 bg-rose-50 p-1 rounded w-fit">Entrega: ${l.dataEntrega}</p>` : ''}
-                        </div>
-                        <div class="bg-gray-100 px-4 py-2 rounded-2xl font-black text-[10px] uppercase text-gray-500">${l.status}</div>
+                    <div class="card p-8 bg-rose-50 border-2 border-rose-100 flex flex-col justify-center gap-4">
+                        <div><h4 class="font-black text-rose-800 uppercase text-sm tracking-tight italic">Alerta de Estoque</h4><p class="text-rose-600/70 text-[10px] font-bold uppercase mt-1 tracking-widest">Itens com menos de 15 un.</p></div>
+                        <button onclick="window.setView('estoque')" class="w-full mt-4 bg-rose-600 text-white py-4 rounded-2xl font-black uppercase text-[10px] shadow-lg shadow-rose-100 transition">Gerenciar Estoque</button>
                     </div>
-                    <div class="bg-gray-50 p-6 rounded-[24px] mb-6 flex justify-between items-center">
-                        <span class="font-black text-sm uppercase">${l.quantidade}x ${l.produto}</span>
-                        <span class="text-rose-600 font-black text-lg">R$ ${Number(l.valorTotal).toFixed(2)}</span>
-                    </div>
-                    <div class="flex gap-3">
-                        ${l.status === 'PEDIDO CRIADO' ? 
-                           `<button onclick="mudarStatus('${l.id}', 'EMBALANDO')" class="flex-1 bg-blue-600 text-white py-5 rounded-2xl font-black uppercase text-xs hover:bg-blue-700 transition">Embalar</button>` 
-                           : ''}
-                        
-                        ${l.status === 'EMBALANDO' ? 
-                           `<button onclick="mudarStatus('${l.id}', 'SAIU PARA ENTREGA')" class="flex-1 bg-purple-600 text-white py-5 rounded-2xl font-black uppercase text-xs hover:bg-purple-700 transition">Enviar</button>` 
-                           : ''}
-                           
-                        ${l.status === 'SAIU PARA ENTREGA' ? 
-                           `<button onclick="finalizarPedido('${l.id}')" class="flex-1 bg-emerald-600 text-white py-5 rounded-2xl font-black uppercase text-xs shadow-lg shadow-emerald-100 hover:bg-emerald-700 transition">Finalizar</button>` 
-                           : ''}
-
-                        <button onclick="cancelarPedido('${l.id}')" class="px-8 bg-gray-100 text-gray-400 rounded-2xl font-black uppercase text-[10px] hover:bg-gray-200 transition">Excluir</button>
-                    </div>
-                </div>`).join('') || '<div class="text-center py-20 card font-black text-gray-300 uppercase">Nenhum pedido pendente</div>';
-        }
-
-        function renderFinanceiro() {
-            const filtrados = filtrarDados(state.logs).filter(l => l.status === 'FINALIZADO');
-            let v = 0, c = 0;
-            const ranking = {};
-
-            filtrados.forEach(l => {
-                const total = Number(l.valorTotal);
-                v += total;
-                const prd = state.produtos.find(p => p.nome === l.produto);
-                const custoUn = prd?.preco_custo || (total / l.quantidade) * 0.7;
-                const custoTotal = custoUn * l.quantidade;
-                c += custoTotal;
-
-                if (!ranking[l.produto]) ranking[l.produto] = { lucro: 0, qtd: 0 };
-                ranking[l.produto].lucro += (total - custoTotal);
-                ranking[l.produto].qtd += l.quantidade;
-            });
-
-            const lucroTotal = v - c;
-
-            return `
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-                    <div class="card p-8 bg-white border-b-8 border-rose-500">
-                        <p class="text-[10px] font-black text-gray-400 uppercase mb-2">Faturamento Bruto</p>
-                        <h2 class="text-3xl font-black text-gray-800 tracking-tighter">R$ ${v.toFixed(2)}</h2>
-                    </div>
-                    <div class="card p-8 bg-white border-b-8 border-gray-800">
-                        <p class="text-[10px] font-black text-gray-400 uppercase mb-2">Custo Operacional</p>
-                        <h2 class="text-3xl font-black text-gray-800 tracking-tighter">R$ ${c.toFixed(2)}</h2>
-                    </div>
-                    <div class="card p-8 bg-white border-b-8 border-emerald-500">
-                        <p class="text-[10px] font-black text-gray-400 uppercase mb-2">Lucro Líquido</p>
-                        <h2 class="text-3xl font-black text-emerald-600 tracking-tighter">R$ ${lucroTotal.toFixed(2)}</h2>
-                    </div>
-                </div>
-
-                <div class="card p-10 mb-8">
-                    <h3 class="font-black uppercase text-xs text-gray-400 mb-10 tracking-widest">Desempenho por Produto</h3>
-                    <div class="space-y-10">
-                        ${Object.entries(ranking).sort((a,b) => b[1].lucro - a[1].lucro).map(([nome, d]) => {
-                            const perc = (d.lucro / (lucroTotal || 1)) * 100;
-                            return `
-                                <div>
-                                    <div class="flex justify-between items-end mb-3">
-                                        <div>
-                                            <p class="text-xs font-black uppercase text-gray-800">${nome}</p>
-                                            <p class="text-[9px] font-bold text-gray-400 uppercase">${d.qtd} UNIDADES VENDIDAS</p>
-                                        </div>
-                                        <span class="text-emerald-600 font-black text-sm">R$ ${d.lucro.toFixed(2)}</span>
-                                    </div>
-                                    <div class="progress-bar"><div class="progress-fill" style="width: ${perc}%"></div></div>
-                                </div>
-                            `;
-                        }).join('') || '<p class="text-center font-black text-gray-300 py-10 uppercase">Sem dados no período</p>'}
-                    </div>
-                </div>
-                <button onclick="gerarCSV()" class="w-full bg-gray-900 text-white py-6 rounded-3xl font-black uppercase text-xs shadow-2xl">Exportar Relatório Detalhado (Excel)</button>
-            `;
+                </div>`;
         }
 
         function renderEstoque() {
-            const p = state.editando || { nome: 'Ovo Branco', preco: '', preco_custo: '', quantidade: '', foto_url: '', embalagem: 'Cartela 30' };
             return `
-                <div class="card p-10 mb-12 bg-gray-50/50">
-                    <form onsubmit="salvarProd(event)" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        <div class="space-y-1">
-                            <label class="text-[9px] font-black uppercase text-gray-400 ml-2">Tipo de Ovo</label>
-                            <select name="nome" class="input-egg" required>
-                                <option value="Ovo Branco" ${p.nome==='Ovo Branco'?'selected':''}>Ovo Branco</option>
-                                <option value="Ovo Vermelho" ${p.nome==='Ovo Vermelho'?'selected':''}>Ovo Vermelho</option>
-                                <option value="Ovo Caipira" ${p.nome==='Ovo Caipira'?'selected':''}>Ovo Caipira</option>
-                                <option value="Ovo Jumbo" ${p.nome==='Ovo Jumbo'?'selected':''}>Ovo Jumbo</option>
-                            </select>
-                        </div>
-                        <div class="space-y-1">
-                            <label class="text-[9px] font-black uppercase text-gray-400 ml-2">Embalagem</label>
-                            <select name="embalagem" class="input-egg" required>
-                                <option value="Cartela 30" ${p.embalagem==='Cartela 30'?'selected':''}>Cartela 30</option>
-                                <option value="Cartela 20" ${p.embalagem==='Cartela 20'?'selected':''}>Cartela 20</option>
-                                <option value="Dúzia 12" ${p.embalagem==='Dúzia 12'?'selected':''}>Dúzia 12</option>
-                                <option value="Caixa 360" ${p.embalagem==='Caixa 360'?'selected':''}>Caixa 360</option>
-                            </select>
-                        </div>
-                        <div class="space-y-1">
-                            <label class="text-[9px] font-black uppercase text-gray-400 ml-2">Custo Unitário</label>
-                            <input name="preco_custo" type="number" step="0.01" value="${p.preco_custo}" class="input-egg" placeholder="R$ 0.00" required>
-                        </div>
-                        <div class="space-y-1">
-                            <label class="text-[9px] font-black uppercase text-gray-400 ml-2">Preço de Venda</label>
-                            <input name="preco" type="number" step="0.01" value="${p.preco}" class="input-egg" placeholder="R$ 0.00" required>
-                        </div>
-                        <div class="space-y-1">
-                            <label class="text-[9px] font-black uppercase text-gray-400 ml-2">Qtd em Estoque</label>
-                            <input name="quantidade" type="number" value="${p.quantidade}" class="input-egg" placeholder="0" required>
-                        </div>
-                        <div class="space-y-1">
-                            <label class="text-[9px] font-black uppercase text-gray-400 ml-2">URL da Imagem</label>
-                            <input name="foto_url" value="${p.foto_url || ''}" class="input-egg" placeholder="http://...">
-                        </div>
-                        <button class="bg-rose-600 text-white font-black rounded-2xl uppercase text-xs py-5 lg:col-span-3 mt-4 hover:bg-rose-700 transition shadow-xl shadow-rose-100">Atualizar Inventário</button>
-                    </form>
+                <div class="flex flex-col md:flex-row justify-between items-center mb-10 gap-6">
+                    <h2 class="text-3xl font-[950] uppercase tracking-tighter text-gray-800 italic">Gestão de Estoque</h2>
+                    <button onclick="window.openModal('addProduto')" class="bg-rose-600 text-white px-8 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg shadow-rose-200 active:scale-95 transition">+ Novo Item</button>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    ${state.produtos.map((prod, i) => `
-                        <div class="card p-6 flex items-center justify-between border ${prod.quantidade < 15 ? 'border-red-200 bg-red-50/30' : ''}">
-                            <div class="flex items-center gap-5">
-                                <img src="${safeImg(prod.foto_url)}" onerror="this.src='${IMG_DEFAULT}'" class="w-16 h-16 rounded-[20px] object-cover shadow-sm">
-                                <div>
-                                    <p class="font-black text-sm uppercase text-gray-800">${prod.nome}</p>
-                                    <p class="text-[10px] font-bold text-gray-400 uppercase">${prod.embalagem} • ${prod.quantidade} no estoque</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+                    ${window.state.produtos.map(p => {
+                        const fotoFinal = p.foto_url || FALLBACKS[p.nome?.toLowerCase().split(' ')[1]] || FALLBACKS.geral;
+                        return `
+                        <div class="card overflow-hidden group">
+                            <div class="h-48 relative overflow-hidden bg-slate-200">
+                                <img src="${fotoFinal}" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000">
+                                <div class="absolute top-4 right-4 bg-white/95 backdrop-blur px-4 py-1.5 rounded-full text-[10px] font-black text-slate-900 uppercase shadow-sm">Qtd: ${p.quantidade}</div>
+                            </div>
+                            <div class="p-8">
+                                <h3 class="font-[900] text-slate-800 text-lg uppercase tracking-tighter mb-1 truncate">${p.nome}</h3>
+                                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-8 italic">${p.embalagem}</p>
+                                <div class="flex justify-between items-center pt-5 border-t border-slate-50">
+                                    <div><p class="text-[8px] font-black text-slate-300 uppercase mb-0.5 tracking-tighter">Venda</p><span class="text-2xl font-[950] text-slate-900 tracking-tighter italic">R$ ${Number(p.preco || 0).toFixed(2)}</span></div>
+                                    <div class="flex gap-2">
+                                        <button onclick="window.abrirModalProdutoEdit('${p.id}')" class="w-11 h-11 flex items-center justify-center bg-slate-50 rounded-2xl text-slate-400 hover:text-slate-900 transition font-black">✎</button>
+                                        <button onclick="window.eliminarProd('${p.id}')" class="w-11 h-11 flex items-center justify-center bg-red-50 rounded-2xl text-red-400 hover:text-red-600 transition font-black">✕</button>
+                                    </div>
                                 </div>
                             </div>
-                            <button onclick="window.editarIndex(${i})" class="bg-white border-2 border-gray-100 px-5 py-2 rounded-xl font-black text-[10px] uppercase hover:border-rose-200 hover:text-rose-600 transition">Editar</button>
-                        </div>
-                    `).join('')}
+                        </div>`;
+                    }).join('') || '<div class="col-span-full py-40 text-center font-black text-gray-300 uppercase text-xs tracking-widest italic">Estoque Vazio.</div>'}
                 </div>`;
         }
 
-        window.editarIndex = (i) => { state.editando = state.produtos[i]; window.render(); };
-
-        window.salvarProd = async (e) => {
-            e.preventDefault();
-            const f = new FormData(e.target);
-            let foto = f.get('foto_url')?.trim();
-            const nome = f.get('nome');
-
-            if (!foto) {
-                if (nome.includes("Branco")) foto = "https://images.unsplash.com/photo-1582722872445-41ca501ea14b?auto=format&fit=crop&w=300&q=80";
-                else if (nome.includes("Vermelho")) foto = "https://images.unsplash.com/photo-1598965402089-897ce52e8355?auto=format&fit=crop&w=300&q=80";
-                else if (nome.includes("Caipira")) foto = "https://images.unsplash.com/photo-1516448620398-c5f44bf9f441?auto=format&fit=crop&w=300&q=80";
-                else foto = IMG_DEFAULT;
-            }
-
-            const payload = { 
-                nome, preco: parseFloat(f.get('preco')), 
-                preco_custo: parseFloat(f.get('preco_custo')), quantidade: parseInt(f.get('quantidade')), 
-                foto_url: foto, embalagem: f.get('embalagem') 
-            };
-            
-            const url = state.editando ? `${API_BASE}/produtos/${state.editando.id}` : `${API_BASE}/produtos`;
-            await fetch(url, { method: state.editando ? 'PUT' : 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
-            state.editando = null; loadProdutos();
-        };
-
-        // Avança status sem mexer em estoque (pq já foi baixado no cliente)
-        window.mudarStatus = async (id, novoStatus) => {
-            await updateDoc(doc(db, "vendas_logs", id), { status: novoStatus });
-        };
-
-        // Apenas marca como finalizado
-        window.finalizarPedido = async (id) => {
-            await updateDoc(doc(db, "vendas_logs", id), { status: 'FINALIZADO', horarioConcluido: serverTimestamp() });
-            window.open(`https://wa.me/?text=${encodeURIComponent('Seu pedido AppEgg está a caminho! 🥚')}`);
-        };
-
-        // Cancela e DEVOLVE estoque
-        window.cancelarPedido = async (id) => { 
-            if(!confirm("Deseja excluir e estornar o estoque?")) return;
-            
-            // 1. Pega dados do pedido para saber quanto devolver
-            const snap = await getDoc(doc(db, "vendas_logs", id));
-            const p = snap.data();
-
-            // 2. Busca produto atual
-            const prod = state.produtos.find(prod => prod.id === p.produtoId);
-
-            // 3. Devolve estoque
-            if(prod) {
-                const novaQtd = prod.quantidade + p.quantidade; // SOMA de volta
-                await fetch(`${API_BASE}/produtos/${p.produtoId}`, {
-                    method: 'PUT',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({...prod, quantidade: novaQtd})
-                });
-            }
-
-            // 4. Deleta
-            await deleteDoc(doc(db, "vendas_logs", id)); 
-            loadProdutos();
-        };
-
-        window.gerarCSV = () => {
-            const logs = filtrarDados(state.logs).filter(l => l.status === 'FINALIZADO');
-            let csv = "Data,Cliente,Produto,Qtd,Total\n";
-            logs.forEach(l => { csv += `${new Date(l.criadoEm.seconds*1000).toLocaleDateString()},${l.clienteNome},${l.produto},${l.quantidade},${l.valorTotal}\n`; });
-            const blob = new Blob(["\ufeff" + csv], { type: 'text/csv' });
-            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `relatorio_appegg_${state.filtroData}.csv`; a.click();
-        };
-
-        window.handleLogin = async (e) => {
-            e.preventDefault();
-            const f = new FormData(e.target);
-            try { await signInWithEmailAndPassword(auth, f.get('email'), f.get('pass')); } catch (err) { alert("Credenciais Inválidas"); }
-        };
-
-        function renderLogin() { 
+        function renderPedidos() {
+            const pendentes = window.state.logs.filter(l => !['FINALIZADO', 'CANCELADO'].includes(l.status));
             return `
-                <div class="min-h-screen flex items-center justify-center bg-gray-900 p-8">
-                    <form onsubmit="handleLogin(event)" class="bg-white p-12 rounded-[48px] shadow-2xl w-full max-w-md">
-                        <div class="logo-text text-5xl mb-4 text-center">AppEgg</div>
-                        <p class="text-center text-gray-400 font-bold text-xs uppercase mb-10 tracking-widest">Painel Administrativo</p>
-                        <input name="email" class="input-egg border mb-3" placeholder="Email corporativo">
-                        <input name="pass" type="password" class="input-egg border mb-8" placeholder="Senha de acesso">
-                        <button class="w-full bg-rose-600 text-white py-6 rounded-3xl font-black uppercase text-sm shadow-xl shadow-rose-100">Acessar Dashboard</button>
-                    </form>
-                </div>`; 
+                <h2 class="text-3xl font-[950] uppercase tracking-tighter text-gray-800 italic mb-10">Pedidos em Aberto</h2>
+                <div class="grid gap-6">
+                    ${pendentes.map(l => `
+                        <div class="card p-8 border-l-[16px] border-rose-500 fade-in flex flex-col md:flex-row justify-between items-center gap-6">
+                            <div class="flex-1">
+                                <h3 class="font-black text-xl uppercase tracking-tighter text-gray-900">${l.clienteNome || 'Cliente'}</h3>
+                                <p class="text-[11px] text-slate-400 font-black uppercase mt-1 tracking-widest">${l.quantidade}x ${l.produto}</p>
+                                <p class="text-[10px] text-rose-600 font-bold uppercase mt-2 italic">Total: R$ ${Number(l.valorTotal || 0).toFixed(2)}</p>
+                            </div>
+                            <div class="flex gap-3 w-full md:w-auto">
+                                <button onclick="window.mudarStatus('${l.id}', 'FINALIZADO')" class="flex-1 md:flex-none bg-emerald-600 text-white px-10 py-4 rounded-3xl font-black uppercase text-[10px] shadow-xl shadow-emerald-50 transition active:scale-95">Entregue</button>
+                                <button onclick="window.mudarStatus('${l.id}', 'CANCELADO')" class="flex-1 md:flex-none bg-slate-100 text-slate-400 px-6 py-4 rounded-3xl font-black uppercase text-[10px] transition active:scale-95">Cancelar</button>
+                            </div>
+                        </div>
+                    `).join('') || '<p class="text-center py-40 font-black text-gray-300 uppercase text-sm tracking-[0.4em]">Nenhum pedido pendente.</p>'}
+                </div>`;
         }
 
-        window.signOut = () => signOut(auth);
+        function renderFinanceiro() {
+            const finalizados = window.state.logs.filter(l => l.status === 'FINALIZADO');
+            let faturamento = 0; let lucroTotal = 0; const performance = {};
+            finalizados.forEach(log => {
+                const valor = Number(log.valorTotal || 0); faturamento += valor;
+                const prod = window.state.produtos.find(p => p.nome === log.produto);
+                const custoUn = prod?.preco_custo || (valor / (log.quantidade || 1)) * 0.7;
+                lucroTotal += valor - (custoUn * (log.quantidade || 1));
+                if (!performance[log.produto]) performance[log.produto] = { total: 0, qtd: 0 };
+                performance[log.produto].total += valor; performance[log.produto].qtd += Number(log.quantidade || 0);
+            });
+            return `
+                <div class="mb-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4"><h2 class="text-3xl font-[950] uppercase tracking-tighter text-gray-800 italic">Relatório Financeiro</h2><div class="bg-white border-2 border-slate-100 px-8 py-4 rounded-3xl font-black uppercase text-[11px] text-slate-400 tracking-widest shadow-sm">Balanço do Mês</div></div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+                    <div class="stat-card bg-rose-600 text-white shadow-2xl shadow-rose-100"><p class="text-[10px] font-black uppercase opacity-70 mb-2 tracking-widest italic text-white">Faturamento Bruto</p><h3 class="text-4xl font-black tracking-tighter text-white italic">R$ ${faturamento.toFixed(2)}</h3></div>
+                    <div class="stat-card bg-emerald-600 text-white shadow-2xl shadow-emerald-100"><p class="text-[10px] font-black uppercase opacity-70 mb-2 tracking-widest italic text-white">Lucro Estimado</p><h3 class="text-4xl font-black tracking-tighter text-white italic">R$ ${lucroTotal.toFixed(2)}</h3></div>
+                </div>
+                <div class="card p-10 mb-10"><h4 class="font-black uppercase text-[10px] text-gray-400 mb-10 tracking-[0.4em] italic text-center md:text-left">Performance por Variedade</h4>
+                <div class="space-y-10">${Object.entries(performance).sort((a,b) => b[1].total - a[1].total).map(([nome, data]) => `<div class="progress-container"><div class="flex justify-between items-end mb-3"><div><span class="text-xs font-[900] uppercase text-slate-800 tracking-tighter italic">${nome}</span><p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">${data.qtd} un vendidas</p></div><span class="text-sm font-black text-emerald-600 italic">R$ ${data.total.toFixed(2)}</span></div><div class="progress-bar"><div class="progress-fill" style="width: ${Math.min((data.total / (faturamento || 1)) * 100 * 3, 100)}%"></div></div></div>`).join('') || '<p class="text-center py-10 font-black text-gray-200 uppercase text-xs tracking-widest italic">Aguardando vendas.</p>'}</div></div>`;
+        }
+
+        function renderModal() {
+            if (!window.state.activeModal) return '';
+            const type = window.state.activeModal; const data = window.state.editData;
+            const p = data || { nome: CATEGORIES[0], embalagem: PACKAGING[0], preco: '', preco_custo: '', quantidade: '', foto_url: '' };
+            return `
+                <div class="fixed inset-0 modal-blur z-[100] flex items-center justify-center p-6"><div class="absolute inset-0" onclick="window.closeModal()"></div>
+                <div class="relative bg-white w-full max-w-2xl rounded-[40px] shadow-2xl animate-in zoom-in duration-200 overflow-hidden">
+                <div class="p-8 border-b flex justify-between items-center bg-white"><h2 class="font-black text-2xl text-slate-900 uppercase italic tracking-tighter">${data ? 'Editar Lote' : 'Novo Registro'}</h2><button onclick="window.closeModal()" class="text-slate-400 hover:text-rose-600 font-black">✕</button></div>
+                <form onsubmit="window.handleFormSubmit(event, '${type}', '${p.id || ''}')" class="p-8 grid grid-cols-2 gap-4 bg-white max-h-[80vh] overflow-y-auto no-scrollbar">
+                    <div class="col-span-2 mb-4"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 italic tracking-widest">Imagem Realista (Base64)</label>
+                        <div class="upload-area h-44" onclick="document.getElementById('f-p').click()"><div id="ph-p" class="${p.foto_url?'hidden':''} font-black uppercase text-[10px] text-slate-300 tracking-widest text-center text-white italic">Clique para Carregar Foto</div><img id="pv-p" src="${p.foto_url||''}" class="${p.foto_url?'':'hidden'} w-full h-full object-cover"><input type="file" id="f-p" class="hidden" accept="image/*" onchange="window.previewBase64(event, 'pv-p', 'ph-p', 'b64-p')"></div><input type="hidden" id="b64-p" value="${p.foto_url || ''}">
+                    </div>
+                    <div class="col-span-2 space-y-1"><label class="text-[10px] font-black text-slate-400 uppercase ml-2 italic tracking-widest">Variedade</label><select id="p-tipo-nome" class="input-egg appearance-none cursor-pointer font-black italic uppercase" required>${CATEGORIES.map(cat => `<option value="${cat}" ${p.nome === cat ? 'selected' : ''}>${cat}</option>`).join('')}</select></div>
+                    <div class="col-span-2 space-y-1"><label class="text-[10px] font-black text-slate-400 uppercase ml-2 italic tracking-widest">Embalagem</label><select id="p-emb" class="input-egg appearance-none cursor-pointer font-black italic uppercase" required>${PACKAGING.map(pkg => `<option value="${pkg}" ${p.embalagem === pkg ? 'selected' : ''}>${pkg}</option>`).join('')}</select></div>
+                    <div class="space-y-1"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 italic">Custo (R$)</label><input id="p-custo" type="number" step="0.01" value="${p.preco_custo || ''}" class="input-egg font-black italic" placeholder="0.00" required></div>
+                    <div class="space-y-1"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 italic">Venda (R$)</label><input id="p-venda" type="number" step="0.01" value="${p.preco || ''}" class="input-egg font-black italic text-rose-600" placeholder="0.00" required></div>
+                    <div class="col-span-2 space-y-1"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 tracking-widest">Quantidade</label><input id="p-qtd" type="number" value="${p.quantidade || ''}" class="input-egg font-black italic" placeholder="0" required></div>
+                    <button type="submit" class="col-span-2 bg-rose-600 text-white py-6 rounded-[32px] font-black uppercase text-[11px] tracking-[0.3em] shadow-xl shadow-rose-200 mt-6 active:scale-95 transition disabled:opacity-50 italic" ${window.state.saving ? 'disabled' : ''}>${window.state.saving ? 'Sincronizando...' : (data ? 'Atualizar Estoque' : 'Gravar no Estoque')}</button>
+                </form></div></div>`;
+        }
+
+        function renderLogin() { 
+            return `<div class="min-h-screen flex items-center justify-center bg-gray-900 p-8">
+                        <form onsubmit="window.handleLogin(event)" class="bg-white p-12 rounded-[48px] shadow-2xl w-full max-w-md">
+                            <div class="logo-text text-6xl mb-4 text-center tracking-tighter italic">AppEgg</div>
+                            <p class="text-center text-gray-400 font-bold text-[10px] uppercase mb-10 tracking-[0.4em] italic text-white">Administração Distribuidora</p>
+                            <input id="l-email" class="input-egg border mb-3" placeholder="Usuário">
+                            <input id="l-pass" type="password" class="input-egg border mb-8" placeholder="Código de Acesso">
+                            <button class="w-full bg-rose-600 text-white py-6 rounded-3xl font-black uppercase text-xs tracking-widest shadow-xl italic transition active:scale-95">Entrar no Dashboard</button>
+                        </form>
+                    </div>`; 
+        }
+
+        window.render();
     </script>
 </body>
 </html>
