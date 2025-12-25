@@ -41,7 +41,8 @@
         const API_BASE = "https://painel-distribuidora-backend.onrender.com/api";
         const IMG_DEFAULT = "https://via.placeholder.com/300x300?text=AppEgg+Ovos";
 
-        window.state = { user: null, view: 'loja', produtos: [], pedidos: [], comprando: null, qtd: 1, filtroData: 'todos', freqSelecionada: '' };
+        // Adicionado freqTemp para controlar o select no modal
+        window.state = { user: null, view: 'loja', produtos: [], pedidos: [], comprando: null, qtd: 1, filtroData: 'todos', freqTemp: '' };
         const state = window.state;
 
         window.safeImg = (url) => {
@@ -70,6 +71,19 @@
             onSnapshot(q, s => {
                 state.pedidos = s.docs.map(d => ({ id: d.id, ...d.data() }));
                 window.render();
+            });
+        }
+
+        function filtrarPedidos(dados) {
+            if (state.filtroData === 'todos') return dados;
+            const agora = new Date();
+            return dados.filter(l => {
+                if (!l.criadoEm) return false;
+                const dt = new Date(l.criadoEm.seconds * 1000);
+                if (state.filtroData === 'hoje') return dt.toDateString() === agora.toDateString();
+                if (state.filtroData === 'semana') return (agora - dt) / (1000 * 3600 * 24) <= 7;
+                if (state.filtroData === 'mes') return (agora - dt) / (1000 * 3600 * 24) <= 30;
+                return true;
             });
         }
 
@@ -117,15 +131,34 @@
         }
 
         function renderPedidos() {
+            const filtrados = filtrarPedidos(state.pedidos);
+            // Aqui garantimos que o pedido apareça com o status correto, sem sumir
             return `
-                <h2 class="font-black uppercase text-[10px] tracking-widest text-gray-400 mb-8">Meus Pedidos</h2>
+                <div class="flex justify-between items-center mb-8">
+                    <h2 class="font-black uppercase text-[10px] tracking-widest text-gray-400">Meus Pedidos</h2>
+                    <select onchange="state.filtroData=this.value;render()" class="bg-gray-50 font-black uppercase text-[9px] p-2 rounded-xl border">
+                        <option value="todos" ${state.filtroData==='todos'?'selected':''}>Tudo</option>
+                        <option value="hoje" ${state.filtroData==='hoje'?'selected':''}>Hoje</option>
+                        <option value="semana" ${state.filtroData==='semana'?'selected':''}>7 Dias</option>
+                        <option value="mes" ${state.filtroData==='mes'?'selected':''}>30 Dias</option>
+                    </select>
+                </div>
                 <div class="space-y-6">
-                    ${state.pedidos.map(p => `
-                        <div class="card-pedido border-t-8 ${p.status === 'FINALIZADO' ? 'border-emerald-500' : p.status === 'SAIU PARA ENTREGA' ? 'border-rose-500' : 'border-blue-400'}">
+                    ${filtrados.map(p => {
+                        // Cores de status baseadas no fluxo
+                        let borderClass = 'border-gray-200';
+                        if(p.status === 'PEDIDO CRIADO') borderClass = 'border-yellow-400';
+                        if(p.status === 'EMBALANDO') borderClass = 'border-blue-500';
+                        if(p.status === 'SAIU PARA ENTREGA') borderClass = 'border-purple-500';
+                        if(p.status === 'FINALIZADO') borderClass = 'border-emerald-500';
+
+                        return `
+                        <div class="card-pedido border-t-8 ${borderClass}">
                             <div class="flex justify-between items-start mb-4">
                                 <div>
                                     <h4 class="font-black uppercase text-sm text-gray-800">${p.quantidade}x ${p.produto}</h4>
-                                    <p class="text-[10px] font-bold text-gray-400 uppercase">${p.criadoEm ? new Date(p.criadoEm.seconds*1000).toLocaleDateString() : '...'}</p>
+                                    <p class="text-[10px] font-bold text-gray-400 uppercase">${new Date(p.criadoEm.seconds*1000).toLocaleDateString()}</p>
+                                    ${p.dataEntrega ? `<p class="text-[9px] font-black text-blue-600 uppercase mt-1">Entrega: ${p.dataEntrega.split('-').reverse().join('/')}</p>` : ''}
                                 </div>
                                 <span class="bg-gray-100 px-3 py-1 rounded-lg text-[8px] font-black uppercase text-gray-500">${p.status}</span>
                             </div>
@@ -134,7 +167,7 @@
                                 <button onclick="window.acaoPedido('${p.produtoId}', ${p.quantidade}, 'Semanal')" class="btn-agendar">Agendar Pedido</button>
                             </div>
                         </div>
-                    `).join('') || '<div class="text-center py-20 font-black text-gray-300 uppercase">Sem pedidos registrados</div>'}
+                    `}).join('') || '<div class="text-center py-20 font-black text-gray-300 uppercase">Sem pedidos registrados</div>'}
                 </div>`;
         }
 
@@ -143,17 +176,19 @@
             if(p) { 
                 state.comprando = p; 
                 state.qtd = qtd; 
-                state.freqSelecionada = frequencia;
+                state.freqTemp = frequencia || ''; 
                 window.render();
             }
         };
 
-        window.abrirIndex = (i) => { state.comprando = state.produtos[i]; state.qtd = 1; state.freqSelecionada = ''; window.render(); };
+        window.abrirIndex = (i) => { state.comprando = state.produtos[i]; state.qtd = 1; state.freqTemp = ''; window.render(); };
 
         window.finalizarPedido = async (e) => {
             e.preventDefault();
             const f = new FormData(e.target);
             const p = state.comprando;
+            
+            // Aqui foi removido o window.open do WhatsApp
             await addDoc(collection(db, "vendas_logs"), {
                 clienteId: auth.currentUser.uid,
                 clienteNome: auth.currentUser.email.split('@')[0],
@@ -163,9 +198,9 @@
                 precoUnidade: p.preco,
                 valorTotal: p.preco * state.qtd,
                 recorrencia: f.get('recorrencia'),
-                dataEntrega: f.get('data_entrega') || null,
+                dataEntrega: f.get('data_entrega') || null, // Salva a data do calendário
                 telefone: f.get('telefone'),
-                status: 'PEDIDO CRIADO',
+                status: 'PEDIDO CRIADO', // Começa neste status e não some
                 criadoEm: serverTimestamp()
             });
             state.comprando = null; state.view = 'pedidos'; window.render();
@@ -173,7 +208,9 @@
 
         function renderModalCompra() {
             const p = state.comprando;
-            const mostrarCalendario = ['Semanal', 'Quinzenal', 'Mensal'].includes(state.freqSelecionada);
+            // Exibe calendário se freq for semanal, quinzenal ou mensal
+            const showCalendar = ['Semanal', 'Quinzenal', 'Mensal'].includes(state.freqTemp);
+            
             return `
             <div class="fixed inset-0 bg-black/80 flex items-end z-[200]">
                 <div class="bg-white w-full p-10 rounded-t-[48px]">
@@ -190,19 +227,21 @@
                         <input name="telefone" placeholder="WhatsApp (DDD)" class="input-egg" required>
                         <div class="space-y-1">
                             <label class="text-[9px] font-black uppercase text-gray-400 ml-4">Frequência de Entrega</label>
-                            <select name="recorrencia" onchange="state.freqSelecionada=this.value;render()" class="input-egg text-[11px] uppercase">
-                                <option value="" ${state.freqSelecionada===''?'selected':''}>Apenas uma vez</option>
-                                <option value="Semanal" ${state.freqSelecionada==='Semanal'?'selected':''}>Semanal</option>
-                                <option value="Quinzenal" ${state.freqSelecionada==='Quinzenal'?'selected':''}>Quinzenal</option>
-                                <option value="Mensal" ${state.freqSelecionada==='Mensal'?'selected':''}>Mensal</option>
+                            <select name="recorrencia" onchange="state.freqTemp=this.value;render()" class="input-egg text-[11px] uppercase">
+                                <option value="" ${state.freqTemp===''?'selected':''}>Apenas uma vez (Refazer)</option>
+                                <option value="Semanal" ${state.freqTemp==='Semanal'?'selected':''}>Semanal</option>
+                                <option value="Quinzenal" ${state.freqTemp==='Quinzenal'?'selected':''}>Quinzenal</option>
+                                <option value="Mensal" ${state.freqTemp==='Mensal'?'selected':''}>Mensal</option>
                             </select>
                         </div>
-                        ${mostrarCalendario ? `
+                        
+                        ${showCalendar ? `
                         <div class="space-y-1">
-                            <label class="text-[9px] font-black uppercase text-rose-500 ml-4">Data da primeira entrega</label>
+                            <label class="text-[9px] font-black uppercase text-rose-600 ml-4">Data da Próxima Remessa</label>
                             <input type="date" name="data_entrega" class="input-egg border-rose-200" required>
                         </div>
                         ` : ''}
+
                         <button class="w-full bg-rose-600 text-white py-6 rounded-[28px] font-black uppercase text-xs mt-4">Confirmar Pedido</button>
                     </form>
                     <button onclick="state.comprando=null;render()" class="w-full py-6 text-gray-400 font-black text-[10px] uppercase">Fechar</button>
