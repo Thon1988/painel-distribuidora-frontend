@@ -13,7 +13,7 @@
         
         body { font-family: 'Inter', sans-serif; background: #f8fafc; color: #1e293b; overflow-x: hidden; }
         
-        /* Navegação Estilo Premium */
+        /* Navegação Premium */
         .nav-link { 
             font-size: 12px; font-weight: 800; text-transform: uppercase; color: #64748b; 
             padding: 14px 24px; border-radius: 16px; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
@@ -22,7 +22,6 @@
         .nav-link:hover { background: #fff; color: #e11d48; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
         .nav-link.active { color: #e11d48; background: #fff; border-color: #ffe4e6; box-shadow: 0 4px 12px rgba(225, 29, 72, 0.08); }
         
-        /* Design System AppEgg - 32px Arredondamento */
         .logo-text { font-weight: 900; color: #e11d48; font-size: 1.6rem; letter-spacing: -1.5px; }
         .card { background: #ffffff; border-radius: 32px; box-shadow: 0 10px 30px rgba(0,0,0,0.02); border: 1px solid rgba(226, 232, 240, 0.8); transition: all 0.3s ease; }
         .card:hover { transform: translateY(-4px); box-shadow: 0 20px 40px rgba(0,0,0,0.04); }
@@ -34,12 +33,13 @@
         }
         .input-egg:focus { border-color: #e11d48; background: #fff; box-shadow: 0 0 0 4px rgba(225, 29, 72, 0.05); }
         
-        /* Área de Upload Realista */
+        /* Área de Upload Base64 */
         .upload-area { 
-            width: 100%; height: 200px; background: #f8fafc; border: 2px dashed #cbd5e1; 
+            width: 100%; height: 220px; background: #f8fafc; border: 2px dashed #cbd5e1; 
             border-radius: 24px; display: flex; align-items: center; justify-content: center; 
             overflow: hidden; cursor: pointer; transition: 0.3s; position: relative;
         }
+        .upload-area:hover { border-color: #e11d48; background: #fff; }
         .upload-area img { width: 100%; height: 100%; object-fit: cover; }
 
         .modal-blur { background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(10px); }
@@ -62,12 +62,6 @@
             animation: slideIn 0.3s ease-out;
         }
         @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
-
-        .error-overlay {
-            position: fixed; inset: 0; background: white; z-index: 9999;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            padding: 40px; text-align: center;
-        }
     </style>
 </head>
 <body class="no-scrollbar text-left">
@@ -76,166 +70,157 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
         import { getFirestore, collection, onSnapshot, query, doc, updateDoc, getDoc, setDoc, serverTimestamp, deleteDoc, increment } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
-        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
 
-        // --- SISTEMA DE TOAST ---
+        // --- CONFIGURAÇÃO MANUAL PARA RENDER (SOLUÇÃO ERRO PROJETID) ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyD3Otz9-zdZH-E5Feg9IOGWPzVycoe8gro",
+            authDomain: "distribuidora-de-ovos-aline.firebaseapp.com",
+            projectId: "distribuidora-de-ovos-aline",
+            storageBucket: "distribuidora-de-ovos-aline.firebasestorage.app",
+            messagingSenderId: "92187548716",
+            appId: "1:92187548716:web:d61d18a29aa76aead7c589"
+        };
+
+        const appFB = initializeApp(firebaseConfig);
+        const db = getFirestore(appFB);
+        const auth = getAuth(appFB);
+        const appId = "app-egg-pro-transacional"; // ID fixo para consistência
+
+        const STATUS_OPTIONS = ["PEDIDO CRIADO", "EM PREPARAÇÃO", "SAIU PARA ENTREGA", "FINALIZADO", "CANCELADO"];
+        const CATEGORIES = ["Ovo Branco Extra", "Ovo Branco Grande", "Ovo Branco Médio", "Ovo Branco Pequeno", "Ovo Vermelho Extra", "Ovo Vermelho Grande", "Ovo Vermelho Médio", "Ovo Caipira", "Ovo de Codorna", "Ovo Jumbo", "Cesto de Ovos"];
+        const PACKAGING = ["Cartela 30", "Cartela 20", "Dúzia 12", "Caixa 360", "Fardo 20 unid"];
+
+        window.state = { user: null, view: 'dashboard', logs: [], produtos: [], editando: null, loading: true, saving: false, authError: null };
+        window.activeListeners = [];
+
         window.showToast = (msg) => {
             const t = document.createElement('div');
             t.className = 'toast-egg';
             t.innerText = msg;
             document.body.appendChild(t);
-            setTimeout(() => t.remove(), 3000);
+            setTimeout(() => { if(t.parentNode) t.remove(); }, 4000);
         };
 
-        // --- INICIALIZAÇÃO SEGURA DO FIREBASE ---
-        let db, auth, appId;
-        
-        try {
-            const configStr = typeof __firebase_config !== 'undefined' ? __firebase_config : null;
-            if (!configStr) throw new Error("Configuração do Firebase não encontrada (__firebase_config ausente).");
+        window.safeImg = (url) => {
+            if (!url || typeof url !== "string" || url.trim() === "" || (!url.startsWith("http") && !url.startsWith("data:"))) return "https://via.placeholder.com/300x300?text=AppEgg";
+            return url.trim();
+        };
+
+        // --- MONITOR DE AUTENTICAÇÃO ---
+        onAuthStateChanged(auth, user => {
+            if (user && user.email === 'thon@lojista.com.br') {
+                window.state.user = user;
+                syncDados(); 
+            } else {
+                window.state.user = null;
+            }
+            window.state.loading = false;
+            window.render();
+        });
+
+        // --- SINCRONIZAÇÃO EM TEMPO REAL ---
+        const syncDados = () => {
+            if (!auth.currentUser) return;
             
-            const firebaseConfig = JSON.parse(configStr);
-            if (!firebaseConfig.projectId) throw new Error("Projeto ID não configurado no Firebase.");
+            if (window.activeListeners.length > 0) window.activeListeners.forEach(u => u());
+            window.activeListeners = [];
 
-            const appFB = initializeApp(firebaseConfig);
-            db = getFirestore(appFB);
-            auth = getAuth(appFB);
-            appId = typeof __app_id !== 'undefined' ? __app_id : 'app-egg-pro-total';
-        } catch (e) {
-            console.error("Erro Crítico de Configuração:", e);
-            document.getElementById('app-root').innerHTML = `
-                <div class="error-overlay">
-                    <h1 class="text-4xl font-black text-rose-600 mb-4 uppercase italic tracking-tighter">Erro de Configuração</h1>
-                    <p class="text-slate-500 font-bold max-w-md">${e.message}</p>
-                    <p class="mt-6 text-[10px] text-slate-300 uppercase tracking-widest">Verifique as variáveis de ambiente do projeto.</p>
-                </div>
-            `;
-        }
+            // Snapshot do Estoque
+            const unsubE = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'estoque'), s => {
+                window.state.produtos = s.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => (a.nome||"").localeCompare(b.nome||""));
+                window.render();
+            });
+            window.activeListeners.push(unsubE);
 
-        const STATUS_OPTIONS = ["PEDIDO CRIADO", "EM PREPARAÇÃO", "SAIU PARA ENTREGA", "FINALIZADO", "CANCELADO"];
-
-        const FALLBACKS = {
-            branco: "https://images.unsplash.com/photo-1582722872445-41ca501ea14b?auto=format&fit=crop&w=600", 
-            vermelho: "https://images.unsplash.com/photo-1516448620398-c5f44bf9f441?q=60&w=600",
-            codorna: "https://images.unsplash.com/photo-1591123720164-de1348028a82?q=60&w=600",
-            caipira: "https://images.unsplash.com/photo-1498654203941-344718507204?q=60&w=600",
-            jumbo: "https://images.unsplash.com/photo-1506755855567-92ff770e8d30?q=60&w=600",
-            geral: "https://images.unsplash.com/photo-1522302302302?q=60&w=600"
+            // Snapshot dos Pedidos
+            const unsubL = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'vendas_logs'), s => {
+                window.state.logs = s.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => (b.criadoEm?.seconds || 0) - (a.criadoEm?.seconds || 0));
+                window.render();
+            });
+            window.activeListeners.push(unsubL);
         };
 
-        const CATEGORIES = ["Ovo Branco Extra", "Ovo Branco Grande", "Ovo Branco Médio", "Ovo Branco Pequeno", "Ovo Vermelho Extra", "Ovo Vermelho Grande", "Ovo Vermelho Médio", "Ovo Caipira", "Ovo de Codorna", "Ovo Jumbo", "Cesto de Ovos"];
-        const PACKAGING = ["Cartela 30", "Cartela 20", "Dúzia 12", "Caixa 360", "Fardo 20 unid"];
+        window.setView = (v) => { window.state.view = v; window.state.editando = null; window.render(); };
 
-        window.state = { 
-            user: null, view: 'dashboard', logs: [], produtos: [], 
-            activeModal: null, editData: null, loading: true, saving: false
-        };
-
-        window.activeListeners = [];
-
-        // --- RENDERIZAÇÃO PRINCIPAL ---
         window.render = () => {
             const root = document.getElementById('app-root');
-            if (!db) return; // Interrompe se o Firebase falhou na inicialização
-
-            if (window.state.loading) { 
-                root.innerHTML = `<div class="h-screen flex items-center justify-center font-black text-rose-600 animate-pulse uppercase">Sincronizando Sistema...</div>`; 
-                return; 
-            }
-            
+            if (window.state.loading) { root.innerHTML = '<div class="h-screen flex items-center justify-center font-black text-rose-600 animate-pulse uppercase italic">Iniciando AppEgg...</div>'; return; }
             if (!window.state.user) { root.innerHTML = renderLogin(); return; }
 
             root.innerHTML = `
                 <nav class="bg-white border-b px-8 h-24 flex justify-between items-center sticky top-0 z-50">
                     <div class="logo-text cursor-pointer uppercase italic tracking-tighter" onclick="window.setView('dashboard')">AppEgg</div>
                     <div class="flex gap-2 overflow-x-auto no-scrollbar">
-                        <button onclick="window.setView('dashboard')" class="nav-link ${window.state.view==='dashboard'?'active':''}" title="Início">
+                        <button onclick="window.setView('dashboard')" class="nav-link ${window.state.view==='dashboard'?'active':''}" title="Dashboard Principal">
                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
                         </button>
                         <button onclick="window.setView('estoque')" class="nav-link ${window.state.view==='estoque'?'active':''}">Estoque</button>
                         <button onclick="window.setView('pedidos')" class="nav-link ${window.state.view==='pedidos'?'active':''}">Encomendas</button>
                         <button onclick="window.setView('financeiro')" class="nav-link ${window.state.view==='financeiro'?'active':''}">Financeiro</button>
-                        <button onclick="window.handleSignOut()" class="nav-link text-rose-600 hover:bg-rose-50 font-black">Sair</button>
+                        <button onclick="signOut(auth)" class="nav-link text-rose-600 font-black">Sair</button>
                     </div>
                 </nav>
                 <main class="p-8 max-w-7xl mx-auto fade-in">
                     ${window.state.view === 'dashboard' ? renderDashboard() :
-                      window.state.view === 'estoque' ? renderEstoque() : 
-                      window.state.view === 'financeiro' ? renderFinanceiro() : renderPedidos()}
-                </main>
-                <div id="modal-wrapper">${renderModal()}</div>`;
+                      window.state.view === 'financeiro' ? renderFinanceiro() : 
+                      window.state.view === 'estoque' ? renderEstoque() : renderPedidos()}
+                </main>`;
         };
 
+        // --- LÓGICA DE UPLOAD E EDIÇÃO ---
         window.previewBase64 = (e, imgId, phId, hiddenId) => {
             const file = e.target.files[0];
             if (!file) return;
-            if (file.size > 800 * 1024) {
-                window.showToast("IMAGEM MUITO GRANDE (MÁX 800KB)");
-                return;
-            }
             const reader = new FileReader();
             reader.onload = ev => {
                 const b64 = ev.target.result;
                 document.getElementById(hiddenId).value = b64;
                 const img = document.getElementById(imgId);
-                if (img) { img.src = b64; img.classList.remove('hidden'); }
-                const ph = document.getElementById(phId);
-                if (ph) ph.classList.add('hidden');
+                img.src = b64; img.classList.remove('hidden');
+                document.getElementById(phId).classList.add('hidden');
             };
             reader.readAsDataURL(file);
         };
 
-        window.setView = (v) => { window.state.view = v; window.render(); };
-        window.handleSignOut = () => signOut(auth);
-        window.closeModal = () => { window.state.activeModal = null; window.state.editData = null; window.render(); };
-        window.openModal = (type, data = null) => { window.state.activeModal = type; window.state.editData = data; window.render(); };
-        
-        window.abrirModalProdutoEdit = (id) => {
-            const p = window.state.produtos.find(x => String(x.id) === String(id));
+        window.editarProduto = (id) => {
+            const p = window.state.produtos.find(x => x.id === id);
             if (!p) return;
-            window.openModal('editProduto', p);
+            window.state.editando = p;
+            window.render();
+            setTimeout(() => {
+                if(document.getElementById('b64-hidden')) {
+                    document.getElementById('b64-hidden').value = p.foto_url || '';
+                }
+            }, 100);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         };
 
-        // --- SALVAR PRODUTO (ADMIN) ---
-        window.handleFormSubmit = async (e, type, id) => {
+        window.salvarProd = async (e) => {
             e.preventDefault();
-            if (window.state.saving || !window.state.user) return;
+            if (window.state.saving) return;
             window.state.saving = true; window.render();
-
+            const f = new FormData(e.target);
+            const docId = window.state.editando ? window.state.editando.id : crypto.randomUUID();
+            
             const payload = {
-                nome: document.getElementById('p-tipo-nome').value,
-                categoria: document.getElementById('p-tipo-nome').value,
-                embalagem: document.getElementById('p-emb').value,
-                preco: Number(document.getElementById('p-venda').value),
-                preco_custo: Number(document.getElementById('p-custo').value),
-                quantidade: Number(document.getElementById('p-qtd').value),
-                foto_url: document.getElementById('b64-p').value, 
+                nome: f.get('nome'),
+                embalagem: f.get('embalagem'),
+                preco: Number(f.get('preco')),
+                preco_custo: Number(f.get('preco_custo')),
+                quantidade: Number(f.get('quantidade')),
+                foto_url: document.getElementById('b64-hidden').value,
                 updatedAt: serverTimestamp()
             };
 
             try {
-                const docId = id || crypto.randomUUID();
                 await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'estoque', docId), payload, { merge: true });
-                window.state.saving = false; window.showToast("ESTOQUE ATUALIZADO"); window.closeModal();
-            } catch (err) { 
-                window.state.saving = false; 
-                window.render(); 
-                window.showToast("ERRO AO SALVAR DADOS");
-            }
+                window.state.editando = null; window.state.saving = false;
+                window.showToast("ESTOQUE ATUALIZADO!"); window.render();
+            } catch (err) { window.state.saving = false; window.showToast("ERRO AO SALVAR"); window.render(); }
         };
 
-        window.eliminarProd = async (id) => { 
-            if (confirm("Remover do estoque definitivamente?")) {
-                try {
-                    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'estoque', id));
-                    window.showToast("REMOVIDO");
-                } catch (e) { window.showToast("ERRO AO EXCLUIR"); }
-            }
-        };
-
-        // --- LÓGICA DE STATUS COM DEVOLUÇÃO DE ESTOQUE ---
         window.mudarStatus = async (id, status) => {
-            if (!window.state.user) return;
             const logRef = doc(db, 'artifacts', appId, 'public', 'data', 'vendas_logs', id);
             const logSnap = await getDoc(logRef);
             if (!logSnap.exists()) return;
@@ -246,218 +231,151 @@
                 const prodSnap = await getDoc(prodRef);
                 if (prodSnap.exists()) {
                     await updateDoc(prodRef, { quantidade: increment(logData.quantidade) });
-                    window.showToast("ESTOQUE REPOSTO");
                 }
             }
-
-            await updateDoc(logRef, { status: status });
-            window.showToast(`STATUS: ${status}`);
+            await updateDoc(logRef, { status });
+            window.showToast(`PEDIDO ${status}`);
         };
 
-        window.handleLogin = async (e) => {
-            e.preventDefault();
-            const email = document.getElementById('l-email').value;
-            const pass = document.getElementById('l-pass').value;
-            try { 
-                await signInWithEmailAndPassword(auth, email, pass); 
-            } catch (err) { 
-                window.showToast("ACESSO NEGADO: CREDENCIAIS INVÁLIDAS");
-            }
-        };
-
-        // --- SINCRONIZAÇÃO FIRESTORE ---
-        const startSnapshots = () => {
-            if (!db) return;
-            if (window.activeListeners.length > 0) window.activeListeners.forEach(unsub => unsub());
-            window.activeListeners = [];
-
-            const unsubEstoque = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'estoque'), s => {
-                const list = s.docs.map(d => ({ id: d.id, ...d.data() }));
-                window.state.produtos = list.sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
-                window.render();
-            });
-            window.activeListeners.push(unsubEstoque);
-
-            const unsubLogs = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'vendas_logs'), s => {
-                const data = s.docs.map(d => ({ id: d.id, ...d.data() }));
-                window.state.logs = data.sort((a, b) => (b.criadoEm?.seconds || 0) - (a.criadoEm?.seconds || 0));
-                window.render();
-            });
-            window.activeListeners.push(unsubLogs);
-        };
-
-        if (db) {
-            onAuthStateChanged(auth, user => {
-                window.state.user = user;
-                if (user) startSnapshots();
-                window.state.loading = false;
-                window.render();
-            });
-
-            const initAuth = async () => {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) await signInWithCustomToken(auth, __initial_auth_token).catch(() => signInAnonymously(auth));
-                else await signInAnonymously(auth);
-            };
-            initAuth();
-        }
-
-        // --- VIEWS ---
-
+        // --- DASHBOARD (CASA) ---
         function renderDashboard() {
             const totalStock = window.state.produtos.reduce((acc, p) => acc + (Number(p.quantidade) || 0), 0);
             const activeOrders = window.state.logs.filter(l => !['FINALIZADO','CANCELADO'].includes(l.status));
+            const alerts = window.state.produtos.filter(p => p.quantidade < 15);
+
             return `
-                <div class="mb-12"><h1 class="text-4xl font-[950] text-gray-900 mb-2 tracking-tighter uppercase italic text-left text-left">AppEgg <span class="text-rose-600 italic">Admin</span></h1><p class="text-gray-500 font-medium italic text-left text-left text-left">Gestão de estoque e pedidos.</p></div>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12 text-left text-left text-left">
-                    <div class="stat-card bg-rose-600 text-white shadow-xl shadow-rose-100 text-left text-left text-left text-left text-left"><p class="text-[10px] font-black uppercase opacity-70 mb-2 tracking-widest italic text-white text-left text-left text-left">Pedidos Pendentes</p><h3 class="text-3xl font-black text-white tracking-tighter text-left ${activeOrders.length > 0 ? 'pulse-order' : ''}">${activeOrders.length} Ativos</h3></div>
-                    <div class="stat-card bg-white border text-left text-left text-left text-left text-left text-left"><p class="text-[10px] font-black uppercase text-gray-400 mb-2 tracking-widest italic text-left text-left text-left">Variedades</p><h3 class="text-3xl font-black text-gray-800 tracking-tighter text-left text-left">${window.state.produtos.length} Itens</h3></div>
-                    <div class="stat-card bg-gray-900 text-white shadow-2xl shadow-gray-200 text-left text-left text-left text-left text-left text-left text-left"><p class="text-[10px] font-black uppercase opacity-60 mb-2 tracking-widest italic text-white text-left text-left text-left text-left text-left">Estoque Total</p><h3 class="text-3xl font-black text-white tracking-tighter text-left text-left text-left text-left">${totalStock} un</h3></div>
+                <div class="mb-12"><h1 class="text-4xl font-[950] text-gray-900 mb-2 tracking-tighter uppercase italic text-left">Dashboard <span class="text-rose-600">Geral</span></h1></div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+                    <div class="stat-card bg-rose-600 text-white shadow-xl text-left">
+                        <p class="text-[10px] font-black uppercase opacity-70 mb-2 tracking-widest italic">Pedidos Ativos</p>
+                        <h3 class="text-3xl font-black ${activeOrders.length > 0 ? 'pulse-order' : ''}">${activeOrders.length} Pendentes</h3>
+                    </div>
+                    <div class="stat-card bg-white border text-left">
+                        <p class="text-[10px] font-black uppercase text-gray-400 mb-2 tracking-widest italic">Catálogo</p>
+                        <h3 class="text-3xl font-black text-gray-800">${window.state.produtos.length} Variedades</h3>
+                    </div>
+                    <div class="stat-card bg-gray-900 text-white shadow-2xl text-left">
+                        <p class="text-[10px] font-black uppercase opacity-60 mb-2 tracking-widest italic">Total Estoque</p>
+                        <h3 class="text-3xl font-black text-white">${totalStock} un</h3>
+                    </div>
                 </div>
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 text-left text-left">
-                    <div class="card p-8 text-left text-left">
-                        <div class="flex justify-between items-center mb-6 text-left text-left">
-                            <h4 class="font-black text-slate-800 uppercase text-xs tracking-[0.2em] italic text-left text-left">Últimos Pedidos Ativos</h4>
-                            <button onclick="window.setView('pedidos')" class="text-[10px] font-black text-rose-600 uppercase tracking-widest text-left text-left">Ver Todos ></button>
-                        </div>
-                        <div class="space-y-4 text-left text-left">
-                            ${activeOrders.slice(0, 4).map(l => `<div class="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex justify-between items-center text-left text-left"><div><p class="font-black text-slate-800 uppercase text-[11px] tracking-tight text-left text-left">${l.clienteNome || 'Cliente'}</p><p class="text-[10px] text-slate-400 font-bold uppercase italic text-left text-left">${l.quantidade}x ${l.produto}</p></div><span class="px-3 py-1 bg-rose-100 text-rose-600 rounded-full font-black text-[8px] uppercase tracking-widest italic text-center text-center text-center">${l.status}</span></div>`).join('') || '<p class="text-slate-300 font-bold uppercase text-[10px] text-center py-10 tracking-[0.3em] text-center text-center text-center">Tudo em dia!</p>'}
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 text-left">
+                    <div class="card p-8">
+                        <h4 class="font-black uppercase text-sm border-b pb-4 mb-8 text-left">Fila de Encomendas</h4>
+                        <div class="space-y-4">
+                            ${activeOrders.slice(0, 5).map(l => `
+                                <div class="flex justify-between items-center p-4 bg-slate-50 rounded-2xl border text-left">
+                                    <div class="text-left"><p class="font-black text-xs uppercase">${l.clienteNome || 'Cliente'}</p><p class="text-[10px] text-slate-400 font-bold">${l.quantidade}x ${l.produto}</p></div>
+                                    <span class="px-3 py-1 bg-rose-100 text-rose-600 rounded-full font-black text-[8px] uppercase italic text-center">${l.status}</span>
+                                </div>
+                            `).join('') || '<p class="text-center py-10 font-black text-slate-300 uppercase tracking-widest">Sem pedidos ativos</p>'}
                         </div>
                     </div>
-                    <div class="card p-8 bg-rose-50 border-2 border-rose-100 flex flex-col justify-center gap-4 text-left text-left">
-                        <div><h4 class="font-black text-rose-800 uppercase text-sm tracking-tight italic text-left text-left text-left text-left text-left">Alerta de Reposição</h4><p class="text-rose-600/70 text-[10px] font-bold uppercase mt-1 tracking-widest text-left text-left text-left text-left">Itens com menos de 15 unidades exigem atenção.</p></div>
-                        <button onclick="window.setView('estoque')" class="w-full mt-4 bg-rose-600 text-white py-4 rounded-2xl font-black uppercase text-[10px] shadow-lg shadow-rose-100 transition active:scale-95 text-center text-center text-center">Abrir Estoque</button>
+                    <div class="card p-8 text-left">
+                        <h4 class="font-black uppercase text-sm border-b pb-4 mb-8 text-left">Alerta de Reposição</h4>
+                        <div class="space-y-4 text-left">
+                            ${alerts.map(p => `<div class="flex justify-between items-center p-3 border-b text-left"><span class="text-xs font-bold uppercase text-slate-700">${p.nome}</span><span class="bg-red-100 text-red-600 px-3 py-1 rounded-full font-black text-[10px]">${p.quantidade} un</span></div>`).join('') || '<p class="text-center py-10 font-black text-emerald-300 uppercase text-xs">Estoque OK!</p>'}
+                        </div>
                     </div>
                 </div>`;
         }
 
         function renderEstoque() {
+            const p = window.state.editando || { nome: CATEGORIES[0], preco: '', preco_custo: '', quantidade: '', foto_url: '', embalagem: PACKAGING[0] };
             return `
-                <div class="flex flex-col md:flex-row justify-between items-center mb-10 gap-6 text-left text-left text-left">
-                    <h2 class="text-3xl font-[950] uppercase tracking-tighter text-gray-800 italic text-left text-left text-left text-left text-left text-left text-left">Gestão de Estoque</h2>
-                    <button onclick="window.openModal('addProduto')" class="bg-rose-600 text-white px-10 py-4 rounded-2xl font-[900] uppercase text-[11px] shadow-lg shadow-rose-200 active:scale-95 transition tracking-widest text-center text-center text-center">+ Novo Produto</button>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 text-left text-left">
-                    ${window.state.produtos.map(p => {
-                        const fotoFinal = p.foto_url || FALLBACKS[p.nome?.toLowerCase().split(' ')[1]] || FALLBACKS.geral;
-                        return `
-                        <div class="card overflow-hidden group text-left text-left">
-                            <div class="h-48 relative overflow-hidden bg-slate-200 text-center text-center text-center">
-                                <img src="${fotoFinal}" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000">
-                                <div class="absolute top-4 right-4 bg-white/95 backdrop-blur px-4 py-1.5 rounded-full text-[10px] font-black text-slate-900 uppercase shadow-sm text-center text-center text-center text-center">Qtd: ${p.quantidade}</div>
+                <div class="card p-10 mb-12 bg-gray-50/50">
+                    <h2 class="text-xl font-black uppercase text-slate-800 mb-10 text-left">${window.state.editando ? 'Editar Item' : 'Novo Registro de Estoque'}</h2>
+                    <form onsubmit="window.salvarProd(event)" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 text-left">
+                        <div>
+                            <label class="text-[10px] font-black uppercase text-slate-400 ml-2 block text-left">Foto Realista</label>
+                            <div class="upload-area mt-2" onclick="document.getElementById('file-input').click()">
+                                <div id="ph-area" class="${p.foto_url?'hidden':''} text-center p-4">
+                                    <p class="text-slate-300 font-black uppercase text-[10px]">Clique para carregar foto</p>
+                                </div>
+                                <img id="preview-img" src="${p.foto_url || ''}" class="${p.foto_url?'':'hidden'} w-full h-full object-cover">
+                                <input type="file" id="file-input" class="hidden" accept="image/*" onchange="window.previewBase64(event, 'preview-img', 'ph-area', 'b64-hidden')">
                             </div>
-                            <div class="p-8 text-left text-left text-left text-left text-left text-left text-left text-left text-left">
-                                <h3 class="font-[900] text-slate-800 text-lg uppercase tracking-tighter mb-1 truncate text-left text-left text-left text-left text-left">${p.nome}</h3>
-                                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-8 italic text-left text-left text-left text-left text-left">${p.embalagem}</p>
-                                <div class="flex justify-between items-center pt-5 border-t border-slate-50 text-left text-left text-left text-left">
-                                    <div class="text-left text-left text-left text-left text-left text-left">
-                                        <p class="text-[8px] font-black text-slate-300 uppercase mb-0.5 tracking-tighter text-left text-left text-left">Venda</p>
-                                        <span class="text-2xl font-[950] text-slate-900 tracking-tighter italic text-left text-left text-left">R$ ${Number(p.preco || 0).toFixed(2)}</span>
-                                    </div>
-                                    <div class="flex gap-2 text-right text-right">
-                                        <button onclick="window.abrirModalProdutoEdit('${p.id}')" class="w-11 h-11 flex items-center justify-center bg-slate-50 rounded-2xl text-slate-400 hover:text-slate-900 transition font-black border text-center text-center">✎</button>
-                                        <button onclick="window.eliminarProd('${p.id}')" class="w-11 h-11 flex items-center justify-center bg-red-50 rounded-2xl text-red-400 hover:text-red-600 transition font-black border border-red-100 text-center text-center text-center">✕</button>
+                            <input type="hidden" id="b64-hidden" value="${p.foto_url || ''}">
+                        </div>
+                        <div class="space-y-4">
+                            <div class="space-y-1"><label class="text-[10px] font-black uppercase text-slate-400 ml-2">Variedade</label><select name="nome" class="input-egg text-left" required>${CATEGORIES.map(cat => `<option value="${cat}" ${p.nome === cat ? 'selected' : ''}>${cat}</option>`).join('')}</select></div>
+                            <div class="space-y-1"><label class="text-[10px] font-black uppercase text-slate-400 ml-2">Embalagem</label><select name="embalagem" class="input-egg text-left" required>${PACKAGING.map(pkg => `<option value="${pkg}" ${p.embalagem === pkg ? 'selected' : ''}>${pkg}</option>`).join('')}</select></div>
+                        </div>
+                        <div class="space-y-4">
+                            <div class="space-y-1 text-left"><label class="text-[10px] font-black uppercase text-slate-400 ml-2">Custo (R$)</label><input name="preco_custo" type="number" step="0.01" value="${p.preco_custo}" class="input-egg" required placeholder="0.00"></div>
+                            <div class="space-y-1 text-left"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 text-left">Venda (R$)</label><input name="preco" type="number" step="0.01" value="${p.preco}" class="input-egg text-rose-600 font-black" required placeholder="0.00"></div>
+                        </div>
+                        <div class="lg:col-span-2 space-y-1 text-left"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 text-left">Quantidade Total</label><input name="quantidade" type="number" value="${p.quantidade}" class="input-egg" required placeholder="0"></div>
+                        <button type="submit" class="lg:col-span-1 bg-rose-600 text-white py-6 rounded-[32px] font-[950] uppercase text-xs shadow-xl active:scale-95 transition italic text-center">GRAVAR NO ESTOQUE</button>
+                    </form>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 text-left">
+                    ${window.state.produtos.map(prod => `
+                        <div class="card overflow-hidden group text-left">
+                            <div class="h-44 relative overflow-hidden bg-slate-100 text-center">
+                                <img src="${window.safeImg(prod.foto_url)}" class="w-full h-full object-cover">
+                                <div class="absolute top-4 right-4 bg-white/90 px-3 py-1 rounded-full text-[10px] font-black uppercase">Qtd: ${prod.quantidade}</div>
+                            </div>
+                            <div class="p-6">
+                                <h3 class="font-black uppercase text-sm mb-1">${prod.nome}</h3>
+                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-6 italic">${prod.embalagem}</p>
+                                <div class="flex justify-between items-center border-t pt-4">
+                                    <span class="text-xl font-black text-slate-900 italic">R$ ${Number(prod.preco).toFixed(2)}</span>
+                                    <div class="flex gap-2">
+                                        <button onclick="window.editarProduto('${prod.id}')" class="w-10 h-10 flex items-center justify-center bg-slate-100 rounded-xl font-black border hover:bg-slate-200">✎</button>
+                                        <button onclick="deleteDoc(doc(db, 'artifacts', '${appId}', 'public', 'data', 'estoque', '${prod.id}'))" class="w-10 h-10 flex items-center justify-center bg-rose-50 text-rose-600 rounded-xl font-black border hover:bg-rose-100">✕</button>
                                     </div>
                                 </div>
                             </div>
-                        </div>`;
-                    }).join('') || '<div class="col-span-full py-40 text-center font-black text-gray-300 uppercase text-xs tracking-widest italic text-center text-center text-center text-center text-center">Nenhum produto cadastrado no estoque.</div>'}
+                        </div>`).join('')}
                 </div>`;
         }
 
         function renderPedidos() {
             const pendentes = window.state.logs.filter(l => !['FINALIZADO', 'CANCELADO'].includes(l.status));
-            return `
-                <h2 class="text-3xl font-[950] uppercase tracking-tighter text-gray-800 italic mb-10 text-left text-left text-left text-left">Controle de Entregas</h2>
-                <div class="grid gap-6 text-left text-left text-left">
-                    ${pendentes.map(l => `
-                        <div class="card p-8 border-l-[16px] border-rose-500 fade-in flex flex-col md:flex-row justify-between items-center gap-6 text-left text-left text-left text-left text-left text-left">
-                            <div class="flex-1 text-left text-left text-left text-left text-left text-left text-left text-left text-left text-left">
-                                <h3 class="font-black text-xl uppercase tracking-tighter text-gray-900 text-left text-left text-left text-left text-left">${l.clienteNome || 'Cliente'}</h3>
-                                <p class="text-[11px] text-slate-400 font-black uppercase mt-1 tracking-widest text-left text-left text-left text-left text-left text-left text-left text-left">${l.quantidade}x ${l.produto}</p>
-                                <p class="text-[10px] text-rose-600 font-bold uppercase mt-2 italic text-left text-left text-left text-left text-left text-left text-left text-left text-left">Total: R$ ${Number(l.valorTotal || 0).toFixed(2)}</p>
-                            </div>
-                            <div class="flex flex-col gap-2 w-full md:w-auto text-left text-left text-left text-left text-left">
-                                <select onchange="window.mudarStatus('${l.id}', this.value)" class="bg-slate-100 p-4 rounded-2xl font-black uppercase text-[10px] tracking-widest outline-none border-2 border-transparent focus:border-rose-400 text-center text-center text-center text-center">
-                                    ${STATUS_OPTIONS.map(opt => `<option value="${opt}" ${l.status === opt ? 'selected' : ''}>${opt}</option>`).join('')}
-                                </select>
-                            </div>
-                        </div>
-                    `).join('') || '<p class="text-center py-40 font-black text-gray-300 uppercase text-sm tracking-[0.4em] text-center text-center text-center text-center text-center text-center">Tudo entregue!</p>'}
+            return `<h2 class="text-3xl font-[950] uppercase tracking-tighter text-gray-800 italic mb-10 text-left">Fila de Encomendas</h2>
+                <div class="grid gap-6">
+                    ${pendentes.map(l => `<div class="card p-8 border-l-[16px] border-rose-500 fade-in flex flex-col md:flex-row justify-between items-center gap-6 text-left">
+                        <div class="flex-1 text-left"><h3 class="font-black text-xl uppercase tracking-tighter text-gray-900">${l.clienteNome || 'Cliente'}</h3><p class="text-[11px] text-slate-400 font-black uppercase mt-1 tracking-widest">${l.quantidade}x ${l.produto}</p><p class="text-[10px] text-rose-600 font-bold mt-2 italic text-left">Valor: R$ ${Number(l.valorTotal || 0).toFixed(2)}</p></div>
+                        <select onchange="window.mudarStatus('${l.id}', this.value)" class="bg-slate-100 p-4 rounded-2xl font-black uppercase text-[10px] tracking-widest outline-none border-2 border-transparent focus:border-rose-400 text-center">
+                            ${STATUS_OPTIONS.map(opt => `<option value="${opt}" ${l.status === opt ? 'selected' : ''}>${opt}</option>`).join('')}
+                        </select>
+                    </div>`).join('') || '<p class="text-center py-20 font-black text-gray-300 uppercase">Tudo entregue!</p>'}
                 </div>`;
         }
 
         function renderFinanceiro() {
             const finalizados = window.state.logs.filter(l => l.status === 'FINALIZADO');
-            let faturamento = 0; let lucroTotal = 0; const performance = {};
-
-            finalizados.forEach(log => {
-                const valor = Number(log.valorTotal || 0); faturamento += valor;
-                const custoUn = log.custoUnitario || 0;
-                lucroTotal += valor - (custoUn * (log.quantidade || 1));
-                if (!performance[log.produto]) performance[log.produto] = { total: 0, qtd: 0 };
-                performance[log.produto].total += valor; performance[log.produto].qtd += Number(log.quantidade || 0);
-            });
-
-            return `
-                <div class="mb-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 text-left text-left text-left">
-                    <h2 class="text-3xl font-[950] uppercase tracking-tighter text-gray-800 italic text-left text-left text-left text-left text-left text-left">Resultados Financeiros</h2>
-                    <div class="bg-white border-2 border-slate-100 px-8 py-4 rounded-3xl font-black uppercase text-[11px] text-slate-400 tracking-widest shadow-sm text-left text-left text-left text-left text-left text-left text-left">Ciclo Mensal</div>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12 text-left text-left text-left">
-                    <div class="stat-card bg-rose-600 text-white shadow-2xl shadow-rose-100 text-left text-left text-left text-left text-left text-left text-left text-left text-left text-left text-left text-left text-left text-left"><p class="text-[10px] font-black uppercase opacity-70 mb-2 tracking-widest italic text-white text-left text-left text-left text-left">Faturamento Bruto</p><h3 class="text-4xl font-black tracking-tighter text-white italic text-left text-left text-left text-left text-left text-left">R$ ${faturamento.toFixed(2)}</h3></div>
-                    <div class="stat-card bg-emerald-600 text-white shadow-2xl shadow-emerald-100 text-left text-left text-left text-left text-left text-left text-left text-left text-left text-left text-left text-left text-left text-left text-left text-left text-left text-left text-left"><p class="text-[10px] font-black uppercase opacity-70 mb-2 tracking-widest italic text-white text-left text-left text-left text-left text-left">Lucro Líquido Real</p><h3 class="text-4xl font-black tracking-tighter text-white italic text-left text-left text-left text-left text-left text-left text-left">R$ ${lucroTotal.toFixed(2)}</h3></div>
-                </div>
-                <div class="card p-10 mb-10 text-left text-left text-left text-left text-left text-left text-left text-left text-left">
-                    <h4 class="font-black uppercase text-[10px] text-gray-400 mb-10 tracking-[0.4em] italic text-center md:text-left text-left text-left text-left text-left text-left text-left text-left">Performance por Variedade</h4>
-                    <div class="space-y-10 text-left text-left text-left text-left text-left text-left text-left text-left">
-                        ${Object.entries(performance).sort((a,b) => b[1].total - a[1].total).map(([nome, data]) => {
-                            const perc = Math.min((data.total / (faturamento || 1)) * 100 * 3, 100);
-                            return `
-                                <div class="text-left text-left text-left text-left text-left text-left text-left text-left text-left text-left text-left text-left text-left text-left text-left text-left">
-                                    <div class="flex justify-between items-end mb-3 text-left text-left text-left text-left text-left text-left">
-                                        <div class="text-left text-left text-left text-left text-left text-left text-left text-left text-left text-left text-left text-left text-left text-left text-left text-left text-left text-left"><span class="text-xs font-[900] uppercase text-slate-800 tracking-tighter italic text-left text-left text-left text-left">${nome}</span><p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1 text-left text-left text-left text-left text-left">${data.qtd} unidades vendidas</p></div>
-                                        <span class="text-sm font-black text-emerald-600 italic text-right text-right text-right text-right text-right">R$ ${data.total.toFixed(2)}</span>
-                                    </div>
-                                    <div class="progress-bar text-left text-left text-left text-left text-left text-left text-left text-left text-left text-left text-left text-left text-left text-left text-left text-left text-left text-left text-left text-left text-left text-left text-left text-left text-left"><div class="progress-fill" style="width: ${perc}%"></div></div>
-                                </div>`;
-                        }).join('') || '<p class="text-center py-10 font-black text-gray-200 uppercase text-xs tracking-widest text-center text-center text-center text-center text-center">Sem dados financeiros.</p>'}
-                    </div>
-                </div>`;
-        }
-
-        function renderModal() {
-            if (!window.state.activeModal) return '';
-            const data = window.state.editData;
-            const p = data || { nome: CATEGORIES[0], embalagem: PACKAGING[0], preco: '', preco_custo: '', quantidade: '', foto_url: '' };
-            return `
-                <div class="fixed inset-0 modal-blur z-[100] flex items-center justify-center p-6 text-center text-center text-center text-center"><div class="absolute inset-0" onclick="window.closeModal()"></div>
-                <div class="relative bg-white w-full max-w-2xl rounded-[40px] shadow-2xl animate-in zoom-in duration-200 overflow-hidden text-center text-center text-center text-center text-center text-center">
-                <div class="p-8 border-b flex justify-between items-center bg-white text-center text-center text-center text-center text-center text-center text-center text-center text-center text-center text-center text-center"><h2 class="font-black text-2xl text-slate-900 uppercase italic tracking-tighter text-center text-center text-center text-center text-center">${data ? 'Editar Registro' : 'Novo Lote'}</h2><button onclick="window.closeModal()" class="text-slate-400 hover:text-rose-600 font-black text-center text-center text-center text-center text-center">✕</button></div>
-                <form onsubmit="window.handleFormSubmit(event, '', '${p.id || ''}')" class="p-8 grid grid-cols-2 gap-4 bg-white max-h-[80vh] overflow-y-auto no-scrollbar text-center text-center text-center text-center text-center text-center">
-                    <div class="col-span-2 mb-4 text-center text-center text-center text-center text-center">
-                        <label class="text-[10px] font-black uppercase text-slate-400 ml-2 italic tracking-widest text-center text-center text-center text-center text-center text-center">Fotografia Base64</label>
-                        <div class="upload-area h-44 text-center text-center text-center text-center text-center text-center text-center" onclick="document.getElementById('f-p').click()"><div id="ph-p" class="${p.foto_url?'hidden':''} font-black uppercase text-[10px] text-slate-300 tracking-widest text-center text-white italic text-center text-center text-center text-center text-center text-center">Clique para Carregar</div><img id="pv-p" src="${p.foto_url||''}" class="${p.foto_url?'':'hidden'} w-full h-full object-cover text-center text-center text-center text-center text-center text-center"><input type="file" id="f-p" class="hidden text-center text-center text-center text-center text-center text-center" accept="image/*" onchange="window.previewBase64(event, 'pv-p', 'ph-p', 'b64-p')"></div><input type="hidden" id="b64-p" value="${p.foto_url || ''}">
-                    </div>
-                    <div class="col-span-2 space-y-1 text-left text-left text-left text-left text-left text-left text-left text-left text-left"><label class="text-[10px] font-black text-slate-400 uppercase ml-2 italic tracking-widest text-left text-left text-left text-left text-left">Variedade</label><select id="p-tipo-nome" class="input-egg appearance-none cursor-pointer font-black italic uppercase text-left text-left text-left text-left text-left text-left">${CATEGORIES.map(cat => `<option value="${cat}" ${p.nome === cat ? 'selected' : ''}>${cat}</option>`).join('')}</select></div>
-                    <div class="col-span-2 space-y-1 text-left text-left text-left text-left text-left text-left text-left text-left text-left text-left"><label class="text-[10px] font-black text-slate-400 uppercase ml-2 italic tracking-widest text-left text-left text-left text-left text-left text-left">Embalagem</label><select id="p-emb" class="input-egg appearance-none cursor-pointer font-black italic uppercase text-left text-left text-left text-left text-left text-left">${PACKAGING.map(pkg => `<option value="${pkg}" ${p.embalagem === pkg ? 'selected' : ''}>${pkg}</option>`).join('')}</select></div>
-                    <div class="space-y-1 text-left text-left text-left text-left text-left text-left text-left text-left text-left text-left text-left"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 italic text-left text-left text-left text-left text-left">Custo (R$)</label><input id="p-custo" type="number" step="0.01" value="${p.preco_custo || ''}" class="input-egg font-black italic text-left text-left text-left text-left text-left" placeholder="0.00" required></div>
-                    <div class="space-y-1 text-left text-left text-left text-left text-left text-left text-left text-left text-left text-left text-left text-left"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 italic text-left text-left text-left text-left text-left text-left">Venda (R$)</label><input id="p-venda" type="number" step="0.01" value="${p.preco || ''}" class="input-egg font-black italic text-rose-600 text-left text-left text-left text-left text-left text-left" placeholder="0.00" required></div>
-                    <div class="col-span-2 space-y-1 text-left text-left text-left text-left text-left text-left text-left text-left text-left text-left text-left text-left text-left text-left"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 tracking-widest text-left text-left text-left text-left text-left text-left text-left">Quantidade</label><input id="p-qtd" type="number" value="${p.quantidade || ''}" class="input-egg font-black italic text-left text-left text-left text-left text-left text-left text-left" placeholder="0" required></div>
-                    <button type="submit" class="col-span-2 bg-rose-600 text-white py-6 rounded-[32px] font-black uppercase text-[11px] tracking-[0.3em] shadow-xl shadow-rose-200 mt-6 active:scale-95 transition disabled:opacity-50 italic text-center text-center text-center text-center text-center text-center text-center">${window.state.saving ? 'Processando...' : (data ? 'Confirmar Edição' : 'Gravar no Estoque')}</button>
-                </form></div></div>`;
+            let faturamento = 0;
+            finalizados.forEach(l => faturamento += Number(l.valorTotal));
+            return `<div class="card p-20 text-center"><p class="text-[10px] font-black uppercase text-gray-400 mb-2 tracking-widest">Faturamento Acumulado</p><h2 class="text-6xl font-[950] text-rose-600 italic tracking-tighter text-center">R$ ${faturamento.toFixed(2)}</h2></div>`;
         }
 
         function renderLogin() { 
-            return `<div class="min-h-screen flex items-center justify-center bg-gray-900 p-8 text-center text-center text-center text-center text-center text-center text-center text-center">
-                        <form onsubmit="window.handleLogin(event)" class="bg-white p-12 rounded-[48px] shadow-2xl w-full max-w-md text-center text-center text-center text-center text-center text-center text-center text-center">
-                            <div class="logo-text text-6xl mb-4 tracking-tighter italic uppercase text-center text-center text-center text-center text-center text-center text-center text-center">AppEgg</div>
-                            <p class="text-center text-gray-400 font-bold text-[10px] uppercase mb-10 tracking-[0.4em] italic text-white text-center text-center text-center text-center text-center text-center text-center text-center text-center text-center">Distribuidora Pro</p>
-                            <input id="l-email" class="input-egg border mb-3 text-center text-center text-center text-center text-center text-center" placeholder="Utilizador">
-                            <input id="l-pass" type="password" class="input-egg border mb-8 text-center text-center text-center text-center text-center text-center text-center" placeholder="Código de Acesso">
-                            <button class="w-full bg-rose-600 text-white py-6 rounded-3xl font-black uppercase text-xs tracking-widest shadow-xl italic transition active:scale-95 text-center text-center text-center text-center text-center text-center">Entrar</button>
-                        </form>
-                    </div>`; 
+            return `<div class="min-h-screen flex items-center justify-center bg-gray-900 p-8 text-center text-center">
+                <form onsubmit="window.handleLoginAdmin(event)" class="bg-white p-12 rounded-[48px] shadow-2xl w-full max-w-md text-center">
+                    <div class="logo-text text-6xl mb-4 tracking-tighter italic uppercase text-center">AppEgg</div>
+                    <p class="text-center text-gray-400 font-bold text-[10px] uppercase mb-10 tracking-[0.4em] italic text-white text-center">Administração</p>
+                    <input id="ae" class="input-egg border mb-3 text-center" placeholder="Email Admin (thon@lojista.com.br)">
+                    <input id="ap" type="password" class="input-egg border mb-8 text-center" placeholder="Senha (882010)">
+                    <button type="submit" class="w-full bg-rose-600 text-white py-6 rounded-3xl font-black uppercase shadow-xl italic tracking-widest">Acessar Admin</button>
+                    ${window.state.authError ? `<div class="error-box text-center">⚠️ ATENÇÃO: Erro de Permissão. Verifique o login no Firebase Console.</div>` : ''}
+                </form>
+            </div>`; 
         }
+
+        window.handleLoginAdmin = async (e) => {
+            e.preventDefault();
+            const em = document.getElementById('ae').value.trim();
+            const ps = document.getElementById('ap').value;
+            try { 
+                await signInWithEmailAndPassword(auth, em, ps); 
+                window.showToast("LOGIN BEM-SUCEDIDO!");
+            } catch (err) { 
+                if (err.code === 'auth/operation-not-allowed') { window.state.authError = true; window.render(); }
+                else { window.showToast("CREDENCIAIS INVÁLIDAS"); }
+            }
+        };
 
         window.render();
     </script>
