@@ -3,18 +3,19 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>AppEgg | Cliente</title>
+<title>AppEgg | Meus Pedidos</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800;900&display=swap');
-body { font-family:'Inter',sans-serif;background:#fff;padding-bottom:120px;color:#1f2937;}
+body { font-family: 'Inter', sans-serif; background:#fff; padding-bottom:120px; color:#1f2937 }
 .logo-text{font-weight:900;color:#e11d48;font-size:1.8rem}
 .nav-bottom{position:fixed;bottom:20px;left:15px;right:15px;background:#111;border-radius:32px;display:flex;justify-content:space-around;padding:14px;z-index:100}
 .nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;color:#666;font-size:10px;font-weight:800}
 .nav-item.active{color:#fff}
-.card{background:#fff;border:1px solid #f3f4f6;border-radius:28px;padding:24px;margin-bottom:16px}
-.input{width:100%;padding:16px;background:#f9fafb;border-radius:18px;font-weight:700}
-.btn{background:#e11d48;color:#fff;padding:18px;border-radius:22px;font-weight:900;text-transform:uppercase;width:100%}
+.card-pedido{background:white;border:1px solid #f3f4f6;border-radius:32px;padding:24px;margin-bottom:16px}
+.btn-refazer{background:#1f2937;color:white;padding:12px;border-radius:16px;font-weight:900;font-size:10px;flex:1}
+.btn-agendar{background:#2563eb;color:white;padding:12px;border-radius:16px;font-weight:900;font-size:10px;flex:1}
+.input-egg{width:100%;padding:18px;background:#f9fafb;border-radius:20px;font-weight:700}
 </style>
 </head>
 <body>
@@ -30,131 +31,112 @@ const app=initializeApp(firebaseConfig);
 const db=getFirestore(app);
 const auth=getAuth(app);
 
-window.state={user:null,view:'loja',produtos:[],pedidos:[],comprando:null,qtd:1,mostrarData:false};
+window.state={user:null,view:'loja',produtos:[],pedidos:[],comprando:null,qtd:1,filtroData:'todos'};
+const s=window.state;
 
-onAuthStateChanged(auth,u=>{state.user=u;if(u){carregarProdutos();ouvirPedidos()}render()});
+onAuthStateChanged(auth,u=>{s.user=u;if(u){loadProdutos();syncPedidos()}render()});
 
-async function carregarProdutos(){
-const r=await fetch("https://painel-distribuidora-backend.onrender.com/api/produtos");
-state.produtos=await r.json();render();
+async function loadProdutos(){
+ const r=await fetch("https://painel-distribuidora-backend.onrender.com/api/produtos");
+ s.produtos=await r.json(); render();
 }
 
-function ouvirPedidos(){
-const q=query(collection(db,"vendas_logs"),where("clienteId","==",auth.currentUser.uid),orderBy("criadoEm","desc"));
-onSnapshot(q,s=>{state.pedidos=s.docs.map(d=>({id:d.id,...d.data()}));render()});
+function syncPedidos(){
+ const q=query(collection(db,"vendas_logs"),where("clienteId","==",auth.currentUser.uid),orderBy("criadoEm","desc"));
+ onSnapshot(q,snap=>{s.pedidos=snap.docs.map(d=>({id:d.id,...d.data()}));render()});
 }
 
 window.render=()=>{
-const root=document.getElementById("app-root");
-if(!state.user){root.innerHTML=login();return}
-
-root.innerHTML=`
-<div class="p-6 max-w-lg mx-auto">
-<header class="flex justify-between items-center mb-8">
-<div class="logo-text">AppEgg</div>
-<div class="text-[10px] font-black text-gray-400">@${state.user.email.split('@')[0]}</div>
-</header>
-${state.view==='loja'?loja():pedidos()}
-</div>
-
-<nav class="nav-bottom">
-<button onclick="state.view='loja';render()" class="nav-item ${state.view==='loja'?'active':''}">🏠<span>LOJA</span></button>
-<button onclick="state.view='pedidos';render()" class="nav-item ${state.view==='pedidos'?'active':''}">📦<span>PEDIDOS</span></button>
-<button onclick="signOut(auth)" class="nav-item">🚪<span>SAIR</span></button>
-</nav>
-
-${state.comprando?modalCompra():''}
-`;
+ const r=document.getElementById("app-root");
+ if(!s.user){r.innerHTML=login();return}
+ r.innerHTML=`
+ <div class="p-6 max-w-lg mx-auto">
+  <header class="flex justify-between mb-10">
+   <div class="logo-text">AppEgg</div>
+   <div class="bg-gray-100 px-4 py-2 rounded-2xl font-black text-[10px]">@${s.user.email.split('@')[0]}</div>
+  </header>
+  ${s.view==='loja'?loja():pedidos()}
+ </div>
+ <nav class="nav-bottom">
+  <button onclick="state.view='loja';render()" class="nav-item ${s.view==='loja'?'active':''}">🏠 LOJA</button>
+  <button onclick="state.view='pedidos';render()" class="nav-item ${s.view==='pedidos'?'active':''}">📦 PEDIDOS</button>
+  <button onclick="signOut(auth)" class="nav-item text-rose-500">🚪 SAIR</button>
+ </nav>
+ ${s.comprando?modal():''}`;
 };
 
 function loja(){
-return state.produtos.map((p,i)=>`
-<div class="card" onclick="state.comprando=state.produtos[${i}];state.qtd=1;render()">
-<h3 class="font-black uppercase">${p.nome}</h3>
-<p class="text-rose-600 font-black">R$ ${Number(p.preco).toFixed(2)}</p>
-</div>`).join('');
+ return s.produtos.map((p,i)=>`
+ <div class="card-pedido flex gap-5" onclick="abrir(${i})">
+  <div class="flex-1">
+   <h3 class="font-black">${p.nome}</h3>
+   <p class="text-rose-600 font-black">R$ ${p.preco}</p>
+  </div>
+ </div>`).join('');
 }
 
 function pedidos(){
-return state.pedidos.map(p=>`
-<div class="card border-l-8 ${p.status==='FINALIZADO'?'border-emerald-500':'border-blue-500'}">
-<div class="flex justify-between">
-<span class="font-black uppercase text-xs">${p.status}</span>
-<span class="text-[10px] text-gray-400">#${p.id.slice(-4)}</span>
-</div>
-<p class="font-black mt-2">${p.quantidade}x ${p.produto}</p>
-${p.dataProximaRemessa?`<p class="text-[10px] text-gray-400">Próxima: ${p.dataProximaRemessa}</p>`:''}
-</div>`).join('')||'<p class="text-center text-gray-300 font-black">SEM PEDIDOS</p>';
+ return s.pedidos.map(p=>`
+ <div class="card-pedido border-t-8 ${p.status==='FINALIZADO'?'border-emerald-500':'border-rose-500'}">
+  <h4 class="font-black">${p.quantidade}x ${p.produto}</h4>
+  <span class="text-xs font-black">${p.status}</span>
+ </div>`).join('');
 }
 
-function modalCompra(){
-const p=state.comprando;
-return `
-<div class="fixed inset-0 bg-black/70 flex items-end z-50">
-<div class="bg-white w-full p-8 rounded-t-[40px]">
-<h3 class="font-black text-xl mb-4">${p.nome}</h3>
+window.abrir=i=>{s.comprando=s.produtos[i];s.qtd=1;render()}
 
-<form onsubmit="finalizar(event)" class="space-y-4">
-<div class="flex justify-between bg-gray-50 p-4 rounded-2xl">
-<button type="button" onclick="state.qtd=Math.max(1,state.qtd-1);render()">-</button>
-<span class="font-black text-xl">${state.qtd}</span>
-<button type="button" onclick="state.qtd++;render()">+</button>
-</div>
-
-<select name="recorrencia" class="input" onchange="state.mostrarData=this.value!=='';render()">
-<option value="">Apenas uma vez</option>
-<option value="Semanal">Semanal</option>
-<option value="Quinzenal">Quinzenal</option>
-<option value="Mensal">Mensal</option>
-</select>
-
-${state.mostrarData?`<input type="date" name="data" class="input" required>`:''}
-
-<button class="btn">Confirmar Pedido</button>
-</form>
-
-<button onclick="state.comprando=null;render()" class="w-full mt-4 text-gray-400 font-black">Cancelar</button>
-</div>
-</div>`;
+window.finalizarPedido=async e=>{
+ e.preventDefault();
+ const f=new FormData(e.target);
+ const p=s.comprando;
+ await addDoc(collection(db,"vendas_logs"),{
+  clienteId:auth.currentUser.uid,
+  clienteNome:s.user.email.split('@')[0],
+  produto:p.nome,
+  produtoId:p.id,
+  quantidade:s.qtd,
+  valorTotal:p.preco*s.qtd,
+  recorrencia:f.get("recorrencia"),
+  proximaEntrega:f.get("proximaEntrega")||null,
+  status:"CRIADO",
+  criadoEm:serverTimestamp()
+ });
+ s.comprando=null;s.view='pedidos';render();
 }
 
-window.finalizar=async(e)=>{
-e.preventDefault();
-const f=new FormData(e.target);
-const p=state.comprando;
-
-await addDoc(collection(db,"vendas_logs"),{
-clienteId:auth.currentUser.uid,
-clienteNome:auth.currentUser.email.split('@')[0],
-produtoId:p.id,
-produto:p.nome,
-quantidade:state.qtd,
-valorTotal:p.preco*state.qtd,
-recorrencia:f.get("recorrencia"),
-dataProximaRemessa:f.get("data")||null,
-status:"CRIADO",
-criadoEm:serverTimestamp()
-});
-
-state.comprando=null;
-state.view="pedidos";
-render();
-};
+function modal(){
+ return `
+ <div class="fixed inset-0 bg-black/80 flex items-end">
+ <div class="bg-white w-full p-10 rounded-t-[48px]">
+ <form onsubmit="finalizarPedido(event)" class="space-y-4">
+  <div class="flex justify-between">
+   <button type="button" onclick="state.qtd--;render()">-</button>
+   <span class="text-3xl font-black">${s.qtd}</span>
+   <button type="button" onclick="state.qtd++;render()">+</button>
+  </div>
+  <select name="recorrencia" onchange="document.getElementById('dt').style.display=this.value?'block':'none'" class="input-egg">
+   <option value="">Uma vez</option>
+   <option>Semanal</option>
+   <option>Quinzenal</option>
+   <option>Mensal</option>
+  </select>
+  <input id="dt" name="proximaEntrega" type="date" class="input-egg hidden">
+  <button class="w-full bg-rose-600 text-white py-6 rounded-[28px] font-black">Confirmar</button>
+ </form>
+ </div></div>`;
+}
 
 function login(){
-return `<div class="min-h-screen flex items-center justify-center">
-<form onsubmit="loginDo(event)" class="space-y-3">
-<input name="email" class="input" placeholder="Email">
-<input name="pass" type="password" class="input" placeholder="Senha">
-<button class="btn">Entrar</button>
-</form>
-</div>`;
+ return `<form onsubmit="handle(event)">
+ <input name="email" class="input-egg">
+ <input name="pass" type="password" class="input-egg">
+ <button>Entrar</button></form>`;
 }
 
-window.loginDo=async(e)=>{
-e.preventDefault();
-const f=new FormData(e.target);
-await signInWithEmailAndPassword(auth,f.get("email"),f.get("pass"));
+window.handle=async e=>{
+ e.preventDefault();
+ const f=new FormData(e.target);
+ await signInWithEmailAndPassword(auth,f.get("email"),f.get("pass"));
 };
 </script>
 </body>
