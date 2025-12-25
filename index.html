@@ -3,16 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AppEgg Admin | Gestão de Pedidos</title>
+    <title>AppEgg Admin | Dashboard Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
         body { font-family: 'Inter', sans-serif; background: #f4f7f6; color: #1f2937; }
-        .nav-link { font-size: 13px; font-weight: 800; text-transform: uppercase; color: #6b7280; padding: 14px 24px; border-radius: 16px; cursor: pointer; border: 2px solid transparent; }
-        .nav-link.active { color: #e11d48; background: #fff; border-color: #ffe4e6; }
+        .nav-link { font-size: 13px; font-weight: 800; text-transform: uppercase; color: #6b7280; padding: 14px 24px; border-radius: 16px; cursor: pointer; transition: all 0.3s ease; white-space: nowrap; border: 2px solid transparent; }
+        .nav-link.active { color: #e11d48; background: #fff; border-color: #ffe4e6; box-shadow: 0 4px 12px rgba(225, 29, 72, 0.08); }
         .logo-text { font-weight: 900; color: #e11d48; font-size: 1.6rem; letter-spacing: -1px; }
         .card { background: #ffffff; border-radius: 32px; box-shadow: 0 10px 40px rgba(0,0,0,0.03); border: 1px solid rgba(0,0,0,0.02); }
         .input-egg { width: 100%; padding: 16px; background: #f9fafb; border-radius: 20px; border: 1px solid #eee; font-weight: 700; font-size: 14px; outline: none; }
+        .btn-status { flex: 1; padding: 16px; border-radius: 16px; font-weight: 900; text-transform: uppercase; font-size: 10px; color: white; transition: 0.2s; }
     </style>
 </head>
 <body>
@@ -37,7 +38,7 @@
         const auth = getAuth(appFB);
         const API_BASE = "https://painel-distribuidora-backend.onrender.com/api";
 
-        window.state = { user: null, view: 'dashboard', logs: [], produtos: [], filtroData: 'todos' };
+        window.state = { user: null, view: 'dashboard', logs: [], produtos: [], filtroData: 'hoje' };
         const state = window.state;
 
         onAuthStateChanged(auth, user => {
@@ -49,8 +50,7 @@
         async function loadProdutos() {
             try {
                 const r = await fetch(`${API_BASE}/produtos`);
-                const data = await r.json();
-                state.produtos = Array.isArray(data) ? data : [];
+                state.produtos = await r.json();
             } catch { state.produtos = []; }
             window.render();
         }
@@ -68,80 +68,67 @@
 
             root.innerHTML = `
                 <nav class="bg-white border-b px-8 h-24 flex justify-between items-center sticky top-0 z-50">
-                    <div class="logo-text">AppEgg Admin</div>
+                    <div class="logo-text cursor-pointer" onclick="state.view='dashboard';render()">AppEgg</div>
                     <div class="flex gap-2">
                         <button onclick="state.view='pedidos';render()" class="nav-link ${state.view==='pedidos'?'active':''}">Pedidos</button>
                         <button onclick="state.view='estoque';render()" class="nav-link ${state.view==='estoque'?'active':''}">Estoque</button>
                         <button onclick="signOut(auth)" class="nav-link text-rose-600">Sair</button>
                     </div>
                 </nav>
-                <main class="p-8 max-w-5xl mx-auto">
-                    ${state.view === 'estoque' ? renderEstoque() : renderPedidos()}
+                <main class="p-8 max-w-6xl mx-auto">
+                    ${state.view === 'dashboard' ? '<h1 class="text-3xl font-black mb-8 uppercase">Dashboard</h1>' : ''}
+                    ${state.view === 'pedidos' ? renderPedidos() : state.view === 'estoque' ? '<div class="card p-10">Gerencie no backend</div>' : ''}
                 </main>`;
         };
 
         function renderPedidos() {
             const filtrados = state.logs.filter(l => l.status !== 'FINALIZADO');
-            return `
-                <h2 class="text-2xl font-black mb-8 uppercase tracking-tighter">Fluxo de Pedidos</h2>
-                <div class="space-y-6">
-                    ${filtrados.map(l => `
-                        <div class="card p-8 border-l-[12px] ${l.status === 'PEDIDO CRIADO' ? 'border-amber-400' : l.status === 'EMBALANDO' ? 'border-blue-500' : 'border-rose-500'}">
-                            <div class="flex justify-between mb-4">
-                                <div>
-                                    <h3 class="font-black text-lg">${l.clienteNome}</h3>
-                                    <p class="text-xs text-gray-400 font-bold uppercase">${l.telefone}</p>
-                                    ${l.proximaEntrega ? `<p class="text-[10px] text-rose-600 font-black mt-1">AGENDADO PARA: ${l.proximaEntrega}</p>` : ''}
-                                </div>
-                                <span class="bg-gray-100 px-3 py-1 rounded-lg text-[10px] font-black h-fit">${l.status}</span>
-                            </div>
-                            <div class="bg-gray-50 p-4 rounded-2xl mb-6 flex justify-between items-center">
-                                <span class="font-bold">${l.quantidade}x ${l.produto}</span>
-                                <span class="font-black text-rose-600">R$ ${Number(l.valorTotal).toFixed(2)}</span>
-                            </div>
-                            <div class="flex gap-2">
-                                ${l.status === 'PEDIDO CRIADO' ? `<button onclick="mudarStatus('${l.id}', 'EMBALANDO')" class="flex-1 bg-blue-600 text-white py-4 rounded-xl font-black text-[10px] uppercase">Iniciar Embalagem</button>` : ''}
-                                ${l.status === 'EMBALANDO' ? `<button onclick="mudarStatus('${l.id}', 'SAIU PARA ENTREGA')" class="flex-1 bg-rose-600 text-white py-4 rounded-xl font-black text-[10px] uppercase">Sair para Entrega</button>` : ''}
-                                ${l.status === 'SAIU PARA ENTREGA' ? `<button onclick="confirmarPagamento('${l.id}')" class="flex-1 bg-emerald-600 text-white py-4 rounded-xl font-black text-[10px] uppercase">Confirmar Pagamento e Baixar Estoque</button>` : ''}
-                                <button onclick="deletarPedido('${l.id}')" class="px-6 bg-gray-100 text-gray-400 rounded-xl font-black text-[10px] uppercase">Excluir</button>
-                            </div>
+            return filtrados.map(l => `
+                <div class="card p-8 mb-6 border-l-[12px] ${l.status === 'PEDIDO CRIADO' ? 'border-amber-400' : l.status === 'EMBALANDO' ? 'border-blue-500' : 'border-rose-500'}">
+                    <div class="flex justify-between items-start mb-6">
+                        <div>
+                            <h3 class="font-black uppercase text-lg tracking-tight">${l.clienteNome}</h3>
+                            <p class="text-[11px] font-bold text-gray-400 uppercase tracking-widest">${l.telefone}</p>
+                            ${l.dataEntrega ? `<p class="text-[10px] text-blue-600 font-black mt-1">DATA AGENDADA: ${l.dataEntrega}</p>` : ''}
                         </div>
-                    `).join('') || '<p class="text-center py-20 font-black text-gray-300">SEM PEDIDOS ATIVOS</p>'}
-                </div>`;
+                        <div class="bg-gray-100 px-4 py-2 rounded-2xl font-black text-[10px] uppercase text-gray-500">${l.status}</div>
+                    </div>
+                    <div class="bg-gray-50 p-6 rounded-[24px] mb-6 flex justify-between items-center">
+                        <span class="font-black text-sm uppercase">${l.quantidade}x ${l.produto}</span>
+                        <span class="text-rose-600 font-black text-lg">R$ ${Number(l.valorTotal).toFixed(2)}</span>
+                    </div>
+                    <div class="flex gap-3">
+                        ${l.status === 'PEDIDO CRIADO' ? `<button onclick="mudarStatus('${l.id}', 'EMBALANDO')" class="btn-status bg-amber-500">Começar a Embalar</button>` : ''}
+                        ${l.status === 'EMBALANDO' ? `<button onclick="mudarStatus('${l.id}', 'SAIU PARA ENTREGA')" class="btn-status bg-blue-600">Sair para Entrega</button>` : ''}
+                        ${l.status === 'SAIU PARA ENTREGA' ? `<button onclick="confirmarEBaixarEstoque('${l.id}')" class="btn-status bg-emerald-600">Confirmar Pagamento e Baixar Estoque</button>` : ''}
+                        <button onclick="deletar('${l.id}')" class="px-8 bg-gray-100 text-gray-400 rounded-2xl font-black uppercase text-[10px]">Excluir</button>
+                    </div>
+                </div>`).join('') || '<div class="text-center py-20 card font-black text-gray-300 uppercase">Nenhum pedido no fluxo</div>';
         }
 
-        window.mudarStatus = async (id, novoStatus) => {
-            await updateDoc(doc(db, "vendas_logs", id), { status: novoStatus });
-        };
+        window.mudarStatus = async (id, status) => { await updateDoc(doc(db, "vendas_logs", id), { status }); };
 
-        window.confirmarPagamento = async (id) => {
+        window.confirmarEBaixarEstoque = async (id) => {
             const snap = await getDoc(doc(db, "vendas_logs", id));
-            const pedido = snap.data();
-            const produtoOriginal = state.produtos.find(p => p.id === pedido.produtoId);
+            const pData = snap.data();
+            const prod = state.produtos.find(p => p.id === pData.produtoId);
 
-            if (produtoOriginal) {
-                const novaQtd = produtoOriginal.quantidade - pedido.quantidade;
-                // Baixa no estoque via API
-                await fetch(`${API_BASE}/produtos/${pedido.produtoId}`, {
+            if (prod) {
+                const novaQtd = prod.quantidade - pData.quantidade;
+                await fetch(`${API_BASE}/produtos/${pData.produtoId}`, {
                     method: 'PUT',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ ...produtoOriginal, quantidade: novaQtd })
+                    body: JSON.stringify({ ...prod, quantidade: novaQtd })
                 });
             }
-
-            await updateDoc(doc(db, "vendas_logs", id), { status: 'FINALIZADO', pagoEm: serverTimestamp() });
+            await updateDoc(doc(db, "vendas_logs", id), { status: 'FINALIZADO', concluidoEm: serverTimestamp() });
             loadProdutos();
-            alert("Pagamento confirmado e estoque atualizado!");
+            alert("Venda concluída e estoque baixado!");
         };
 
-        window.deletarPedido = async (id) => { if(confirm("Deseja excluir este pedido?")) await deleteDoc(doc(db, "vendas_logs", id)); };
-
-        function renderEstoque() {
-            return `<div class="card p-10 text-center font-black text-gray-300 uppercase">Use a lista lateral para editar produtos. (Estoque atualizado automaticamente nas vendas)</div>`;
-        }
-
+        window.deletar = async (id) => { if(confirm("Deletar?")) await deleteDoc(doc(db, "vendas_logs", id)); };
         window.handleLogin = async (e) => { e.preventDefault(); const f = new FormData(e.target); try { await signInWithEmailAndPassword(auth, f.get('email'), f.get('pass')); } catch { alert("Erro"); } };
-        function renderLogin() { return `<div class="min-h-screen flex items-center justify-center bg-gray-900 p-8"><form onsubmit="handleLogin(event)" class="bg-white p-12 rounded-[48px] w-full max-w-md"><div class="logo-text text-5xl mb-8 text-center">AppEgg Admin</div><input name="email" class="input-egg mb-3" placeholder="Email"><input name="pass" type="password" class="input-egg mb-8" placeholder="Senha"><button class="w-full bg-rose-600 text-white py-6 rounded-3xl font-black uppercase text-sm">Entrar</button></form></div>`; }
+        function renderLogin() { return `<div class="min-h-screen flex items-center justify-center bg-gray-900 p-8"><form onsubmit="handleLogin(event)" class="bg-white p-12 rounded-[48px] w-full max-w-md"><div class="logo-text text-5xl mb-8 text-center">AppEgg</div><input name="email" class="input-egg mb-3 border" placeholder="Email"><input name="pass" type="password" class="input-egg mb-8 border" placeholder="Senha"><button class="w-full bg-rose-600 text-white py-6 rounded-3xl font-black uppercase text-sm">Acessar</button></form></div>`; }
         window.signOut = () => signOut(auth);
     </script>
 </body>

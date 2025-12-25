@@ -16,11 +16,6 @@
         .btn-refazer { background: #1f2937; color: white; padding: 12px; border-radius: 16px; font-weight: 900; text-transform: uppercase; font-size: 10px; flex: 1; text-align: center; }
         .btn-agendar { background: #2563eb; color: white; padding: 12px; border-radius: 16px; font-weight: 900; text-transform: uppercase; font-size: 10px; flex: 1; text-align: center; }
         .input-egg { width: 100%; padding: 18px; background: #f9fafb; border-radius: 20px; border: 2px solid transparent; font-weight: 700; font-size: 14px; outline: none; }
-        .status-badge { padding: 4px 12px; border-radius: 10px; font-size: 9px; font-weight: 900; text-transform: uppercase; }
-        .status-criado { background: #fef3c7; color: #92400e; }
-        .status-embalando { background: #dbeafe; color: #1e40af; }
-        .status-entrega { background: #fce7f3; color: #9d174d; }
-        .status-finalizado { background: #dcfce7; color: #166534; }
     </style>
 </head>
 <body>
@@ -46,7 +41,7 @@
         const API_BASE = "https://painel-distribuidora-backend.onrender.com/api";
         const IMG_DEFAULT = "https://via.placeholder.com/300x300?text=AppEgg+Ovos";
 
-        window.state = { user: null, view: 'loja', produtos: [], pedidos: [], comprando: null, qtd: 1, filtroData: 'todos', mostrarCalendario: false };
+        window.state = { user: null, view: 'loja', produtos: [], pedidos: [], comprando: null, qtd: 1, filtroData: 'todos', freqSelecionada: '' };
         const state = window.state;
 
         window.safeImg = (url) => {
@@ -90,13 +85,16 @@
                             @${state.user.email.split('@')[0]}
                         </div>
                     </header>
+
                     ${state.view === 'loja' ? renderLoja() : renderPedidos()}
                 </div>
+
                 <nav class="nav-bottom">
                     <button onclick="state.view='loja';render()" class="nav-item ${state.view==='loja'?'active':''}"><span>🏠</span>LOJA</button>
                     <button onclick="state.view='pedidos';render()" class="nav-item ${state.view==='pedidos'?'active':''}"><span>📦</span>PEDIDOS</button>
                     <button onclick="signOut(auth)" class="nav-item text-rose-500"><span>🚪</span>SAIR</button>
                 </nav>
+
                 ${state.comprando ? renderModalCompra() : ''}
             `;
         };
@@ -107,10 +105,10 @@
                 <div class="space-y-3">
                     ${state.produtos.map((p, i) => `
                         <div class="card-pedido flex gap-5 items-center" onclick="window.abrirIndex(${i})">
-                            <img src="${safeImg(p.foto_url)}" class="w-24 h-24 object-cover rounded-[24px]">
+                            <img src="${safeImg(p.foto_url)}" onerror="this.src='${IMG_DEFAULT}'" class="w-24 h-24 object-cover rounded-[24px]">
                             <div class="flex-1">
                                 <h3 class="font-black uppercase text-sm mb-1 text-gray-800">${p.nome}</h3>
-                                <p class="text-gray-400 text-[10px] font-bold uppercase mb-3">${p.embalagem} • Estoque: ${p.quantidade}</p>
+                                <p class="text-gray-400 text-[10px] font-bold uppercase mb-3">${p.embalagem}</p>
                                 <p class="text-rose-600 font-black text-xl">R$ ${Number(p.preco).toFixed(2)}</p>
                             </div>
                         </div>
@@ -120,54 +118,42 @@
 
         function renderPedidos() {
             return `
-                <h2 class="font-black uppercase text-[10px] tracking-widest text-gray-400 mb-8">Acompanhe seu pedido</h2>
+                <h2 class="font-black uppercase text-[10px] tracking-widest text-gray-400 mb-8">Meus Pedidos</h2>
                 <div class="space-y-6">
-                    ${state.pedidos.map(p => {
-                        let statusClass = 'status-criado';
-                        if(p.status === 'EMBALANDO') statusClass = 'status-embalando';
-                        if(p.status === 'SAIU PARA ENTREGA') statusClass = 'status-entrega';
-                        if(p.status === 'FINALIZADO') statusClass = 'status-finalizado';
-
-                        return `
-                        <div class="card-pedido">
+                    ${state.pedidos.map(p => `
+                        <div class="card-pedido border-t-8 ${p.status === 'FINALIZADO' ? 'border-emerald-500' : p.status === 'SAIU PARA ENTREGA' ? 'border-rose-500' : 'border-blue-400'}">
                             <div class="flex justify-between items-start mb-4">
                                 <div>
                                     <h4 class="font-black uppercase text-sm text-gray-800">${p.quantidade}x ${p.produto}</h4>
-                                    <p class="text-[10px] font-bold text-gray-400 uppercase">Pedido em: ${p.criadoEm ? new Date(p.criadoEm.seconds*1000).toLocaleDateString() : 'Processando...'}</p>
-                                    ${p.proximaEntrega ? `<p class="text-[9px] text-blue-600 font-black mt-1 uppercase">Próxima entrega: ${p.proximaEntrega}</p>` : ''}
+                                    <p class="text-[10px] font-bold text-gray-400 uppercase">${p.criadoEm ? new Date(p.criadoEm.seconds*1000).toLocaleDateString() : '...'}</p>
                                 </div>
-                                <span class="status-badge ${statusClass}">${p.status}</span>
+                                <span class="bg-gray-100 px-3 py-1 rounded-lg text-[8px] font-black uppercase text-gray-500">${p.status}</span>
                             </div>
                             <div class="flex gap-3 mt-6">
-                                <button onclick="window.acaoPedido('${p.produtoId}', ${p.quantidade}, '')" class="btn-refazer">Comprar Novamente</button>
+                                <button onclick="window.acaoPedido('${p.produtoId}', ${p.quantidade}, '')" class="btn-refazer">Refazer Pedido</button>
+                                <button onclick="window.acaoPedido('${p.produtoId}', ${p.quantidade}, 'Semanal')" class="btn-agendar">Agendar Pedido</button>
                             </div>
                         </div>
-                    `}).join('') || '<div class="text-center py-20 font-black text-gray-300 uppercase">Sem pedidos registrados</div>'}
+                    `).join('') || '<div class="text-center py-20 font-black text-gray-300 uppercase">Sem pedidos registrados</div>'}
                 </div>`;
         }
 
-        window.abrirIndex = (i) => { 
-            state.comprando = state.produtos[i]; 
-            state.qtd = 1; 
-            state.mostrarCalendario = false;
-            window.render(); 
-        };
-
-        window.acaoPedido = (prodId, qtd, freq) => {
+        window.acaoPedido = (prodId, qtd, frequencia) => {
             const p = state.produtos.find(x => x.id === prodId);
-            if(p) { state.comprando = p; state.qtd = qtd; window.render(); }
+            if(p) { 
+                state.comprando = p; 
+                state.qtd = qtd; 
+                state.freqSelecionada = frequencia;
+                window.render();
+            }
         };
 
-        window.toggleCalendario = (val) => {
-            state.mostrarCalendario = ['Semanal', 'Quinzenal', 'Mensal'].includes(val);
-            window.render();
-        };
+        window.abrirIndex = (i) => { state.comprando = state.produtos[i]; state.qtd = 1; state.freqSelecionada = ''; window.render(); };
 
         window.finalizarPedido = async (e) => {
             e.preventDefault();
             const f = new FormData(e.target);
             const p = state.comprando;
-            
             await addDoc(collection(db, "vendas_logs"), {
                 clienteId: auth.currentUser.uid,
                 clienteNome: auth.currentUser.email.split('@')[0],
@@ -177,22 +163,20 @@
                 precoUnidade: p.preco,
                 valorTotal: p.preco * state.qtd,
                 recorrencia: f.get('recorrencia'),
-                proximaEntrega: f.get('data_entrega') || null,
+                dataEntrega: f.get('data_entrega') || null,
                 telefone: f.get('telefone'),
                 status: 'PEDIDO CRIADO',
                 criadoEm: serverTimestamp()
             });
-
-            state.comprando = null; 
-            state.view = 'pedidos'; 
-            window.render();
+            state.comprando = null; state.view = 'pedidos'; window.render();
         };
 
         function renderModalCompra() {
             const p = state.comprando;
+            const mostrarCalendario = ['Semanal', 'Quinzenal', 'Mensal'].includes(state.freqSelecionada);
             return `
             <div class="fixed inset-0 bg-black/80 flex items-end z-[200]">
-                <div class="bg-white w-full p-10 rounded-t-[48px] max-h-[90vh] overflow-y-auto">
+                <div class="bg-white w-full p-10 rounded-t-[48px]">
                     <div class="flex gap-5 mb-8 items-center">
                         <img src="${safeImg(p.foto_url)}" class="w-16 h-16 object-cover rounded-[20px]">
                         <h3 class="font-black uppercase text-xl text-gray-800">${p.nome}</h3>
@@ -205,22 +189,23 @@
                         </div>
                         <input name="telefone" placeholder="WhatsApp (DDD)" class="input-egg" required>
                         <div class="space-y-1">
-                            <label class="text-[9px] font-black uppercase text-gray-400 ml-4">Frequência</label>
-                            <select name="recorrencia" onchange="window.toggleCalendario(this.value)" class="input-egg text-[11px] uppercase">
-                                <option value="">Apenas uma vez</option>
-                                <option value="Semanal">Semanal</option>
-                                <option value="Quinzenal">Quinzenal</option>
-                                <option value="Mensal">Mensal</option>
+                            <label class="text-[9px] font-black uppercase text-gray-400 ml-4">Frequência de Entrega</label>
+                            <select name="recorrencia" onchange="state.freqSelecionada=this.value;render()" class="input-egg text-[11px] uppercase">
+                                <option value="" ${state.freqSelecionada===''?'selected':''}>Apenas uma vez</option>
+                                <option value="Semanal" ${state.freqSelecionada==='Semanal'?'selected':''}>Semanal</option>
+                                <option value="Quinzenal" ${state.freqSelecionada==='Quinzenal'?'selected':''}>Quinzenal</option>
+                                <option value="Mensal" ${state.freqSelecionada==='Mensal'?'selected':''}>Mensal</option>
                             </select>
                         </div>
-                        ${state.mostrarCalendario ? `
+                        ${mostrarCalendario ? `
                         <div class="space-y-1">
-                            <label class="text-[9px] font-black uppercase text-rose-500 ml-4 font-black">Selecione a Data da Primeira Entrega</label>
-                            <input type="date" name="data_entrega" class="input-egg" required min="${new Date().toISOString().split('T')[0]}">
-                        </div>` : ''}
+                            <label class="text-[9px] font-black uppercase text-rose-500 ml-4">Data da primeira entrega</label>
+                            <input type="date" name="data_entrega" class="input-egg border-rose-200" required>
+                        </div>
+                        ` : ''}
                         <button class="w-full bg-rose-600 text-white py-6 rounded-[28px] font-black uppercase text-xs mt-4">Confirmar Pedido</button>
                     </form>
-                    <button onclick="state.comprando=null;render()" class="w-full py-6 text-gray-400 font-black text-[10px] uppercase">Cancelar</button>
+                    <button onclick="state.comprando=null;render()" class="w-full py-6 text-gray-400 font-black text-[10px] uppercase">Fechar</button>
                 </div>
             </div>`;
         }
