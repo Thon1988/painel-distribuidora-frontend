@@ -23,7 +23,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-        import { getFirestore, collection, addDoc, serverTimestamp, onSnapshot, query, where, orderBy } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, where, orderBy } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
         import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
 
         const firebaseConfig = {
@@ -41,7 +41,6 @@
         const API_BASE = "https://painel-distribuidora-backend.onrender.com/api";
         const IMG_DEFAULT = "https://via.placeholder.com/300x300?text=AppEgg+Ovos";
 
-        // Adicionei freqTemp para controlar a exibição do calendário
         window.state = { user: null, view: 'loja', produtos: [], pedidos: [], comprando: null, qtd: 1, filtroData: 'todos', freqTemp: '' };
         const state = window.state;
 
@@ -67,6 +66,8 @@
 
         function syncPedidos() {
             if(!auth.currentUser) return;
+            // QUERY CORRIGIDA: new Date() na gravação resolve a latência, mas o indice composto precisa existir no Firebase.
+            // Se der erro de índice, verifique o console.
             const q = query(collection(db, "vendas_logs"), where("clienteId", "==", auth.currentUser.uid), orderBy("criadoEm", "desc"));
             onSnapshot(q, s => {
                 state.pedidos = s.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -79,7 +80,10 @@
             const agora = new Date();
             return dados.filter(l => {
                 if (!l.criadoEm) return false;
-                const dt = new Date(l.criadoEm.seconds * 1000);
+                // Ajuste para lidar com Timestamp do Firestore OU Date nativo
+                const seconds = l.criadoEm.seconds || Math.floor(new Date(l.criadoEm).getTime() / 1000);
+                const dt = new Date(seconds * 1000);
+                
                 if (state.filtroData === 'hoje') return dt.toDateString() === agora.toDateString();
                 if (state.filtroData === 'semana') return (agora - dt) / (1000 * 3600 * 24) <= 7;
                 if (state.filtroData === 'mes') return (agora - dt) / (1000 * 3600 * 24) <= 30;
@@ -144,20 +148,27 @@
                 </div>
                 <div class="space-y-6">
                     ${filtrados.map(p => {
-                        // Lógica de cores para os novos status
+                        // Cores baseadas no fluxo de status
                         let borderClass = 'border-gray-200';
-                        if(p.status === 'PEDIDO CRIADO') borderClass = 'border-yellow-400';
+                        if(p.status === 'PEDIDO CRIADO') borderClass = 'border-amber-400';
                         if(p.status === 'EMBALANDO') borderClass = 'border-blue-500';
                         if(p.status === 'SAIU PARA ENTREGA') borderClass = 'border-purple-500';
                         if(p.status === 'FINALIZADO') borderClass = 'border-emerald-500';
+
+                        // Tratamento da data para exibição
+                        let dataExibicao = '...';
+                        if(p.criadoEm) {
+                            const seconds = p.criadoEm.seconds || Math.floor(new Date(p.criadoEm).getTime() / 1000);
+                            dataExibicao = new Date(seconds * 1000).toLocaleDateString();
+                        }
 
                         return `
                         <div class="card-pedido border-t-8 ${borderClass}">
                             <div class="flex justify-between items-start mb-4">
                                 <div>
                                     <h4 class="font-black uppercase text-sm text-gray-800">${p.quantidade}x ${p.produto}</h4>
-                                    <p class="text-[10px] font-bold text-gray-400 uppercase">${p.criadoEm ? new Date(p.criadoEm.seconds*1000).toLocaleDateString() : '...'}</p>
-                                    ${p.dataEntrega ? `<p class="text-[9px] font-black uppercase text-rose-500 mt-1">Entrega: ${p.dataEntrega.split('-').reverse().join('/')}</p>` : ''}
+                                    <p class="text-[10px] font-bold text-gray-400 uppercase">${dataExibicao}</p>
+                                    ${p.dataEntrega ? `<p class="text-[9px] font-black text-rose-500 mt-1 uppercase">Próx. Entrega: ${p.dataEntrega.split('-').reverse().join('/')}</p>` : ''}
                                 </div>
                                 <span class="bg-gray-100 px-3 py-1 rounded-lg text-[8px] font-black uppercase text-gray-500">${p.status}</span>
                             </div>
@@ -178,7 +189,6 @@
                 state.qtd = qtd; 
                 state.freqTemp = frequencia || '';
                 window.render();
-                // Se já veio com frequencia (clicou em agendar), seta o select
                 if(frequencia) {
                    setTimeout(() => {
                         const select = document.querySelector('select[name="recorrencia"]');
@@ -195,7 +205,24 @@
             const f = new FormData(e.target);
             const p = state.comprando;
             
-            // REMOVIDO WHATSAPP. STATUS INICIAL AGORA É 'PEDIDO CRIADO'
+            // 1. RESERVA DE ESTOQUE IMEDIATA (Resolve problema de overselling)
+            // Atualiza a API antes de criar o pedido
+            try {
+                const novaQtd = p.quantidade - state.qtd;
+                if(novaQtd < 0) { alert("Estoque insuficiente!"); return; }
+
+                await fetch(`${API_BASE}/produtos/${p.id}`, {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({...p, quantidade: novaQtd})
+                });
+            } catch(err) {
+                alert("Erro ao reservar estoque. Tente novamente.");
+                return;
+            }
+
+            // 2. CRIA O PEDIDO USANDO NEW DATE() (Resolve problema do pedido sumir)
+            // serverTimestamp() tem latência, new Date() é imediato para leitura local
             await addDoc(collection(db, "vendas_logs"), {
                 clienteId: auth.currentUser.uid,
                 clienteNome: auth.currentUser.email.split('@')[0],
@@ -205,17 +232,21 @@
                 precoUnidade: p.preco,
                 valorTotal: p.preco * state.qtd,
                 recorrencia: f.get('recorrencia'),
-                dataEntrega: f.get('data_entrega') || null, // Salva data do calendario
+                dataEntrega: f.get('data_entrega') || null,
                 telefone: f.get('telefone'),
-                status: 'PEDIDO CRIADO', // Começa aqui para não sumir
-                criadoEm: serverTimestamp()
+                status: 'PEDIDO CRIADO', // Começa no status correto
+                criadoEm: new Date().toISOString() // Mudança crucial para não "sumir"
             });
-            state.comprando = null; state.view = 'pedidos'; window.render();
+
+            state.comprando = null; 
+            state.view = 'pedidos'; 
+            window.render();
+            // Atualiza produtos localmente para refletir a baixa
+            loadProdutos();
         };
 
         function renderModalCompra() {
             const p = state.comprando;
-            // Verifica se precisa mostrar o calendario
             const mostrarCalendario = ['Semanal', 'Quinzenal', 'Mensal'].includes(state.freqTemp);
 
             return `
@@ -246,7 +277,7 @@
                         ${mostrarCalendario ? `
                         <div class="space-y-1">
                             <label class="text-[9px] font-black uppercase text-rose-500 ml-4">Data da Próxima Remessa</label>
-                            <input type="date" name="data_entrega" class="input-egg border-2 border-rose-100" required>
+                            <input type="date" name="data_entrega" class="input-egg border-2 border-rose-100" required min="${new Date().toISOString().split('T')[0]}">
                         </div>
                         ` : ''}
 
