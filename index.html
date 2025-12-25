@@ -1,133 +1,154 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AppEgg Admin | Dashboard Pro</title>
-<script src="https://cdn.tailwindcss.com"></script>
-
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
-body { font-family:'Inter',sans-serif;background:#f4f7f6;color:#1f2937 }
-.nav-link{font-size:13px;font-weight:800;text-transform:uppercase;color:#6b7280;padding:14px 24px;border-radius:16px}
-.nav-link.active{color:#e11d48;background:#fff;border:2px solid #ffe4e6}
-.logo-text{font-weight:900;color:#e11d48;font-size:1.6rem}
-.card{background:#fff;border-radius:32px;padding:32px;box-shadow:0 10px 40px rgba(0,0,0,.03)}
-.input-egg{width:100%;padding:16px;background:#f9fafb;border-radius:20px;font-weight:700}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AppEgg Admin | Gestão de Pedidos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        body { font-family: 'Inter', sans-serif; background: #f8fafc; color: #1e293b; }
+        .logo-admin { font-weight: 900; color: #e11d48; font-size: 1.5rem; letter-spacing: -1px; }
+        .card-admin { background: white; border-radius: 24px; padding: 24px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); border: 1px solid #e2e8f0; }
+        .btn-status { padding: 10px 14px; border-radius: 12px; font-size: 10px; font-weight: 900; text-transform: uppercase; transition: all 0.2s; border: none; cursor: pointer; }
+        .status-badge { font-size: 10px; font-weight: 900; padding: 4px 10px; border-radius: 8px; text-transform: uppercase; }
+        .status-CRIADO { background: #fef3c7; color: #92400e; }
+        .status-EMBALANDO { background: #dcfce7; color: #166534; }
+        .status-ENTREGA { background: #dbeafe; color: #1e40af; }
+        .status-FINALIZADO { background: #f1f5f9; color: #475569; }
+    </style>
 </head>
-
 <body>
-<div id="app-root"></div>
+    <div id="app-root"></div>
 
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-import { getFirestore, collection, onSnapshot, query, orderBy, doc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
-import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+        import { getFirestore, collection, onSnapshot, query, orderBy, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+        import { getAuth, onAuthStateChanged, signOut, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
 
-const firebaseConfig={
- apiKey:"AIzaSyD3Otz9-zdZH-E5Feg9IOGWPzVycoe8gro",
- authDomain:"distribuidora-de-ovos-aline.firebaseapp.com",
- projectId:"distribuidora-de-ovos-aline"
-};
+        const firebaseConfig = {
+            apiKey: "AIzaSyD3Otz9-zdZH-E5Feg9IOGWPzVycoe8gro",
+            authDomain: "distribuidora-de-ovos-aline.firebaseapp.com",
+            projectId: "distribuidora-de-ovos-aline",
+            storageBucket: "distribuidora-de-ovos-aline.firebasestorage.app",
+            messagingSenderId: "92187548716",
+            appId: "1:92187548716:web:d61d18a29aa76aead7c589"
+        };
 
-const app=initializeApp(firebaseConfig);
-const db=getFirestore(app);
-const auth=getAuth(app);
+        const appFB = initializeApp(firebaseConfig);
+        const db = getFirestore(appFB);
+        const auth = getAuth(appFB);
 
-const state={
- user:null,
- view:'dashboard',
- pedidos:[]
-};
+        window.state = { user: null, pedidos: [] };
 
-onAuthStateChanged(auth,u=>{
- state.user=u;
- if(u) syncPedidos();
- render();
-});
+        onAuthStateChanged(auth, user => {
+            window.state.user = user;
+            if (user) {
+                const q = query(collection(db, "vendas_logs"), orderBy("criadoEm", "desc"));
+                onSnapshot(q, s => {
+                    window.state.pedidos = s.docs.map(d => ({ id: d.id, ...d.data() }));
+                    window.render();
+                });
+            }
+            window.render();
+        });
 
-function syncPedidos(){
- const q=query(collection(db,"vendas_logs"),orderBy("criadoEm","desc"));
- onSnapshot(q,s=>{
-  state.pedidos=s.docs.map(d=>({id:d.id,...d.data()}));
-  render();
- });
-}
+        window.mudarStatus = async (id, novoStatus) => {
+            try {
+                const docRef = doc(db, "vendas_logs", id);
+                await updateDoc(docRef, { status: novoStatus });
+            } catch (err) {
+                console.error("Erro ao atualizar:", err);
+                alert("Erro ao mudar status");
+            }
+        };
 
-window.render=()=>{
- const r=document.getElementById("app-root");
- if(!state.user){ r.innerHTML=login(); return; }
+        window.deletarPedido = async (id) => {
+            if (confirm("Tem certeza que deseja apagar este pedido do histórico?")) {
+                await deleteDoc(doc(db, "vendas_logs", id));
+            }
+        };
 
- r.innerHTML=`
- <nav class="bg-white h-24 px-8 flex justify-between items-center">
-  <div class="logo-text">AppEgg</div>
-  <div class="flex gap-2">
-   <button class="nav-link ${state.view==='pedidos'?'active':''}" onclick="state.view='pedidos';render()">Pedidos</button>
-   <button class="nav-link ${state.view==='dashboard'?'active':''}" onclick="state.view='dashboard';render()">Dashboard</button>
-   <button class="nav-link text-rose-600" onclick="signOut(auth)">Sair</button>
-  </div>
- </nav>
+        window.render = () => {
+            const root = document.getElementById('app-root');
+            if (!window.state.user) { root.innerHTML = renderLogin(); return; }
 
- <main class="p-8 max-w-6xl mx-auto">
- ${state.view==='pedidos'?renderPedidos():renderDashboard()}
- </main>`;
-};
+            root.innerHTML = `
+                <nav class="bg-white border-b border-slate-200 p-6 flex justify-between items-center sticky top-0 z-50">
+                    <div class="logo-admin">AppEgg <span class="text-slate-400 font-medium text-sm">ADMIN</span></div>
+                    <button onclick="signOut(auth)" class="text-rose-600 font-black text-xs uppercase tracking-widest">Sair</button>
+                </nav>
 
-function renderDashboard(){
- return `
- <div class="card">
-  <h1 class="text-3xl font-black">Bem-vindo ao AppEgg</h1>
-  <p class="text-gray-400">Painel administrativo completo</p>
- </div>`;
-}
+                <main class="p-6 max-w-5xl mx-auto">
+                    <div class="flex justify-between items-center mb-8">
+                        <h2 class="font-black text-slate-800 text-xl">Painel de Pedidos</h2>
+                        <span class="bg-slate-200 text-slate-600 px-3 py-1 rounded-full text-[10px] font-bold">${window.state.pedidos.length} PEDIDOS</span>
+                    </div>
 
-function renderPedidos(){
- return state.pedidos.map(p=>`
- <div class="card mb-6 border-l-8 ${p.status==='FINALIZADO'?'border-emerald-500':'border-rose-500'}">
-  <div class="flex justify-between mb-4">
-   <div>
-    <h3 class="font-black">${p.clienteNome}</h3>
-    <p class="text-xs text-gray-400">${p.produto}</p>
-   </div>
-   <span class="text-xs font-black">${p.status}</span>
-  </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        ${window.state.pedidos.map(p => `
+                            <div class="card-admin border-l-[8px] ${p.status === 'FINALIZADO' ? 'border-slate-300' : 'border-rose-500'}">
+                                <div class="flex justify-between items-start mb-4">
+                                    <div>
+                                        <h3 class="font-black text-lg text-slate-800 uppercase">${p.clienteNome || 'Cliente'}</h3>
+                                        <p class="text-sm font-bold text-slate-500">${p.quantidade}x ${p.produto}</p>
+                                        <p class="text-[10px] text-slate-400 mt-1">ID: ${p.id}</p>
+                                    </div>
+                                    <span class="status-badge status-${(p.status || 'CRIADO').replace(/\s/g, '')}">${p.status || 'CRIADO'}</span>
+                                </div>
 
-  <div class="flex gap-2 flex-wrap">
-   <button onclick="setStatus('${p.id}','CRIADO')" class="px-4 py-2 bg-gray-100 rounded-xl font-black text-xs">Criado</button>
-   <button onclick="setStatus('${p.id}','EMBALANDO')" class="px-4 py-2 bg-yellow-100 rounded-xl font-black text-xs">Embalando</button>
-   <button onclick="setStatus('${p.id}','SAIU PARA ENTREGA')" class="px-4 py-2 bg-blue-100 rounded-xl font-black text-xs">Entrega</button>
-   <button onclick="setStatus('${p.id}','AGUARDANDO RETIRADA')" class="px-4 py-2 bg-purple-100 rounded-xl font-black text-xs">Retirada</button>
-   <button onclick="setStatus('${p.id}','FINALIZADO')" class="px-4 py-2 bg-emerald-600 text-white rounded-xl font-black text-xs">Finalizar</button>
-  </div>
- </div>
-`).join('') || '<div class="text-center text-gray-400">Sem pedidos</div>';
-}
+                                <div class="bg-slate-50 rounded-2xl p-4 mb-6 space-y-2">
+                                    <div class="flex justify-between text-xs">
+                                        <span class="text-slate-400 font-bold uppercase">WhatsApp:</span>
+                                        <span class="font-black text-slate-700">${p.telefone || 'N/A'}</span>
+                                    </div>
+                                    <div class="flex justify-between text-xs">
+                                        <span class="text-slate-400 font-bold uppercase">Recorrência:</span>
+                                        <span class="font-black text-rose-600">${p.recorrencia || 'Única'}</span>
+                                    </div>
+                                    ${p.dataProximaRemessa ? `
+                                        <div class="flex justify-between text-xs pt-2 border-t border-slate-200">
+                                            <span class="text-slate-400 font-bold uppercase">Agendado para:</span>
+                                            <span class="font-black text-blue-600">${p.dataProximaRemessa}</span>
+                                        </div>
+                                    ` : ''}
+                                </div>
 
-window.setStatus=async(id,status)=>{
- await updateDoc(doc(db,"vendas_logs",id),{
-  status,
-  atualizadoEm:serverTimestamp()
- });
-};
+                                <div class="flex flex-wrap gap-2">
+                                    <button onclick="window.mudarStatus('${p.id}', 'EMBALANDO')" class="btn-status bg-amber-100 text-amber-700 hover:bg-amber-200">Embalar</button>
+                                    <button onclick="window.mudarStatus('${p.id}', 'SAIU PARA ENTREGA')" class="btn-status bg-blue-100 text-blue-700 hover:bg-blue-200">Entrega</button>
+                                    <button onclick="window.mudarStatus('${p.id}', 'FINALIZADO')" class="btn-status bg-emerald-600 text-white hover:bg-emerald-700">Finalizar</button>
+                                    <button onclick="window.deletarPedido('${p.id}')" class="btn-status bg-slate-100 text-slate-400 hover:bg-rose-100 hover:text-rose-600 ml-auto">Excluir</button>
+                                </div>
+                            </div>
+                        `).join('') || '<div class="col-span-full text-center py-20 font-black text-slate-300 uppercase tracking-widest">Nenhum pedido recebido</div>'}
+                    </div>
+                </main>
+            `;
+        };
 
-function login(){
- return `
- <div class="min-h-screen flex items-center justify-center">
-  <form onsubmit="loginSubmit(event)" class="card max-w-md w-full">
-   <div class="logo-text text-4xl text-center mb-6">AppEgg</div>
-   <input name="email" class="input-egg mb-3" placeholder="Email">
-   <input name="pass" type="password" class="input-egg mb-6" placeholder="Senha">
-   <button class="w-full bg-rose-600 text-white py-4 rounded-2xl font-black">Entrar</button>
-  </form>
- </div>`;
-}
+        window.handleLogin = async (e) => {
+            e.preventDefault();
+            const f = new FormData(e.target);
+            try {
+                await signInWithEmailAndPassword(auth, f.get('email'), f.get('pass'));
+            } catch (err) {
+                alert("Falha no login admin");
+            }
+        };
 
-window.loginSubmit=async e=>{
- e.preventDefault();
- const f=new FormData(e.target);
- await signInWithEmailAndPassword(auth,f.get("email"),f.get("pass"));
-};
-</script>
+        function renderLogin() {
+            return `
+                <div class="min-h-screen flex items-center justify-center p-8 bg-slate-900">
+                    <form onsubmit="window.handleLogin(event)" class="bg-white p-10 rounded-[40px] w-full max-w-sm space-y-4 shadow-2xl">
+                        <div class="logo-admin text-center text-3xl mb-8">AppEgg Admin</div>
+                        <input name="email" type="email" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-200 outline-none focus:border-rose-500 font-bold" placeholder="E-mail Admin" required>
+                        <input name="pass" type="password" class="w-full p-4 bg-slate-50 rounded-2xl border border-slate-200 outline-none focus:border-rose-500 font-bold" placeholder="Senha" required>
+                        <button type="submit" class="w-full bg-rose-600 text-white py-5 rounded-2xl font-black uppercase tracking-widest shadow-lg shadow-rose-200 active:scale-95 transition-all">Entrar no Painel</button>
+                    </form>
+                </div>
+            `;
+        }
+    </script>
 </body>
 </html>
