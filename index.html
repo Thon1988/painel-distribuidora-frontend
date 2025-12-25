@@ -4,11 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AppEgg Admin | Gestão Pro Total</title>
+    <!-- Tailwind CSS para Design Responsivo -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js para indicadores financeiros -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
+        
         body { font-family: 'Inter', sans-serif; background: #f8fafc; color: #1e293b; overflow-x: hidden; }
+        
+        /* Navegação Estilo Premium */
         .nav-link { 
             font-size: 12px; font-weight: 800; text-transform: uppercase; color: #64748b; 
             padding: 14px 24px; border-radius: 16px; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
@@ -16,23 +21,47 @@
         }
         .nav-link:hover { background: #fff; color: #e11d48; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
         .nav-link.active { color: #e11d48; background: #fff; border-color: #ffe4e6; box-shadow: 0 4px 12px rgba(225, 29, 72, 0.08); }
+        
+        /* Design System AppEgg - 32px Arredondamento */
         .logo-text { font-weight: 900; color: #e11d48; font-size: 1.6rem; letter-spacing: -1.5px; }
         .card { background: #ffffff; border-radius: 32px; box-shadow: 0 10px 30px rgba(0,0,0,0.02); border: 1px solid rgba(226, 232, 240, 0.8); transition: all 0.3s ease; }
         .card:hover { transform: translateY(-4px); box-shadow: 0 20px 40px rgba(0,0,0,0.04); }
-        .input-egg { width: 100%; padding: 16px 20px; background: #f1f5f9; border-radius: 20px; border: 2px solid transparent; font-weight: 700; font-size: 14px; outline: none; transition: all 0.2s; }
+        
+        .input-egg { 
+            width: 100%; padding: 16px 20px; background: #f1f5f9; border-radius: 20px; 
+            border: 2px solid transparent; font-weight: 700; font-size: 14px; outline: none; 
+            transition: all 0.2s; appearance: none; 
+        }
         .input-egg:focus { border-color: #e11d48; background: #fff; box-shadow: 0 0 0 4px rgba(225, 29, 72, 0.05); }
-        .upload-area { width: 100%; height: 200px; background: #f8fafc; border: 2px dashed #cbd5e1; border-radius: 24px; display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: pointer; transition: 0.3s; position: relative; }
+        
+        /* Área de Upload Realista */
+        .upload-area { 
+            width: 100%; height: 200px; background: #f8fafc; border: 2px dashed #cbd5e1; 
+            border-radius: 24px; display: flex; align-items: center; justify-content: center; 
+            overflow: hidden; cursor: pointer; transition: 0.3s; position: relative;
+        }
+        .upload-area:hover { border-color: #e11d48; background: #fff; }
         .upload-area img { width: 100%; height: 100%; object-fit: cover; }
+
         .modal-blur { background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(10px); }
         .no-scrollbar::-webkit-scrollbar { display: none; }
+        
         .fade-in { animation: fadeIn 0.4s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
         .stat-card { padding: 32px; border-radius: 32px; }
         .progress-bar { height: 8px; border-radius: 10px; background: #f1f5f9; overflow: hidden; }
         .progress-fill { height: 100%; background: #e11d48; transition: 1s cubic-bezier(0.4, 0, 0.2, 1); }
+        
         .pulse-order { animation: pulse 2s infinite; }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
-        .toast-egg { position: fixed; bottom: 24px; right: 24px; padding: 16px 32px; background: #1e293b; color: white; border-radius: 20px; font-weight: 800; font-size: 12px; text-transform: uppercase; z-index: 1000; box-shadow: 0 10px 30px rgba(0,0,0,0.2); animation: slideIn 0.3s ease-out; }
+
+        .toast-egg {
+            position: fixed; bottom: 24px; right: 24px; padding: 16px 32px; 
+            background: #1e293b; color: white; border-radius: 20px; font-weight: 800;
+            font-size: 12px; text-transform: uppercase; z-index: 1000; box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            animation: slideIn 0.3s ease-out;
+        }
         @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
     </style>
 </head>
@@ -82,6 +111,8 @@
             setTimeout(() => t.remove(), 3000);
         };
 
+        // --- ATRIBUIÇÃO GLOBAL DE FUNÇÕES ---
+
         window.render = () => {
             const root = document.getElementById('app-root');
             if (window.state.loading) { root.innerHTML = `<div class="h-screen flex items-center justify-center font-black text-rose-600 animate-pulse uppercase">Conectando...</div>`; return; }
@@ -111,6 +142,7 @@
         window.previewBase64 = (e, imgId, phId, hiddenId) => {
             const file = e.target.files[0];
             if (!file) return;
+            if (file.size > 800 * 1024) return alert("Imagem muito grande (Máximo 800KB)");
             const reader = new FileReader();
             reader.onload = ev => {
                 const b64 = ev.target.result;
@@ -169,9 +201,32 @@
             }
         };
 
+        // --- MUDAR STATUS COM LÓGICA DE TRANSAÇÃO (TRANSACIONAL) ---
         window.mudarStatus = async (id, status) => {
             if (!window.state.user) return;
-            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'vendas_logs', id), { status });
+            
+            const logRef = doc(db, 'artifacts', appId, 'public', 'data', 'vendas_logs', id);
+            const logSnap = await getDoc(logRef);
+            
+            if (!logSnap.exists()) return;
+            const logData = logSnap.data();
+
+            // LÓGICA: Se o status for CANCELADO, devolvemos o estoque.
+            if (status === 'CANCELADO' && logData.status !== 'CANCELADO') {
+                // Tentamos encontrar o produto pelo ID gravado ou nome
+                const prodRef = doc(db, 'artifacts', appId, 'public', 'data', 'estoque', logData.produtoId || 'none');
+                const prodSnap = await getDoc(prodRef);
+                
+                if (prodSnap.exists()) {
+                    const currentQty = prodSnap.data().quantidade || 0;
+                    await updateDoc(prodRef, {
+                        quantidade: currentQty + logData.quantidade
+                    });
+                    window.showToast("ESTOQUE DEVOLVIDO");
+                }
+            }
+
+            await updateDoc(logRef, { status });
             window.showToast(`STATUS: ${status}`);
         };
 
@@ -183,7 +238,6 @@
         };
 
         const startSnapshots = () => {
-            // Sincronização centralizada na coleção 'estoque'
             onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'estoque'), s => {
                 const list = s.docs.map(d => ({ id: d.id, ...d.data() }));
                 window.state.produtos = list.sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
@@ -210,15 +264,17 @@
         };
         initAuth();
 
+        // --- VIEWS ---
+
         function renderDashboard() {
             const totalStock = window.state.produtos.reduce((acc, p) => acc + (Number(p.quantidade) || 0), 0);
             const activeOrders = window.state.logs.filter(l => !['FINALIZADO','CANCELADO'].includes(l.status));
             return `
                 <div class="mb-12"><h1 class="text-4xl font-[950] text-gray-900 mb-2 tracking-tighter uppercase italic text-left">AppEgg <span class="text-rose-600 italic">Admin</span></h1><p class="text-gray-500 font-medium italic text-left">Gestão centralizada de estoque e pedidos.</p></div>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-                    <div class="stat-card bg-rose-600 text-white shadow-xl shadow-rose-100"><p class="text-[10px] font-black uppercase opacity-70 mb-2 tracking-widest italic text-white text-left text-left text-left text-left">Pedidos Ativos</p><h3 class="text-3xl font-black text-white tracking-tighter text-left ${activeOrders.length > 0 ? 'pulse-order' : ''}">${activeOrders.length} Pendentes</h3></div>
-                    <div class="stat-card bg-white border"><p class="text-[10px] font-black uppercase text-gray-400 mb-2 tracking-widest italic text-left text-left text-left text-left">Variedades</p><h3 class="text-3xl font-black text-gray-800 tracking-tighter text-left">${window.state.produtos.length} Itens</h3></div>
-                    <div class="stat-card bg-gray-900 text-white shadow-2xl shadow-gray-200"><p class="text-[10px] font-black uppercase opacity-60 mb-2 tracking-widest italic text-white text-left text-left text-left text-left">Estoque Total</p><h3 class="text-3xl font-black text-white tracking-tighter text-left">${totalStock} un</h3></div>
+                    <div class="stat-card bg-rose-600 text-white shadow-xl shadow-rose-100 text-left text-left text-left text-left"><p class="text-[10px] font-black uppercase opacity-70 mb-2 tracking-widest italic text-white text-left text-left text-left text-left">Pedidos Ativos</p><h3 class="text-3xl font-black text-white tracking-tighter text-left ${activeOrders.length > 0 ? 'pulse-order' : ''}">${activeOrders.length} Pendentes</h3></div>
+                    <div class="stat-card bg-white border"><p class="text-[10px] font-black uppercase text-gray-400 mb-2 tracking-widest italic text-left text-left text-left text-left text-left">Variedades</p><h3 class="text-3xl font-black text-gray-800 tracking-tighter text-left">${window.state.produtos.length} Itens</h3></div>
+                    <div class="stat-card bg-gray-900 text-white shadow-2xl shadow-gray-200 text-left text-left text-left text-left text-left text-left"><p class="text-[10px] font-black uppercase opacity-60 mb-2 tracking-widest italic text-white text-left text-left text-left text-left">Estoque Total</p><h3 class="text-3xl font-black text-white tracking-tighter text-left">${totalStock} un</h3></div>
                 </div>
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     <div class="card p-8">
@@ -239,9 +295,9 @@
 
         function renderEstoque() {
             return `
-                <div class="flex flex-col md:flex-row justify-between items-center mb-10 gap-6">
+                <div class="flex flex-col md:flex-row justify-between items-center mb-10 gap-6 text-left">
                     <h2 class="text-3xl font-[950] uppercase tracking-tighter text-gray-800 italic text-left">Gestão de Estoque</h2>
-                    <button onclick="window.openModal('addProduto')" class="bg-rose-600 text-white px-10 py-4 rounded-2xl font-[900] uppercase text-[11px] shadow-lg shadow-rose-200 active:scale-95 transition tracking-widest text-left">+ Novo Item</button>
+                    <button onclick="window.openModal('addProduto')" class="bg-rose-600 text-white px-10 py-4 rounded-2xl font-[900] uppercase text-[11px] shadow-lg shadow-rose-200 active:scale-95 transition tracking-widest text-left text-left">+ Novo Item</button>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
                     ${window.state.produtos.map(p => {
@@ -252,16 +308,16 @@
                                 <img src="${fotoFinal}" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000">
                                 <div class="absolute top-4 right-4 bg-white/95 backdrop-blur px-4 py-1.5 rounded-full text-[10px] font-black text-slate-900 uppercase shadow-sm">Qtd: ${p.quantidade}</div>
                             </div>
-                            <div class="p-8 text-left">
-                                <h3 class="font-[900] text-slate-800 text-lg uppercase tracking-tighter mb-1 truncate text-left">${p.nome}</h3>
-                                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-8 italic text-left text-left">${p.embalagem}</p>
-                                <div class="flex justify-between items-center pt-5 border-t border-slate-50 text-left">
-                                    <div class="text-left text-left">
-                                        <p class="text-[8px] font-black text-slate-300 uppercase mb-0.5 tracking-tighter text-left">Venda</p>
+                            <div class="p-8 text-left text-left text-left">
+                                <h3 class="font-[900] text-slate-800 text-lg uppercase tracking-tighter mb-1 truncate text-left text-left">${p.nome}</h3>
+                                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-8 italic text-left text-left text-left">${p.embalagem}</p>
+                                <div class="flex justify-between items-center pt-5 border-t border-slate-50 text-left text-left">
+                                    <div class="text-left text-left text-left">
+                                        <p class="text-[8px] font-black text-slate-300 uppercase mb-0.5 tracking-tighter text-left text-left">Venda</p>
                                         <span class="text-2xl font-[950] text-slate-900 tracking-tighter italic text-left text-left">R$ ${Number(p.preco || 0).toFixed(2)}</span>
                                     </div>
-                                    <div class="flex gap-2">
-                                        <button onclick="window.abrirModalProdutoEdit('${p.id}')" class="w-11 h-11 flex items-center justify-center bg-slate-50 rounded-2xl text-slate-400 hover:text-slate-900 transition font-black border text-left text-left">✎</button>
+                                    <div class="flex gap-2 text-right">
+                                        <button onclick="window.abrirModalProdutoEdit('${p.id}')" class="w-11 h-11 flex items-center justify-center bg-slate-50 rounded-2xl text-slate-400 hover:text-slate-900 transition font-black border text-left">✎</button>
                                         <button onclick="window.eliminarProd('${p.id}')" class="w-11 h-11 flex items-center justify-center bg-red-50 rounded-2xl text-red-400 hover:text-red-600 transition font-black border border-red-100 text-left">✕</button>
                                     </div>
                                 </div>
@@ -274,18 +330,18 @@
         function renderPedidos() {
             const pendentes = window.state.logs.filter(l => !['FINALIZADO', 'CANCELADO'].includes(l.status));
             return `
-                <h2 class="text-3xl font-[950] uppercase tracking-tighter text-gray-800 italic mb-10 text-left">Pedidos Pendentes</h2>
+                <h2 class="text-3xl font-[950] uppercase tracking-tighter text-gray-800 italic mb-10 text-left text-left">Pedidos Pendentes</h2>
                 <div class="grid gap-6">
                     ${pendentes.map(l => `
-                        <div class="card p-8 border-l-[16px] border-rose-500 fade-in flex flex-col md:flex-row justify-between items-center gap-6">
-                            <div class="flex-1 text-left text-left text-left">
-                                <h3 class="font-black text-xl uppercase tracking-tighter text-gray-900 text-left text-left">${l.clienteNome || 'Cliente'}</h3>
-                                <p class="text-[11px] text-slate-400 font-black uppercase mt-1 tracking-widest text-left text-left">${l.quantidade}x ${l.produto}</p>
-                                <p class="text-[10px] text-rose-600 font-bold uppercase mt-2 italic text-left text-left">Total: R$ ${Number(l.valorTotal || 0).toFixed(2)}</p>
+                        <div class="card p-8 border-l-[16px] border-rose-500 fade-in flex flex-col md:flex-row justify-between items-center gap-6 text-left">
+                            <div class="flex-1 text-left text-left text-left text-left">
+                                <h3 class="font-black text-xl uppercase tracking-tighter text-gray-900 text-left text-left text-left">${l.clienteNome || 'Cliente'}</h3>
+                                <p class="text-[11px] text-slate-400 font-black uppercase mt-1 tracking-widest text-left text-left text-left">${l.quantidade}x ${l.produto}</p>
+                                <p class="text-[10px] text-rose-600 font-bold uppercase mt-2 italic text-left text-left text-left">Total: R$ ${Number(l.valorTotal || 0).toFixed(2)}</p>
                             </div>
-                            <div class="flex gap-3 w-full md:w-auto">
-                                <button onclick="window.mudarStatus('${l.id}', 'FINALIZADO')" class="flex-1 md:flex-none bg-emerald-600 text-white px-10 py-4 rounded-3xl font-black uppercase text-[10px] shadow-xl shadow-emerald-50 transition active:scale-95 text-left text-left">Entregue</button>
-                                <button onclick="window.mudarStatus('${l.id}', 'CANCELADO')" class="flex-1 md:flex-none bg-slate-100 text-slate-400 px-6 py-4 rounded-3xl font-black uppercase text-[10px] transition active:scale-95 text-left text-left text-left">Cancelar</button>
+                            <div class="flex gap-3 w-full md:w-auto text-left text-left text-left">
+                                <button onclick="window.mudarStatus('${l.id}', 'FINALIZADO')" class="flex-1 md:flex-none bg-emerald-600 text-white px-10 py-4 rounded-3xl font-black uppercase text-[10px] shadow-xl shadow-emerald-50 transition active:scale-95 text-left">Entregue</button>
+                                <button onclick="window.mudarStatus('${l.id}', 'CANCELADO')" class="flex-1 md:flex-none bg-slate-100 text-slate-400 px-6 py-4 rounded-3xl font-black uppercase text-[10px] transition active:scale-95 text-left text-left">Cancelar</button>
                             </div>
                         </div>
                     `).join('') || '<p class="text-center py-40 font-black text-gray-300 uppercase text-sm tracking-[0.4em]">Nenhum pedido pendente no momento.</p>'}
@@ -295,36 +351,40 @@
         function renderFinanceiro() {
             const finalizados = window.state.logs.filter(l => l.status === 'FINALIZADO');
             let faturamento = 0; let lucroTotal = 0; const performance = {};
+
             finalizados.forEach(log => {
                 const valor = Number(log.valorTotal || 0); faturamento += valor;
-                const prod = window.state.produtos.find(p => p.nome === log.produto);
-                const custoUn = prod?.preco_custo || (valor / (log.quantidade || 1)) * 0.7;
-                lucroTotal += valor - (custoUn * (log.quantidade || 1));
+                
+                // TRANSAÇÃO PROTEGIDA: Prioriza snapshot de custo gravado no log
+                const custoUn = log.produtoSnapshot?.custo || log.custoUnitario || 0;
+                const lucroLog = valor - (custoUn * (log.quantidade || 1));
+                lucroTotal += lucroLog;
+
                 if (!performance[log.produto]) performance[log.produto] = { total: 0, qtd: 0 };
                 performance[log.produto].total += valor; performance[log.produto].qtd += Number(log.quantidade || 0);
             });
 
             return `
-                <div class="mb-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                    <h2 class="text-3xl font-[950] uppercase tracking-tighter text-gray-800 italic text-left">Relatório Financeiro</h2>
-                    <div class="bg-white border-2 border-slate-100 px-8 py-4 rounded-3xl font-black uppercase text-[11px] text-slate-400 tracking-widest shadow-sm text-left">Balanço Mensal</div>
+                <div class="mb-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 text-left">
+                    <h2 class="text-3xl font-[950] uppercase tracking-tighter text-gray-800 italic text-left text-left">Relatório Financeiro</h2>
+                    <div class="bg-white border-2 border-slate-100 px-8 py-4 rounded-3xl font-black uppercase text-[11px] text-slate-400 tracking-widest shadow-sm text-left text-left">Balanço Mensal</div>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
-                    <div class="stat-card bg-rose-600 text-white shadow-2xl shadow-rose-100 text-left text-left text-left"><p class="text-[10px] font-black uppercase opacity-70 mb-2 tracking-widest italic text-white text-left text-left text-left">Faturamento Bruto</p><h3 class="text-4xl font-black tracking-tighter text-white italic text-left text-left text-left">R$ ${faturamento.toFixed(2)}</h3></div>
-                    <div class="stat-card bg-emerald-600 text-white shadow-2xl shadow-emerald-100 text-left text-left text-left text-left"><p class="text-[10px] font-black uppercase opacity-70 mb-2 tracking-widest italic text-white text-left text-left text-left">Lucro Estimado</p><h3 class="text-4xl font-black tracking-tighter text-white italic text-left text-left text-left">R$ ${lucroTotal.toFixed(2)}</h3></div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12 text-left">
+                    <div class="stat-card bg-rose-600 text-white shadow-2xl shadow-rose-100 text-left text-left text-left text-left"><p class="text-[10px] font-black uppercase opacity-70 mb-2 tracking-widest italic text-white text-left text-left text-left">Faturamento Bruto</p><h3 class="text-4xl font-black tracking-tighter text-white italic text-left text-left text-left">R$ ${faturamento.toFixed(2)}</h3></div>
+                    <div class="stat-card bg-emerald-600 text-white shadow-2xl shadow-emerald-100 text-left text-left text-left text-left text-left text-left text-left"><p class="text-[10px] font-black uppercase opacity-70 mb-2 tracking-widest italic text-white text-left text-left text-left text-left">Lucro Estimado Real</p><h3 class="text-4xl font-black tracking-tighter text-white italic text-left text-left text-left text-left">R$ ${lucroTotal.toFixed(2)}</h3></div>
                 </div>
-                <div class="card p-10 mb-10 text-left text-left">
-                    <h4 class="font-black uppercase text-[10px] text-gray-400 mb-10 tracking-[0.4em] italic text-center md:text-left text-left">Performance por Variedade</h4>
-                    <div class="space-y-10 text-left">
+                <div class="card p-10 mb-10 text-left text-left text-left">
+                    <h4 class="font-black uppercase text-[10px] text-gray-400 mb-10 tracking-[0.4em] italic text-center md:text-left text-left text-left">Performance por Variedade</h4>
+                    <div class="space-y-10 text-left text-left">
                         ${Object.entries(performance).sort((a,b) => b[1].total - a[1].total).map(([nome, data]) => {
                             const perc = Math.min((data.total / (faturamento || 1)) * 100 * 3, 100);
                             return `
-                                <div class="text-left text-left text-left">
-                                    <div class="flex justify-between items-end mb-3 text-left">
-                                        <div class="text-left text-left text-left text-left text-left text-left text-left text-left"><span class="text-xs font-[900] uppercase text-slate-800 tracking-tighter italic text-left text-left">${nome}</span><p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1 text-left text-left text-left">${data.qtd} un vendidas</p></div>
-                                        <span class="text-sm font-black text-emerald-600 italic text-right text-right">R$ ${data.total.toFixed(2)}</span>
+                                <div class="text-left text-left">
+                                    <div class="flex justify-between items-end mb-3 text-left text-left">
+                                        <div class="text-left text-left"><span class="text-xs font-[900] uppercase text-slate-800 tracking-tighter italic text-left text-left">${nome}</span><p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1 text-left text-left text-left text-left">${data.qtd} un vendidas</p></div>
+                                        <span class="text-sm font-black text-emerald-600 italic text-right text-right text-right">R$ ${data.total.toFixed(2)}</span>
                                     </div>
-                                    <div class="progress-bar text-left text-left text-left text-left text-left text-left text-left text-left text-left text-left text-left"><div class="progress-fill" style="width: ${perc}%"></div></div>
+                                    <div class="progress-bar text-left text-left text-left text-left"><div class="progress-fill" style="width: ${perc}%"></div></div>
                                 </div>`;
                         }).join('') || '<p class="text-center py-10 font-black text-gray-200 uppercase text-xs tracking-widest">Nenhum dado financeiro disponível.</p>'}
                     </div>
@@ -336,31 +396,31 @@
             const type = window.state.activeModal; const data = window.state.editData;
             const p = data || { nome: CATEGORIES[0], embalagem: PACKAGING[0], preco: '', preco_custo: '', quantidade: '', foto_url: '' };
             return `
-                <div class="fixed inset-0 modal-blur z-[100] flex items-center justify-center p-6"><div class="absolute inset-0" onclick="window.closeModal()"></div>
-                <div class="relative bg-white w-full max-w-2xl rounded-[40px] shadow-2xl animate-in zoom-in duration-200 overflow-hidden text-center text-center text-center">
-                <div class="p-8 border-b flex justify-between items-center bg-white text-center text-center text-center text-center"><h2 class="font-black text-2xl text-slate-900 uppercase italic tracking-tighter text-center">${data ? 'Editar Lote' : 'Novo Registro'}</h2><button onclick="window.closeModal()" class="text-slate-400 hover:text-rose-600 font-black text-center text-center">✕</button></div>
+                <div class="fixed inset-0 modal-blur z-[100] flex items-center justify-center p-6 text-center"><div class="absolute inset-0" onclick="window.closeModal()"></div>
+                <div class="relative bg-white w-full max-w-2xl rounded-[40px] shadow-2xl animate-in zoom-in duration-200 overflow-hidden text-center text-center">
+                <div class="p-8 border-b flex justify-between items-center bg-white text-center text-center text-center"><h2 class="font-black text-2xl text-slate-900 uppercase italic tracking-tighter text-center text-center">${data ? 'Editar Lote' : 'Novo Registro'}</h2><button onclick="window.closeModal()" class="text-slate-400 hover:text-rose-600 font-black text-center text-center">✕</button></div>
                 <form onsubmit="window.handleFormSubmit(event, '${type}', '${p.id || ''}')" class="p-8 grid grid-cols-2 gap-4 bg-white max-h-[80vh] overflow-y-auto no-scrollbar text-center text-center">
-                    <div class="col-span-2 mb-4 text-center text-center">
+                    <div class="col-span-2 mb-4 text-center">
                         <label class="text-[10px] font-black uppercase text-slate-400 ml-2 italic tracking-widest text-center text-center">Imagem Realista (Base64)</label>
-                        <div class="upload-area h-44 text-center" onclick="document.getElementById('f-p').click()"><div id="ph-p" class="${p.foto_url?'hidden':''} font-black uppercase text-[10px] text-slate-300 tracking-widest text-center text-white italic text-center">Clique para Carregar Foto</div><img id="pv-p" src="${p.foto_url||''}" class="${p.foto_url?'':'hidden'} w-full h-full object-cover text-center text-center"><input type="file" id="f-p" class="hidden text-center text-center" accept="image/*" onchange="window.previewBase64(event, 'pv-p', 'ph-p', 'b64-p')"></div><input type="hidden" id="b64-p" value="${p.foto_url || ''}">
+                        <div class="upload-area h-44 text-center" onclick="document.getElementById('f-p').click()"><div id="ph-p" class="${p.foto_url?'hidden':''} font-black uppercase text-[10px] text-slate-300 tracking-widest text-center text-white italic text-center text-center">Clique para Carregar Foto</div><img id="pv-p" src="${p.foto_url||''}" class="${p.foto_url?'':'hidden'} w-full h-full object-cover text-center text-center"><input type="file" id="f-p" class="hidden text-center text-center" accept="image/*" onchange="window.previewBase64(event, 'pv-p', 'ph-p', 'b64-p')"></div><input type="hidden" id="b64-p" value="${p.foto_url || ''}">
                     </div>
-                    <div class="col-span-2 space-y-1 text-left text-left text-left"><label class="text-[10px] font-black text-slate-400 uppercase ml-2 italic tracking-widest text-left">Variedade</label><select id="p-tipo-nome" class="input-egg appearance-none cursor-pointer font-black italic uppercase text-left">${CATEGORIES.map(cat => `<option value="${cat}" ${p.nome === cat ? 'selected' : ''}>${cat}</option>`).join('')}</select></div>
-                    <div class="col-span-2 space-y-1 text-left text-left text-left text-left"><label class="text-[10px] font-black text-slate-400 uppercase ml-2 italic tracking-widest text-left">Embalagem</label><select id="p-emb" class="input-egg appearance-none cursor-pointer font-black italic uppercase text-left">${PACKAGING.map(pkg => `<option value="${pkg}" ${p.embalagem === pkg ? 'selected' : ''}>${pkg}</option>`).join('')}</select></div>
-                    <div class="space-y-1 text-left text-left text-left text-left"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 italic tracking-widest text-left">Custo (R$)</label><input id="p-custo" type="number" step="0.01" value="${p.preco_custo || ''}" class="input-egg font-black italic text-left" placeholder="0.00" required></div>
-                    <div class="space-y-1 text-left text-left text-left text-left"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 italic tracking-widest text-left text-left">Venda (R$)</label><input id="p-venda" type="number" step="0.01" value="${p.preco || ''}" class="input-egg font-black italic text-rose-600 text-left" placeholder="0.00" required></div>
-                    <div class="col-span-2 space-y-1 text-left text-left text-left text-left text-left"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 tracking-widest text-left">Quantidade</label><input id="p-qtd" type="number" value="${p.quantidade || ''}" class="input-egg font-black italic text-left" placeholder="0" required></div>
+                    <div class="col-span-2 space-y-1 text-left"><label class="text-[10px] font-black text-slate-400 uppercase ml-2 italic tracking-widest text-left">Variedade</label><select id="p-tipo-nome" class="input-egg appearance-none cursor-pointer font-black italic uppercase text-left">${CATEGORIES.map(cat => `<option value="${cat}" ${p.nome === cat ? 'selected' : ''}>${cat}</option>`).join('')}</select></div>
+                    <div class="col-span-2 space-y-1 text-left"><label class="text-[10px] font-black text-slate-400 uppercase ml-2 italic tracking-widest text-left">Embalagem</label><select id="p-emb" class="input-egg appearance-none cursor-pointer font-black italic uppercase text-left">${PACKAGING.map(pkg => `<option value="${pkg}" ${p.embalagem === pkg ? 'selected' : ''}>${pkg}</option>`).join('')}</select></div>
+                    <div class="space-y-1 text-left"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 italic text-left">Custo (R$)</label><input id="p-custo" type="number" step="0.01" value="${p.preco_custo || ''}" class="input-egg font-black italic text-left" placeholder="0.00" required></div>
+                    <div class="space-y-1 text-left"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 italic text-left text-left">Venda (R$)</label><input id="p-venda" type="number" step="0.01" value="${p.preco || ''}" class="input-egg font-black italic text-rose-600 text-left" placeholder="0.00" required></div>
+                    <div class="col-span-2 space-y-1 text-left"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 tracking-widest text-left text-left">Quantidade</label><input id="p-qtd" type="number" value="${p.quantidade || ''}" class="input-egg font-black italic text-left" placeholder="0" required></div>
                     <button type="submit" class="col-span-2 bg-rose-600 text-white py-6 rounded-[32px] font-black uppercase text-[11px] tracking-[0.3em] shadow-xl shadow-rose-200 mt-6 active:scale-95 transition disabled:opacity-50 italic text-center text-center">${window.state.saving ? 'Sincronizando...' : (data ? 'Atualizar Estoque' : 'Gravar no Estoque')}</button>
                 </form></div></div>`;
         }
 
         function renderLogin() { 
-            return `<div class="min-h-screen flex items-center justify-center bg-gray-900 p-8 text-center text-center text-center">
-                        <form onsubmit="window.handleLogin(event)" class="bg-white p-12 rounded-[48px] shadow-2xl w-full max-w-md text-center text-center text-center text-center">
-                            <div class="logo-text text-6xl mb-4 tracking-tighter italic uppercase text-center text-center text-center text-center">AppEgg</div>
-                            <p class="text-center text-gray-400 font-bold text-[10px] uppercase mb-10 tracking-[0.4em] italic text-white text-center text-center text-center text-center text-center text-center">Administração Distribuidora</p>
-                            <input id="l-email" class="input-egg border mb-3 text-center text-center" placeholder="Usuário">
-                            <input id="l-pass" type="password" class="input-egg border mb-8 text-center text-center" placeholder="Código de Acesso">
-                            <button class="w-full bg-rose-600 text-white py-6 rounded-3xl font-black uppercase text-xs tracking-widest shadow-xl italic transition active:scale-95 text-center text-center">Entrar no Dashboard</button>
+            return `<div class="min-h-screen flex items-center justify-center bg-gray-900 p-8 text-center text-center text-center text-center">
+                        <form onsubmit="window.handleLogin(event)" class="bg-white p-12 rounded-[48px] shadow-2xl w-full max-w-md text-center text-center text-center">
+                            <div class="logo-text text-6xl mb-4 tracking-tighter italic uppercase text-center text-center text-center">AppEgg</div>
+                            <p class="text-center text-gray-400 font-bold text-[10px] uppercase mb-10 tracking-[0.4em] italic text-white text-center text-center text-center text-center text-center">Administração Distribuidora</p>
+                            <input id="l-email" class="input-egg border mb-3 text-center text-center text-center" placeholder="Usuário">
+                            <input id="l-pass" type="password" class="input-egg border mb-8 text-center text-center text-center" placeholder="Código de Acesso">
+                            <button class="w-full bg-rose-600 text-white py-6 rounded-3xl font-black uppercase text-xs tracking-widest shadow-xl italic transition active:scale-95 text-center text-center text-center">Entrar no Dashboard</button>
                         </form>
                     </div>`; 
         }
