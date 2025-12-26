@@ -3,20 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AppEgg Admin | Gestão de Estoque Pro</title>
-    <!-- Tailwind CSS para Design Responsivo -->
+    <title>AppEgg Admin | Gestão Platinum</title>
+    <!-- Tailwind CSS para Estilização Premium -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Chart.js para indicadores financeiros -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
         
-        body { font-family: 'Inter', sans-serif; background: #f8fafc; color: #1e293b; overflow-x: hidden; }
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background: #f8fafc; 
+            color: #1e293b; 
+            overflow-x: hidden; 
+        }
         
-        /* Navegação Premium */
+        /* Navegação Estilo Platinum */
         .nav-link { 
             font-size: 12px; font-weight: 800; text-transform: uppercase; color: #64748b; 
-            padding: 14px 24px; border-radius: 16px; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+            padding: 14px 24px; border-radius: 16px; cursor: pointer; transition: all 0.3s ease; 
             white-space: nowrap; border: 2px solid transparent; display: flex; align-items: center; justify-content: center;
         }
         .nav-link:hover { background: #fff; color: #e11d48; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
@@ -24,14 +27,12 @@
         
         .logo-text { font-weight: 900; color: #e11d48; font-size: 1.6rem; letter-spacing: -1.5px; }
         .card { background: #ffffff; border-radius: 32px; box-shadow: 0 10px 30px rgba(0,0,0,0.02); border: 1px solid rgba(226, 232, 240, 0.8); transition: all 0.3s ease; }
-        .card:hover { transform: translateY(-4px); box-shadow: 0 20px 40px rgba(0,0,0,0.04); }
         
         .input-egg { 
             width: 100%; padding: 16px 20px; background: #f1f5f9; border-radius: 20px; 
-            border: 2px solid transparent; font-weight: 700; font-size: 14px; outline: none; 
-            transition: all 0.2s; appearance: none; 
+            border: 2px solid transparent; font-weight: 700; font-size: 14px; outline: none; transition: 0.2s; 
         }
-        .input-egg:focus { border-color: #e11d48; background: #fff; box-shadow: 0 0 0 4px rgba(225, 29, 72, 0.05); }
+        .input-egg:focus { border-color: #e11d48; background: #fff; }
         
         /* Área de Upload Base64 */
         .upload-area { 
@@ -39,40 +40,33 @@
             border-radius: 24px; display: flex; align-items: center; justify-content: center; 
             overflow: hidden; cursor: pointer; transition: 0.3s; position: relative;
         }
-        .upload-area:hover { border-color: #e11d48; background: #fff; }
         .upload-area img { width: 100%; height: 100%; object-fit: cover; }
 
-        .modal-blur { background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(10px); }
+        .modal-blur { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(8px); }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         
-        .fade-in { animation: fadeIn 0.4s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-        .stat-card { padding: 32px; border-radius: 32px; }
-        .progress-bar { height: 8px; border-radius: 10px; background: #f1f5f9; overflow: hidden; }
-        .progress-fill { height: 100%; background: #e11d48; transition: 1s cubic-bezier(0.4, 0, 0.2, 1); }
-        
-        .pulse-order { animation: pulse 2s infinite; }
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
-
         .toast-egg {
             position: fixed; bottom: 24px; right: 24px; padding: 16px 32px; 
             background: #1e293b; color: white; border-radius: 20px; font-weight: 800;
             font-size: 12px; text-transform: uppercase; z-index: 1000; box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            animation: slideIn 0.3s ease-out;
         }
-        @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+        
+        .pulse-order { animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
+
+        .fade-in { animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
-<body class="no-scrollbar text-left">
+<body class="no-scrollbar">
     <div id="app-root"></div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, query, doc, updateDoc, getDoc, setDoc, serverTimestamp, deleteDoc, increment } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
-        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+        import { getFirestore, collection, onSnapshot, doc, setDoc, getDoc, updateDoc, deleteDoc, serverTimestamp, increment } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
 
-        // --- CONFIGURAÇÃO MANUAL PARA RENDER (SOLUÇÃO ERRO PROJETID) ---
+        // --- CONFIGURAÇÃO FIREBASE ---
         const firebaseConfig = {
             apiKey: "AIzaSyD3Otz9-zdZH-E5Feg9IOGWPzVycoe8gro",
             authDomain: "distribuidora-de-ovos-aline.firebaseapp.com",
@@ -85,196 +79,244 @@
         const appFB = initializeApp(firebaseConfig);
         const db = getFirestore(appFB);
         const auth = getAuth(appFB);
-        const appId = "app-egg-pro-transacional"; // ID fixo para consistência
+        
+        // Caminho lógico centralizado
+        const appId = "app-egg-pro-transacional";
 
         const STATUS_OPTIONS = ["PEDIDO CRIADO", "EM PREPARAÇÃO", "SAIU PARA ENTREGA", "FINALIZADO", "CANCELADO"];
         const CATEGORIES = ["Ovo Branco Extra", "Ovo Branco Grande", "Ovo Branco Médio", "Ovo Branco Pequeno", "Ovo Vermelho Extra", "Ovo Vermelho Grande", "Ovo Vermelho Médio", "Ovo Caipira", "Ovo de Codorna", "Ovo Jumbo", "Cesto de Ovos"];
         const PACKAGING = ["Cartela 30", "Cartela 20", "Dúzia 12", "Caixa 360", "Fardo 20 unid"];
 
-        window.state = { user: null, view: 'dashboard', logs: [], produtos: [], editando: null, loading: true, saving: false, authError: null };
-        window.activeListeners = [];
-
-        window.showToast = (msg) => {
-            const t = document.createElement('div');
-            t.className = 'toast-egg';
-            t.innerText = msg;
-            document.body.appendChild(t);
-            setTimeout(() => { if(t.parentNode) t.remove(); }, 4000);
+        // --- ESTADO GLOBAL ---
+        window.state = {
+            user: null, 
+            view: 'dashboard', 
+            produtos: [], 
+            logs: [], 
+            editando: null, 
+            loading: true, 
+            saving: false, 
+            confirmExcluir: null, 
+            tempB64: null, 
+            toast: { show: false, msg: '' }
         };
 
-        window.safeImg = (url) => {
-            if (!url || typeof url !== "string" || url.trim() === "" || (!url.startsWith("http") && !url.startsWith("data:"))) return "https://via.placeholder.com/300x300?text=AppEgg";
-            return url.trim();
+        // --- FUNÇÕES DE NAVEGAÇÃO E UI ---
+        window.setView = (v) => { 
+            window.state.view = v; 
+            window.state.editando = null; 
+            window.state.tempB64 = null; 
+            window.render(); 
         };
 
-        // --- MONITOR DE AUTENTICAÇÃO ---
-        onAuthStateChanged(auth, user => {
-            if (user && user.email === 'thon@lojista.com.br') {
-                window.state.user = user;
-                syncDados(); 
-            } else {
-                window.state.user = null;
-            }
-            window.state.loading = false;
+        window.showToast = (msg) => { 
+            window.state.toast = { show: true, msg }; 
+            window.render(); 
+            setTimeout(() => { window.state.toast.show = false; window.render(); }, 3000); 
+        };
+
+        window.handleFileSelect = (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            if (file.size > 800 * 1024) { window.showToast("MÁXIMO 800KB"); return; }
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                window.state.tempB64 = ev.target.result;
+                const container = document.getElementById('preview-container');
+                if (container) {
+                    container.innerHTML = `<img src="${ev.target.result}" class="w-full h-full object-cover">`;
+                }
+            };
+            reader.readAsDataURL(file);
+        };
+
+        // --- LÓGICA DE SALVAMENTO ---
+        window.handleSaveProduct = async (e) => {
+            e.preventDefault();
+            if (window.state.saving) return;
+            window.state.saving = true; 
             window.render();
-        });
 
-        // --- SINCRONIZAÇÃO EM TEMPO REAL ---
-        const syncDados = () => {
-            if (!auth.currentUser) return;
+            const form = document.getElementById('formEstoque');
+            const data = new FormData(form);
+            const docId = window.state.editando ? window.state.editando.id : crypto.randomUUID();
             
-            if (window.activeListeners.length > 0) window.activeListeners.forEach(u => u());
-            window.activeListeners = [];
+            const payload = {
+                nome: data.get('nome'),
+                embalagem: data.get('embalagem'),
+                preco: Number(data.get('preco')),
+                preco_custo: Number(data.get('preco_custo')),
+                quantidade: Number(data.get('quantidade')),
+                updatedAt: serverTimestamp()
+            };
 
-            // Snapshot do Estoque
-            const unsubE = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'estoque'), s => {
-                window.state.produtos = s.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => (a.nome||"").localeCompare(b.nome||""));
-                window.render();
-            });
-            window.activeListeners.push(unsubE);
+            // Regra de Ouro: Só atualiza foto se houver nova escolha
+            if (window.state.tempB64 && window.state.tempB64.startsWith('data:image')) {
+                payload.foto_url = window.state.tempB64;
+            }
 
-            // Snapshot dos Pedidos
-            const unsubL = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'vendas_logs'), s => {
-                window.state.logs = s.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => (b.criadoEm?.seconds || 0) - (a.criadoEm?.seconds || 0));
+            try {
+                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'estoque', docId), payload, { merge: true });
+                window.state.editando = null;
+                window.state.tempB64 = null;
+                window.state.saving = false;
+                window.showToast("STOCK ATUALIZADO!");
                 window.render();
-            });
-            window.activeListeners.push(unsubL);
+            } catch (err) { 
+                window.state.saving = false; 
+                alert("Erro ao guardar dados."); 
+            }
         };
 
-        window.setView = (v) => { window.state.view = v; window.state.editando = null; window.render(); };
+        window.handleEdit = (id) => {
+            const p = window.state.produtos.find(x => x.id === id);
+            window.state.editando = p;
+            window.state.tempB64 = null;
+            window.render();
+            window.scrollTo({top: 0, behavior: 'smooth'});
+        };
 
+        window.pedirConfirmExcluir = (id) => { 
+            window.state.confirmExcluir = id; 
+            window.render(); 
+        };
+
+        window.handleExcluirReal = async () => {
+            if (!window.state.confirmExcluir) return;
+            try {
+                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'estoque', window.state.confirmExcluir));
+                window.state.confirmExcluir = null;
+                window.showToast("REMOVIDO");
+                window.render();
+            } catch (e) { alert("Erro ao excluir."); }
+        };
+
+        window.handleStatusUpdate = async (id, status) => {
+            const ref = doc(db, 'artifacts', appId, 'public', 'data', 'vendas_logs', id);
+            const snap = await getDoc(ref);
+            const oldStatus = snap.data().status;
+
+            if (status === 'CANCELADO' && oldStatus !== 'CANCELADO') {
+                const pRef = doc(db, 'artifacts', appId, 'public', 'data', 'estoque', snap.data().produtoId || 'none');
+                const pSnap = await getDoc(pRef);
+                if(pSnap.exists()) await updateDoc(pRef, { quantidade: increment(snap.data().quantidade) });
+            }
+            await updateDoc(ref, { status });
+            window.showToast(status);
+        };
+
+        window.handleLogin = async (e) => {
+            e.preventDefault();
+            const em = document.getElementById('loginEmail').value.trim();
+            const ps = document.getElementById('loginPass').value;
+            try { 
+                await signInWithEmailAndPassword(auth, em, ps); 
+                window.showToast("BEM-VINDO!"); 
+            } catch (err) { alert("Credenciais incorretas."); }
+        };
+
+        window.handleSignOut = () => signOut(auth);
+
+        // --- RENDERIZAÇÃO DAS TELAS ---
         window.render = () => {
             const root = document.getElementById('app-root');
-            if (window.state.loading) { root.innerHTML = '<div class="h-screen flex items-center justify-center font-black text-rose-600 animate-pulse uppercase italic">Iniciando AppEgg...</div>'; return; }
-            if (!window.state.user) { root.innerHTML = renderLogin(); return; }
+            if (window.state.loading) {
+                root.innerHTML = `<div class="h-screen flex items-center justify-center font-black text-rose-600 animate-pulse uppercase italic text-2xl">AppEgg Admin...</div>`;
+                return;
+            }
+
+            if (!window.state.user) {
+                root.innerHTML = renderLogin();
+                return;
+            }
 
             root.innerHTML = `
-                <nav class="bg-white border-b px-8 h-24 flex justify-between items-center sticky top-0 z-50">
-                    <div class="logo-text cursor-pointer uppercase italic tracking-tighter" onclick="window.setView('dashboard')">AppEgg</div>
+                <nav class="bg-white/80 backdrop-blur-md border-b sticky top-0 z-50 h-24 px-8 flex justify-between items-center">
+                    <div class="logo-text cursor-pointer uppercase italic tracking-tighter text-left" onclick="window.setView('dashboard')">AppEgg</div>
                     <div class="flex gap-2 overflow-x-auto no-scrollbar">
-                        <button onclick="window.setView('dashboard')" class="nav-link ${window.state.view==='dashboard'?'active':''}" title="Dashboard Principal">
+                        <button onclick="window.setView('dashboard')" class="nav-link ${window.state.view==='dashboard'?'active':''}">
                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
                         </button>
                         <button onclick="window.setView('estoque')" class="nav-link ${window.state.view==='estoque'?'active':''}">Estoque</button>
                         <button onclick="window.setView('pedidos')" class="nav-link ${window.state.view==='pedidos'?'active':''}">Encomendas</button>
                         <button onclick="window.setView('financeiro')" class="nav-link ${window.state.view==='financeiro'?'active':''}">Financeiro</button>
-                        <button onclick="signOut(auth)" class="nav-link text-rose-600 font-black">Sair</button>
+                        <button onclick="window.handleSignOut()" class="nav-link text-rose-600 font-black">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                        </button>
                     </div>
                 </nav>
                 <main class="p-8 max-w-7xl mx-auto fade-in">
-                    ${window.state.view === 'dashboard' ? renderDashboard() :
-                      window.state.view === 'financeiro' ? renderFinanceiro() : 
-                      window.state.view === 'estoque' ? renderEstoque() : renderPedidos()}
-                </main>`;
+                    ${window.state.view === 'dashboard' ? renderDashboard() : 
+                      window.state.view === 'estoque' ? renderEstoque() : 
+                      window.state.view === 'financeiro' ? renderFinanceiro() : renderPedidos()}
+                </main>
+                ${window.state.confirmExcluir ? renderModalExcluir() : ''}
+                ${window.state.toast.show ? `<div class="toast-egg border-l-4 border-rose-500">${window.state.toast.msg}</div>` : ''}
+            `;
         };
 
-        // --- LÓGICA DE UPLOAD E EDIÇÃO ---
-        window.previewBase64 = (e, imgId, phId, hiddenId) => {
-            const file = e.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = ev => {
-                const b64 = ev.target.result;
-                document.getElementById(hiddenId).value = b64;
-                const img = document.getElementById(imgId);
-                img.src = b64; img.classList.remove('hidden');
-                document.getElementById(phId).classList.add('hidden');
-            };
-            reader.readAsDataURL(file);
-        };
-
-        window.editarProduto = (id) => {
-            const p = window.state.produtos.find(x => x.id === id);
-            if (!p) return;
-            window.state.editando = p;
-            window.render();
-            setTimeout(() => {
-                if(document.getElementById('b64-hidden')) {
-                    document.getElementById('b64-hidden').value = p.foto_url || '';
-                }
-            }, 100);
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        };
-
-        window.salvarProd = async (e) => {
-            e.preventDefault();
-            if (window.state.saving) return;
-            window.state.saving = true; window.render();
-            const f = new FormData(e.target);
-            const docId = window.state.editando ? window.state.editando.id : crypto.randomUUID();
-            
-            const payload = {
-                nome: f.get('nome'),
-                embalagem: f.get('embalagem'),
-                preco: Number(f.get('preco')),
-                preco_custo: Number(f.get('preco_custo')),
-                quantidade: Number(f.get('quantidade')),
-                foto_url: document.getElementById('b64-hidden').value,
-                updatedAt: serverTimestamp()
-            };
-
-            try {
-                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'estoque', docId), payload, { merge: true });
-                window.state.editando = null; window.state.saving = false;
-                window.showToast("ESTOQUE ATUALIZADO!"); window.render();
-            } catch (err) { window.state.saving = false; window.showToast("ERRO AO SALVAR"); window.render(); }
-        };
-
-        window.mudarStatus = async (id, status) => {
-            const logRef = doc(db, 'artifacts', appId, 'public', 'data', 'vendas_logs', id);
-            const logSnap = await getDoc(logRef);
-            if (!logSnap.exists()) return;
-            const logData = logSnap.data();
-
-            if (status === 'CANCELADO' && logData.status !== 'CANCELADO') {
-                const prodRef = doc(db, 'artifacts', appId, 'public', 'data', 'estoque', logData.produtoId || 'none');
-                const prodSnap = await getDoc(prodRef);
-                if (prodSnap.exists()) {
-                    await updateDoc(prodRef, { quantidade: increment(logData.quantidade) });
-                }
-            }
-            await updateDoc(logRef, { status });
-            window.showToast(`PEDIDO ${status}`);
-        };
-
-        // --- DASHBOARD (CASA) ---
-        function renderDashboard() {
-            const totalStock = window.state.produtos.reduce((acc, p) => acc + (Number(p.quantidade) || 0), 0);
-            const activeOrders = window.state.logs.filter(l => !['FINALIZADO','CANCELADO'].includes(l.status));
-            const alerts = window.state.produtos.filter(p => p.quantidade < 15);
-
+        function renderLogin() {
             return `
-                <div class="mb-12"><h1 class="text-4xl font-[950] text-gray-900 mb-2 tracking-tighter uppercase italic text-left">Dashboard <span class="text-rose-600">Geral</span></h1></div>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-                    <div class="stat-card bg-rose-600 text-white shadow-xl text-left">
-                        <p class="text-[10px] font-black uppercase opacity-70 mb-2 tracking-widest italic">Pedidos Ativos</p>
-                        <h3 class="text-3xl font-black ${activeOrders.length > 0 ? 'pulse-order' : ''}">${activeOrders.length} Pendentes</h3>
+                <div class="min-h-screen bg-slate-900 flex items-center justify-center p-6 text-center">
+                    <div class="bg-white p-12 rounded-[56px] shadow-2xl w-full max-w-md">
+                        <div class="text-6xl font-[950] text-rose-600 mb-2 italic uppercase tracking-tighter">AppEgg</div>
+                        <p class="text-slate-400 font-bold text-[10px] uppercase mb-12 italic tracking-[0.4em]">Administração Distribuidora</p>
+                        <form onsubmit="window.handleLogin(event)" class="space-y-4">
+                            <input id="loginEmail" type="email" value="thon@lojista.com.br" class="input-egg text-center font-bold" required>
+                            <input id="loginPass" type="password" placeholder="Digite a Senha" class="input-egg text-center font-bold" required>
+                            <button class="w-full bg-rose-600 text-white py-6 rounded-[32px] font-black uppercase shadow-xl mt-8 italic active:scale-95 transition-all tracking-widest leading-none">Entrar no Dashboard</button>
+                        </form>
                     </div>
-                    <div class="stat-card bg-white border text-left">
-                        <p class="text-[10px] font-black uppercase text-gray-400 mb-2 tracking-widest italic">Catálogo</p>
-                        <h3 class="text-3xl font-black text-gray-800">${window.state.produtos.length} Variedades</h3>
-                    </div>
-                    <div class="stat-card bg-gray-900 text-white shadow-2xl text-left">
-                        <p class="text-[10px] font-black uppercase opacity-60 mb-2 tracking-widest italic">Total Estoque</p>
-                        <h3 class="text-3xl font-black text-white">${totalStock} un</h3>
-                    </div>
-                </div>
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 text-left">
-                    <div class="card p-8">
-                        <h4 class="font-black uppercase text-sm border-b pb-4 mb-8 text-left">Fila de Encomendas</h4>
-                        <div class="space-y-4">
-                            ${activeOrders.slice(0, 5).map(l => `
-                                <div class="flex justify-between items-center p-4 bg-slate-50 rounded-2xl border text-left">
-                                    <div class="text-left"><p class="font-black text-xs uppercase">${l.clienteNome || 'Cliente'}</p><p class="text-[10px] text-slate-400 font-bold">${l.quantidade}x ${l.produto}</p></div>
-                                    <span class="px-3 py-1 bg-rose-100 text-rose-600 rounded-full font-black text-[8px] uppercase italic text-center">${l.status}</span>
-                                </div>
-                            `).join('') || '<p class="text-center py-10 font-black text-slate-300 uppercase tracking-widest">Sem pedidos ativos</p>'}
+                </div>`;
+        }
+
+        function renderDashboard() {
+            const active = window.state.logs.filter(l => !['FINALIZADO', 'CANCELADO'].includes(l.status));
+            const alerts = window.state.produtos.filter(p => p.quantidade < 15);
+            const totalStock = window.state.produtos.reduce((acc,p)=>acc+(Number(p.quantidade)||0),0);
+            
+            return `
+                <div class="space-y-12 text-left">
+                    <h2 class="text-4xl font-[950] text-slate-900 tracking-tighter uppercase italic">Resumo Operacional</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        <div class="bg-rose-600 p-10 rounded-[40px] text-white shadow-xl">
+                            <p class="text-[10px] font-black uppercase opacity-60 mb-2 italic tracking-widest">Encomendas Ativas</p>
+                            <h3 class="text-5xl font-[950] italic ${active.length > 0 ? 'pulse-order' : ''}">${active.length}</h3>
+                        </div>
+                        <div class="bg-white border p-10 rounded-[40px] shadow-sm text-slate-800">
+                            <p class="text-[10px] font-black uppercase text-slate-400 mb-2 italic tracking-widest">Variedades</p>
+                            <h3 class="text-5xl font-[950] italic text-left">${window.state.produtos.length}</h3>
+                        </div>
+                        <div class="bg-slate-900 p-10 rounded-[40px] text-white shadow-2xl">
+                            <p class="text-[10px] font-black uppercase opacity-50 mb-2 italic tracking-widest">Stock Total</p>
+                            <h3 class="text-5xl font-[950] italic text-left">${totalStock} un</h3>
                         </div>
                     </div>
-                    <div class="card p-8 text-left">
-                        <h4 class="font-black uppercase text-sm border-b pb-4 mb-8 text-left">Alerta de Reposição</h4>
-                        <div class="space-y-4 text-left">
-                            ${alerts.map(p => `<div class="flex justify-between items-center p-3 border-b text-left"><span class="text-xs font-bold uppercase text-slate-700">${p.nome}</span><span class="bg-red-100 text-red-600 px-3 py-1 rounded-full font-black text-[10px]">${p.quantidade} un</span></div>`).join('') || '<p class="text-center py-10 font-black text-emerald-300 uppercase text-xs">Estoque OK!</p>'}
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 text-left">
+                        <div class="bg-white rounded-[40px] p-10 border shadow-sm">
+                            <h4 class="font-black uppercase text-sm text-slate-400 border-b pb-6 mb-8 italic">Monitor de Pedidos</h4>
+                            <div class="space-y-4">
+                                ${active.slice(0, 5).map(l => `
+                                    <div class="p-5 bg-slate-50 rounded-3xl border flex justify-between items-center text-left">
+                                        <div>
+                                            <p class="font-[950] text-slate-800 uppercase text-xs tracking-tight text-left leading-none">${l.clienteNome || 'Cliente'}</p>
+                                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-left">${l.quantidade}x ${l.produto}</p>
+                                        </div>
+                                        <span class="px-4 py-1.5 bg-rose-100 text-rose-600 rounded-full font-black text-[8px] uppercase italic tracking-tighter">${l.status}</span>
+                                    </div>
+                                `).join('') || '<p class="text-center font-black text-slate-200 uppercase text-xs py-10 italic">Tudo em dia!</p>'}
+                            </div>
+                        </div>
+                        <div class="bg-white rounded-[40px] p-10 border shadow-sm">
+                            <h4 class="font-black uppercase text-sm text-slate-400 border-b pb-6 mb-8 italic tracking-widest text-left">Alerta de Reposição</h4>
+                            <div class="space-y-4 text-left">
+                                ${alerts.map(p => `
+                                    <div class="flex justify-between items-center p-4 border-b border-slate-50 last:border-0 text-left">
+                                        <p class="text-xs font-[950] text-slate-800 uppercase italic text-left tracking-tight">${p.nome}</p>
+                                        <span class="bg-rose-50 text-rose-600 px-4 py-1.5 rounded-full font-black text-[10px] uppercase animate-pulse">${p.quantidade} un</span>
+                                    </div>
+                                `).join('') || '<p class="text-center font-black text-emerald-400 uppercase text-xs py-10 italic">Stock Abastecido!</p>'}
+                            </div>
                         </div>
                     </div>
                 </div>`;
@@ -282,102 +324,147 @@
 
         function renderEstoque() {
             const p = window.state.editando || { nome: CATEGORIES[0], preco: '', preco_custo: '', quantidade: '', foto_url: '', embalagem: PACKAGING[0] };
+            const isSaving = window.state.saving;
+
             return `
-                <div class="card p-10 mb-12 bg-gray-50/50">
-                    <h2 class="text-xl font-black uppercase text-slate-800 mb-10 text-left">${window.state.editando ? 'Editar Item' : 'Novo Registro de Estoque'}</h2>
-                    <form onsubmit="window.salvarProd(event)" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 text-left">
+                <div class="space-y-12 fade-in text-left">
+                    <div class="flex justify-between items-center">
                         <div>
-                            <label class="text-[10px] font-black uppercase text-slate-400 ml-2 block text-left">Foto Realista</label>
-                            <div class="upload-area mt-2" onclick="document.getElementById('file-input').click()">
-                                <div id="ph-area" class="${p.foto_url?'hidden':''} text-center p-4">
-                                    <p class="text-slate-300 font-black uppercase text-[10px]">Clique para carregar foto</p>
+                            <h2 class="text-4xl font-[950] text-slate-900 tracking-tighter uppercase italic text-left">Gestão de Stock</h2>
+                            <p class="text-slate-400 font-bold text-sm italic text-left">Controlo de variedades e inventário.</p>
+                        </div>
+                        <button onclick="window.setView('estoque')" class="bg-slate-900 text-white px-8 py-5 rounded-[28px] font-black uppercase text-[10px] tracking-widest shadow-xl active:scale-95 transition-all">+ Novo Produto</button>
+                    </div>
+
+                    <div class="bg-white rounded-[48px] p-12 border shadow-sm text-left">
+                        <form id="formEstoque" class="grid grid-cols-1 md:grid-cols-3 gap-8 text-left">
+                            <div class="md:row-span-2 text-left">
+                                <label class="text-[10px] font-black uppercase text-slate-300 ml-4 italic block mb-2 tracking-widest">Foto Realista</label>
+                                <div onclick="document.getElementById('file-input').click()" class="upload-area group text-center">
+                                    <div id="preview-container" class="w-full h-full flex items-center justify-center">
+                                        ${(window.state.tempB64 || p.foto_url) ? `<img src="${window.state.tempB64 || p.foto_url}" class="w-full h-full object-cover">` : `<div class="text-slate-200 text-center uppercase font-black text-[9px] tracking-widest">Carregar Fotografia</div>`}
+                                    </div>
+                                    <input type="file" id="file-input" class="hidden" accept="image/*" onchange="window.handleFileSelect(event)">
                                 </div>
-                                <img id="preview-img" src="${p.foto_url || ''}" class="${p.foto_url?'':'hidden'} w-full h-full object-cover">
-                                <input type="file" id="file-input" class="hidden" accept="image/*" onchange="window.previewBase64(event, 'preview-img', 'ph-area', 'b64-hidden')">
                             </div>
-                            <input type="hidden" id="b64-hidden" value="${p.foto_url || ''}">
-                        </div>
-                        <div class="space-y-4">
-                            <div class="space-y-1"><label class="text-[10px] font-black uppercase text-slate-400 ml-2">Variedade</label><select name="nome" class="input-egg text-left" required>${CATEGORIES.map(cat => `<option value="${cat}" ${p.nome === cat ? 'selected' : ''}>${cat}</option>`).join('')}</select></div>
-                            <div class="space-y-1"><label class="text-[10px] font-black uppercase text-slate-400 ml-2">Embalagem</label><select name="embalagem" class="input-egg text-left" required>${PACKAGING.map(pkg => `<option value="${pkg}" ${p.embalagem === pkg ? 'selected' : ''}>${pkg}</option>`).join('')}</select></div>
-                        </div>
-                        <div class="space-y-4">
-                            <div class="space-y-1 text-left"><label class="text-[10px] font-black uppercase text-slate-400 ml-2">Custo (R$)</label><input name="preco_custo" type="number" step="0.01" value="${p.preco_custo}" class="input-egg" required placeholder="0.00"></div>
-                            <div class="space-y-1 text-left"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 text-left">Venda (R$)</label><input name="preco" type="number" step="0.01" value="${p.preco}" class="input-egg text-rose-600 font-black" required placeholder="0.00"></div>
-                        </div>
-                        <div class="lg:col-span-2 space-y-1 text-left"><label class="text-[10px] font-black uppercase text-slate-400 ml-2 text-left">Quantidade Total</label><input name="quantidade" type="number" value="${p.quantidade}" class="input-egg" required placeholder="0"></div>
-                        <button type="submit" class="lg:col-span-1 bg-rose-600 text-white py-6 rounded-[32px] font-[950] uppercase text-xs shadow-xl active:scale-95 transition italic text-center">GRAVAR NO ESTOQUE</button>
-                    </form>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 text-left">
-                    ${window.state.produtos.map(prod => `
-                        <div class="card overflow-hidden group text-left">
-                            <div class="h-44 relative overflow-hidden bg-slate-100 text-center">
-                                <img src="${window.safeImg(prod.foto_url)}" class="w-full h-full object-cover">
-                                <div class="absolute top-4 right-4 bg-white/90 px-3 py-1 rounded-full text-[10px] font-black uppercase">Qtd: ${prod.quantidade}</div>
+                            <div class="space-y-4 text-left">
+                                <div class="space-y-1"><label class="text-[10px] font-black uppercase text-slate-300 ml-4 italic tracking-widest">Variedade</label>
+                                <select name="nome" class="input-egg text-xs uppercase">${CATEGORIES.map(c=>`<option value="${c}" ${p.nome===c?'selected':''}>${c}</option>`).join('')}</select></div>
+                                <div class="space-y-1"><label class="text-[10px] font-black uppercase text-slate-300 ml-4 italic tracking-widest">Embalagem</label>
+                                <select name="embalagem" class="input-egg text-xs uppercase">${PACKAGING.map(pk=>`<option value="${pk}" ${p.embalagem===pk?'selected':''}>${pk}</option>`).join('')}</select></div>
                             </div>
-                            <div class="p-6">
-                                <h3 class="font-black uppercase text-sm mb-1">${prod.nome}</h3>
-                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-6 italic">${prod.embalagem}</p>
-                                <div class="flex justify-between items-center border-t pt-4">
-                                    <span class="text-xl font-black text-slate-900 italic">R$ ${Number(prod.preco).toFixed(2)}</span>
-                                    <div class="flex gap-2">
-                                        <button onclick="window.editarProduto('${prod.id}')" class="w-10 h-10 flex items-center justify-center bg-slate-100 rounded-xl font-black border hover:bg-slate-200">✎</button>
-                                        <button onclick="deleteDoc(doc(db, 'artifacts', '${appId}', 'public', 'data', 'estoque', '${prod.id}'))" class="w-10 h-10 flex items-center justify-center bg-rose-50 text-rose-600 rounded-xl font-black border hover:bg-rose-100">✕</button>
+                            <div class="space-y-4 text-left">
+                                <div class="space-y-1"><label class="text-[10px] font-black uppercase text-slate-300 ml-4 italic text-rose-600 tracking-widest">Venda (R$)</label>
+                                <input name="preco" type="number" step="0.01" value="${p.preco}" class="input-egg text-rose-600 font-black text-center" required placeholder="0.00"></div>
+                                <div class="space-y-1"><label class="text-[10px] font-black uppercase text-slate-300 ml-4 italic tracking-widest">Custo (R$)</label>
+                                <input name="preco_custo" type="number" step="0.01" value="${p.preco_custo}" class="input-egg text-center font-bold" required placeholder="0.00"></div>
+                            </div>
+                            <div class="lg:col-span-2 text-left">
+                                <label class="text-[10px] font-black uppercase text-slate-300 ml-4 italic tracking-widest">Quantidade Total</label>
+                                <input name="quantidade" type="number" value="${p.quantidade}" class="input-egg text-center font-black" required placeholder="0">
+                            </div>
+                            <button type="button" onclick="window.handleSaveProduct(event)" class="lg:col-span-1 bg-rose-600 text-white py-6 rounded-[32px] font-black uppercase text-xs shadow-xl active:scale-95 transition-all italic tracking-widest leading-none">${isSaving ? 'A GRAVAR...' : (window.state.editando ? 'SALVAR ALTERAÇÕES' : 'LANÇAR NO ESTOQUE')}</button>
+                        </form>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 text-left">
+                        ${window.state.produtos.map((p, i) => `
+                            <div class="bg-white rounded-[40px] border shadow-sm overflow-hidden text-left hover:shadow-xl transition-all group">
+                                <div class="h-56 bg-slate-100 relative text-center">
+                                    <img src="${p.foto_url || 'https://via.placeholder.com/300'}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700">
+                                    <div class="absolute top-4 right-4 bg-white/95 backdrop-blur px-3 py-1.5 rounded-full text-[10px] font-black uppercase italic shadow-sm text-center">Qtd: ${p.quantidade}</div>
+                                </div>
+                                <div class="p-8 text-left">
+                                    <h3 class="font-black text-slate-800 uppercase text-xs mb-1 tracking-tight leading-tight">${p.nome}</h3>
+                                    <p class="text-[10px] font-bold text-slate-300 uppercase italic mb-6 tracking-widest">${p.embalagem}</p>
+                                    <div class="flex justify-between items-center border-t border-slate-50 pt-6 text-left">
+                                        <span class="text-2xl font-[950] text-rose-600 italic tracking-tighter text-left leading-none">R$ ${Number(p.preco).toFixed(2)}</span>
+                                        <div class="flex gap-2">
+                                            <button onclick="window.handleEdit('${p.id}')" class="w-11 h-11 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-400 hover:text-rose-600 shadow-inner text-center">✎</button>
+                                            <button onclick="window.pedirConfirmExcluir('${p.id}')" class="w-11 h-11 bg-rose-50 rounded-2xl flex items-center justify-center text-rose-400 hover:text-rose-600 shadow-inner text-center">✕</button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>`).join('')}
+                        `).join('')}
+                    </div>
                 </div>`;
         }
 
         function renderPedidos() {
-            const pendentes = window.state.logs.filter(l => !['FINALIZADO', 'CANCELADO'].includes(l.status));
-            return `<h2 class="text-3xl font-[950] uppercase tracking-tighter text-gray-800 italic mb-10 text-left">Fila de Encomendas</h2>
-                <div class="grid gap-6">
-                    ${pendentes.map(l => `<div class="card p-8 border-l-[16px] border-rose-500 fade-in flex flex-col md:flex-row justify-between items-center gap-6 text-left">
-                        <div class="flex-1 text-left"><h3 class="font-black text-xl uppercase tracking-tighter text-gray-900">${l.clienteNome || 'Cliente'}</h3><p class="text-[11px] text-slate-400 font-black uppercase mt-1 tracking-widest">${l.quantidade}x ${l.produto}</p><p class="text-[10px] text-rose-600 font-bold mt-2 italic text-left">Valor: R$ ${Number(l.valorTotal || 0).toFixed(2)}</p></div>
-                        <select onchange="window.mudarStatus('${l.id}', this.value)" class="bg-slate-100 p-4 rounded-2xl font-black uppercase text-[10px] tracking-widest outline-none border-2 border-transparent focus:border-rose-400 text-center">
-                            ${STATUS_OPTIONS.map(opt => `<option value="${opt}" ${l.status === opt ? 'selected' : ''}>${opt}</option>`).join('')}
-                        </select>
-                    </div>`).join('') || '<p class="text-center py-20 font-black text-gray-300 uppercase">Tudo entregue!</p>'}
+            const pending = window.state.logs.filter(l => !['FINALIZADO','CANCELADO'].includes(l.status));
+            return `
+                <div class="space-y-12 fade-in text-left">
+                    <h2 class="text-4xl font-[950] text-slate-900 tracking-tighter uppercase italic text-left text-left">Fila de Encomendas</h2>
+                    <div class="grid gap-6">
+                        ${pending.map(l => `
+                            <div class="bg-white p-10 rounded-[48px] border-l-[20px] border-rose-600 shadow-sm flex flex-col md:flex-row justify-between items-center gap-8 text-left">
+                                <div class="text-left flex-1">
+                                    <h3 class="text-2xl font-black text-slate-900 uppercase italic tracking-tighter text-left leading-none mb-2">${l.clienteNome || 'Cliente'}</h3>
+                                    <p class="text-xs font-bold text-slate-400 uppercase tracking-widest italic mb-2 text-left">${l.quantidade}x ${l.produto}</p>
+                                    <p class="text-2xl font-[950] text-rose-600 italic tracking-tighter text-left leading-none">R$ ${Number(l.valorTotal).toFixed(2)}</p>
+                                </div>
+                                <select onchange="window.handleStatusUpdate('${l.id}', this.value)" class="w-full md:w-64 p-5 bg-slate-900 text-white rounded-3xl font-black text-[10px] uppercase outline-none shadow-xl cursor-pointer tracking-widest text-center">
+                                    ${STATUS_OPTIONS.map(opt => `<option value="${opt}" ${l.status===opt?'selected':''}>${opt}</option>`).join('')}
+                                </select>
+                            </div>
+                        `).join('') || '<p class="text-center py-20 font-black text-slate-200 uppercase tracking-widest italic">A aguardar novas encomendas...</p>'}
+                    </div>
                 </div>`;
         }
 
         function renderFinanceiro() {
-            const finalizados = window.state.logs.filter(l => l.status === 'FINALIZADO');
-            let faturamento = 0;
-            finalizados.forEach(l => faturamento += Number(l.valorTotal));
-            return `<div class="card p-20 text-center"><p class="text-[10px] font-black uppercase text-gray-400 mb-2 tracking-widest">Faturamento Acumulado</p><h2 class="text-6xl font-[950] text-rose-600 italic tracking-tighter text-center">R$ ${faturamento.toFixed(2)}</h2></div>`;
+            const finished = window.state.logs.filter(l => l.status === 'FINALIZADO');
+            const total = finished.reduce((acc,l)=>acc+Number(l.valorTotal),0);
+            const lucro = finished.reduce((acc,l)=>acc+(Number(l.valorTotal) - (Number(l.custoUnitario||0) * l.quantidade)),0);
+            return `
+                <div class="space-y-12 fade-in text-left">
+                    <h2 class="text-4xl font-[950] text-slate-900 tracking-tighter uppercase italic text-left">Resultados</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 text-center">
+                        <div class="bg-white rounded-[48px] p-12 border shadow-sm text-center">
+                            <p class="text-[10px] font-black uppercase text-slate-400 mb-2 italic tracking-widest text-center">Faturamento Bruto</p>
+                            <h3 class="text-6xl font-[950] text-rose-600 italic tracking-tighter text-center leading-none">R$ ${total.toFixed(2)}</h3>
+                        </div>
+                        <div class="bg-slate-900 rounded-[48px] p-12 shadow-2xl text-center">
+                            <p class="text-[10px] font-black uppercase text-white/40 mb-2 italic tracking-widest text-center">Lucro Estimado Real</p>
+                            <h3 class="text-6xl font-[950] text-emerald-400 italic tracking-tighter text-center leading-none">R$ ${lucro.toFixed(2)}</h3>
+                        </div>
+                    </div>
+                </div>`;
         }
 
-        function renderLogin() { 
-            return `<div class="min-h-screen flex items-center justify-center bg-gray-900 p-8 text-center text-center">
-                <form onsubmit="window.handleLoginAdmin(event)" class="bg-white p-12 rounded-[48px] shadow-2xl w-full max-w-md text-center">
-                    <div class="logo-text text-6xl mb-4 tracking-tighter italic uppercase text-center">AppEgg</div>
-                    <p class="text-center text-gray-400 font-bold text-[10px] uppercase mb-10 tracking-[0.4em] italic text-white text-center">Administração</p>
-                    <input id="ae" class="input-egg border mb-3 text-center" placeholder="Email Admin (thon@lojista.com.br)">
-                    <input id="ap" type="password" class="input-egg border mb-8 text-center" placeholder="Senha (882010)">
-                    <button type="submit" class="w-full bg-rose-600 text-white py-6 rounded-3xl font-black uppercase shadow-xl italic tracking-widest">Acessar Admin</button>
-                    ${window.state.authError ? `<div class="error-box text-center">⚠️ ATENÇÃO: Erro de Permissão. Verifique o login no Firebase Console.</div>` : ''}
-                </form>
-            </div>`; 
+        function renderModalExcluir() {
+            return `
+                <div class="fixed inset-0 modal-blur z-[1000] flex items-center justify-center p-4">
+                    <div class="bg-white rounded-[40px] p-8 max-w-sm w-full shadow-2xl text-center animate-in zoom-in duration-300">
+                        <div class="w-16 h-16 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center mx-auto mb-6 text-3xl font-black">!</div>
+                        <h3 class="text-xl font-black text-slate-900 mb-2 uppercase italic tracking-tighter text-center">Remover Produto?</h3>
+                        <p class="text-slate-500 text-sm font-medium mb-8 leading-relaxed italic text-center">Esta ação é irreversível e removerá o item permanentemente do stock.</p>
+                        <div class="flex flex-col gap-3">
+                            <button onclick="window.handleExcluirReal()" class="w-full py-4 rounded-2xl bg-rose-600 text-white font-black text-xs uppercase shadow-xl italic tracking-widest leading-none">Confirmar Exclusão</button>
+                            <button onclick="window.state.confirmExcluir=null;window.render()" class="w-full py-4 rounded-2xl text-slate-400 bg-slate-50 font-black text-xs uppercase italic">Cancelar</button>
+                        </div>
+                    </div>
+                </div>`;
         }
 
-        window.handleLoginAdmin = async (e) => {
-            e.preventDefault();
-            const em = document.getElementById('ae').value.trim();
-            const ps = document.getElementById('ap').value;
-            try { 
-                await signInWithEmailAndPassword(auth, em, ps); 
-                window.showToast("LOGIN BEM-SUCEDIDO!");
-            } catch (err) { 
-                if (err.code === 'auth/operation-not-allowed') { window.state.authError = true; window.render(); }
-                else { window.showToast("CREDENCIAIS INVÁLIDAS"); }
+        // --- OBSERVAR ESTADO DE AUTH E DADOS ---
+        onAuthStateChanged(auth, u => {
+            window.state.user = u;
+            if (u && u.email === 'thon@lojista.com.br') {
+                onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'estoque'), s => {
+                    window.state.produtos = s.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b)=>(a.nome||"").localeCompare(b.nome||""));
+                    window.state.loading = false; window.render();
+                });
+                onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'vendas_logs'), s => {
+                    window.state.logs = s.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b)=>(b.criadoEm?.seconds||0)-(a.criadoEm?.seconds||0));
+                    window.render();
+                });
+            } else { 
+                window.state.loading = false; 
+                window.render(); 
             }
-        };
-
-        window.render();
+        });
     </script>
 </body>
 </html>
