@@ -56,9 +56,15 @@
 
         .fade-in { animation: fadeIn 0.4s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .new-order-badge {
+            background: #ef4444; color: white; padding: 2px 8px; border-radius: 8px;
+            font-size: 9px; font-weight: 900; animation: bounce 1s infinite;
+        }
+        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
     </style>
 </head>
-<body class="no-scrollbar">
+<body class="no-scrollbar text-left">
     <div id="app-root"></div>
 
     <script type="module">
@@ -80,12 +86,17 @@
         const db = getFirestore(appFB);
         const auth = getAuth(appFB);
         
-        // Caminho lógico centralizado
         const appId = "app-egg-pro-transacional";
 
-        const STATUS_OPTIONS = ["PEDIDO CRIADO", "EM PREPARAÇÃO", "SAIU PARA ENTREGA", "FINALIZADO", "CANCELADO"];
+        const STATUS_OPTIONS = ["EM SEPARAÇÃO", "FINALIZADO", "CANCELADO"];
         const CATEGORIES = ["Ovo Branco Extra", "Ovo Branco Grande", "Ovo Branco Médio", "Ovo Branco Pequeno", "Ovo Vermelho Extra", "Ovo Vermelho Grande", "Ovo Vermelho Médio", "Ovo Caipira", "Ovo de Codorna", "Ovo Jumbo", "Cesto de Ovos"];
         const PACKAGING = ["Cartela 30", "Cartela 20", "Dúzia 12", "Caixa 360", "Fardo 20 unid"];
+        const PIX_TYPES = ["CPF", "CNPJ", "E-mail", "Celular", "Chave Aleatória"];
+
+        // Hashes para Controle Anti-Flicker
+        let lastPixHash = "";
+        let lastStockHash = "";
+        let lastLogsHash = "";
 
         // --- ESTADO GLOBAL ---
         window.state = {
@@ -98,14 +109,68 @@
             saving: false, 
             confirmExcluir: null, 
             tempB64: null, 
-            toast: { show: false, msg: '' }
+            toast: { show: false, msg: '' },
+            pixConfig: { type: 'CPF', key: '', copiaCola: '' },
+            lastOrderCount: 0,
+            hasNewOrder: false
         };
 
+        // --- VALIDAÇÕES RÍGIDAS ---
+
+        function validarCPF(cpf) {
+            const clean = cpf.replace(/\D/g, "");
+            if (clean.length !== 11 || /^(\d)\1+$/.test(clean)) return false;
+            let soma = 0;
+            for (let i = 0; i < 9; i++) soma += parseInt(clean[i]) * (10 - i);
+            let d1 = (soma * 10) % 11;
+            if (d1 === 10) d1 = 0;
+            if (d1 != clean[9]) return false;
+            soma = 0;
+            for (let i = 0; i < 10; i++) soma += parseInt(clean[i]) * (11 - i);
+            let d2 = (soma * 10) % 11;
+            if (d2 === 10) d2 = 0;
+            return d2 == clean[10];
+        }
+
+        function validarCNPJ(cnpj) {
+            const clean = cnpj.replace(/\D/g, "");
+            if (clean.length !== 14 || /^(\d)\1+$/.test(clean)) return false;
+            let tamanho = clean.length - 2;
+            let numeros = clean.substring(0, tamanho);
+            let digitos = clean.substring(tamanho);
+            let soma = 0;
+            let pos = tamanho - 7;
+            for (let i = tamanho; i >= 1; i--) {
+                soma += numeros.charAt(tamanho - i) * pos--;
+                if (pos < 2) pos = 9;
+            }
+            let resultado = soma % 11 < 2 ? 0 : 11 - (soma % 11);
+            if (resultado != digitos.charAt(0)) return false;
+            tamanho = tamanho + 1;
+            numeros = clean.substring(0, tamanho);
+            soma = 0;
+            pos = tamanho - 7;
+            for (let i = tamanho; i >= 1; i--) {
+                soma += numeros.charAt(tamanho - i) * pos--;
+                if (pos < 2) pos = 9;
+            }
+            resultado = soma % 11 < 2 ? 0 : 11 - (soma % 11);
+            return resultado == digitos.charAt(1);
+        }
+
+        function validarChaveAleatoria(chave) {
+            // Padrão UUID do Banco Central
+            const regex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+            return regex.test(chave.trim());
+        }
+
         // --- FUNÇÕES DE NAVEGAÇÃO E UI ---
+        
         window.setView = (v) => { 
             window.state.view = v; 
             window.state.editando = null; 
             window.state.tempB64 = null; 
+            if(v === 'pedidos') window.state.hasNewOrder = false;
             window.render(); 
         };
 
@@ -123,24 +188,35 @@
             reader.onload = (ev) => {
                 window.state.tempB64 = ev.target.result;
                 const container = document.getElementById('preview-container');
-                if (container) {
-                    container.innerHTML = `<img src="${ev.target.result}" class="w-full h-full object-cover">`;
-                }
+                if (container) container.innerHTML = `<img src="${ev.target.result}" class="w-full h-full object-cover">`;
             };
             reader.readAsDataURL(file);
         };
 
-        // --- LÓGICA DE SALVAMENTO ---
+        // Geração EMV Pix
+        window.gerarPixCopiaCola = (chave, nome = "APPEGG", cidade = "SAOPAULO") => {
+            const format = (id, value) => id + value.length.toString().padStart(2, '0') + value;
+            const payload = format("00", "01") + format("26", format("00", "BR.GOV.BCB.PIX") + format("01", chave)) + format("52", "0000") + format("53", "986") + format("58", "BR") + format("59", nome.substring(0, 25).toUpperCase()) + format("60", cidade.substring(0, 15).toUpperCase()) + "6304";
+            const crc16 = (str) => {
+                let crc = 0xFFFF;
+                for (let c of str) {
+                    crc ^= c.charCodeAt(0) << 8;
+                    for (let i = 0; i < 8; i++) crc = crc & 0x8000 ? (crc << 1) ^ 0x1021 : crc << 1;
+                }
+                return (crc & 0xFFFF).toString(16).toUpperCase().padStart(4, '0');
+            };
+            return payload + crc16(payload);
+        };
+
+        // --- HANDLERS FIREBASE ---
+
         window.handleSaveProduct = async (e) => {
             e.preventDefault();
             if (window.state.saving) return;
-            window.state.saving = true; 
-            window.render();
-
+            window.state.saving = true; window.render();
             const form = document.getElementById('formEstoque');
             const data = new FormData(form);
             const docId = window.state.editando ? window.state.editando.id : crypto.randomUUID();
-            
             const payload = {
                 nome: data.get('nome'),
                 embalagem: data.get('embalagem'),
@@ -149,75 +225,94 @@
                 quantidade: Number(data.get('quantidade')),
                 updatedAt: serverTimestamp()
             };
-
-            // Regra de Ouro: Só atualiza foto se houver nova escolha
-            if (window.state.tempB64 && window.state.tempB64.startsWith('data:image')) {
-                payload.foto_url = window.state.tempB64;
-            }
-
+            if (window.state.tempB64) payload.foto_url = window.state.tempB64;
             try {
                 await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'estoque', docId), payload, { merge: true });
-                window.state.editando = null;
-                window.state.tempB64 = null;
-                window.state.saving = false;
-                window.showToast("STOCK ATUALIZADO!");
-                window.render();
-            } catch (err) { 
-                window.state.saving = false; 
-                alert("Erro ao guardar dados."); 
-            }
+                window.state.editando = null; window.state.tempB64 = null;
+                window.showToast("ESTOQUE ATUALIZADO!");
+            } catch (err) { alert("Erro ao salvar estoque."); }
+            window.state.saving = false; window.render();
         };
 
         window.handleEdit = (id) => {
             const p = window.state.produtos.find(x => x.id === id);
-            window.state.editando = p;
-            window.state.tempB64 = null;
-            window.render();
+            window.state.editando = { ...p, preco: p.preco || 0, quantidade: p.quantidade || 0 };
+            window.state.tempB64 = null; window.render();
             window.scrollTo({top: 0, behavior: 'smooth'});
         };
 
-        window.pedirConfirmExcluir = (id) => { 
-            window.state.confirmExcluir = id; 
-            window.render(); 
-        };
+        window.pedirConfirmExcluir = (id) => { window.state.confirmExcluir = id; window.render(); };
 
         window.handleExcluirReal = async () => {
             if (!window.state.confirmExcluir) return;
             try {
                 await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'estoque', window.state.confirmExcluir));
-                window.state.confirmExcluir = null;
-                window.showToast("REMOVIDO");
+                window.state.confirmExcluir = null; window.showToast("REMOVIDO");
                 window.render();
             } catch (e) { alert("Erro ao excluir."); }
         };
 
         window.handleStatusUpdate = async (id, status) => {
             const ref = doc(db, 'artifacts', appId, 'public', 'data', 'vendas_logs', id);
-            const snap = await getDoc(ref);
-            const oldStatus = snap.data().status;
+            const updates = { status };
+            if (status === 'FINALIZADO') updates.finalizadoEm = serverTimestamp();
+            await updateDoc(ref, updates);
+            window.showToast(`PEDIDO ${status}`);
+        };
 
-            if (status === 'CANCELADO' && oldStatus !== 'CANCELADO') {
-                const pRef = doc(db, 'artifacts', appId, 'public', 'data', 'estoque', snap.data().produtoId || 'none');
-                const pSnap = await getDoc(pRef);
-                if(pSnap.exists()) await updateDoc(pRef, { quantidade: increment(snap.data().quantidade) });
+        // ✅ LÓGICA PIX COM NORMALIZAÇÃO E VALIDAÇÕES
+        window.handleSavePixConfig = async (e) => {
+            e.preventDefault();
+            const type = document.getElementById('pixType').value;
+            const rawKey = document.getElementById('pixKey').value.trim();
+            const cleanKey = rawKey.replace(/\D/g, "");
+            
+            let chaveFinal = rawKey;
+            let chaveVisual = rawKey;
+
+            if (type === "CPF") {
+                if (!validarCPF(cleanKey)) return window.showToast("CPF INVÁLIDO");
+                chaveFinal = cleanKey;
+                chaveVisual = cleanKey.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+            } else if (type === "CNPJ") {
+                if (!validarCNPJ(cleanKey)) return window.showToast("CNPJ INVÁLIDO");
+                chaveFinal = cleanKey;
+                chaveVisual = cleanKey.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
+            } else if (type === "Celular") {
+                if (cleanKey.length < 10 || cleanKey.length > 11) return window.showToast("DDD + NÚMERO INVÁLIDO");
+                // Apenas DDD + Número conforme solicitado
+                chaveFinal = cleanKey;
+                chaveVisual = cleanKey.replace(/(\d{2})(\d{5}|\d{4})(\d{4})/, "($1) $2-$3");
+            } else if (type === "E-mail") {
+                if (!rawKey.includes("@") || !rawKey.includes(".")) return window.showToast("E-MAIL INVÁLIDO");
+                chaveFinal = rawKey.toLowerCase();
+                chaveVisual = chaveFinal;
+            } else if (type === "Chave Aleatória") {
+                if (!validarChaveAleatoria(rawKey)) return window.showToast("UUID ALEATÓRIO INVÁLIDO");
+                chaveFinal = rawKey;
+                chaveVisual = rawKey;
             }
-            await updateDoc(ref, { status });
-            window.showToast(status);
+
+            const copiaCola = window.gerarPixCopiaCola(chaveFinal);
+            try {
+                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'pix_config'), {
+                    type, key: chaveVisual, copiaCola, updatedAt: serverTimestamp()
+                }, { merge: true });
+                window.showToast("PIX CONFIGURADO!");
+            } catch (err) { alert("Erro ao salvar PIX."); }
         };
 
         window.handleLogin = async (e) => {
             e.preventDefault();
             const em = document.getElementById('loginEmail').value.trim();
             const ps = document.getElementById('loginPass').value;
-            try { 
-                await signInWithEmailAndPassword(auth, em, ps); 
-                window.showToast("BEM-VINDO!"); 
-            } catch (err) { alert("Credenciais incorretas."); }
+            try { await signInWithEmailAndPassword(auth, em, ps); window.showToast("BEM-VINDO!"); } catch (err) { alert("Credenciais incorretas."); }
         };
 
         window.handleSignOut = () => signOut(auth);
 
-        // --- RENDERIZAÇÃO DAS TELAS ---
+        // --- COMPONENTES DE RENDERIZAÇÃO ---
+
         window.render = () => {
             const root = document.getElementById('app-root');
             if (window.state.loading) {
@@ -225,97 +320,100 @@
                 return;
             }
 
-            if (!window.state.user) {
-                root.innerHTML = renderLogin();
-                return;
-            }
+            if (!window.state.user) { root.innerHTML = renderLogin(); return; }
 
             root.innerHTML = `
                 <nav class="bg-white/80 backdrop-blur-md border-b sticky top-0 z-50 h-24 px-8 flex justify-between items-center">
                     <div class="logo-text cursor-pointer uppercase italic tracking-tighter text-left" onclick="window.setView('dashboard')">AppEgg</div>
                     <div class="flex gap-2 overflow-x-auto no-scrollbar">
-                        <button onclick="window.setView('dashboard')" class="nav-link ${window.state.view==='dashboard'?'active':''}">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-                        </button>
+                        <button onclick="window.setView('dashboard')" class="nav-link ${window.state.view==='dashboard'?'active':''}">Dashboard</button>
                         <button onclick="window.setView('estoque')" class="nav-link ${window.state.view==='estoque'?'active':''}">Estoque</button>
-                        <button onclick="window.setView('pedidos')" class="nav-link ${window.state.view==='pedidos'?'active':''}">Encomendas</button>
-                        <button onclick="window.setView('financeiro')" class="nav-link ${window.state.view==='financeiro'?'active':''}">Financeiro</button>
-                        <button onclick="window.handleSignOut()" class="nav-link text-rose-600 font-black">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                        <button onclick="window.setView('pedidos')" class="nav-link relative ${window.state.view==='pedidos'?'active':''}">
+                            Encomendas
+                            ${window.state.hasNewOrder ? `<span class="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-ping"></span>` : ''}
                         </button>
+                        <button onclick="window.setView('financeiro')" class="nav-link ${window.state.view==='financeiro'?'active':''}">Financeiro</button>
+                        <button onclick="window.handleSignOut()" class="nav-link text-rose-600 font-black">Sair</button>
                     </div>
                 </nav>
-                <main class="p-8 max-w-7xl mx-auto fade-in">
-                    ${window.state.view === 'dashboard' ? renderDashboard() : 
-                      window.state.view === 'estoque' ? renderEstoque() : 
-                      window.state.view === 'financeiro' ? renderFinanceiro() : renderPedidos()}
+                <main class="p-8 max-w-7xl mx-auto fade-in text-left">
+                    ${renderActiveView()}
                 </main>
                 ${window.state.confirmExcluir ? renderModalExcluir() : ''}
                 ${window.state.toast.show ? `<div class="toast-egg border-l-4 border-rose-500">${window.state.toast.msg}</div>` : ''}
             `;
         };
 
+        function renderActiveView() {
+            switch(window.state.view) {
+                case 'dashboard': return renderDashboard();
+                case 'estoque': return renderEstoque();
+                case 'pedidos': return renderPedidos();
+                case 'financeiro': return renderFinanceiro();
+                default: return renderDashboard();
+            }
+        }
+
         function renderLogin() {
             return `
                 <div class="min-h-screen bg-slate-900 flex items-center justify-center p-6 text-center">
                     <div class="bg-white p-12 rounded-[56px] shadow-2xl w-full max-w-md">
-                        <div class="text-6xl font-[950] text-rose-600 mb-2 italic uppercase tracking-tighter">AppEgg</div>
-                        <p class="text-slate-400 font-bold text-[10px] uppercase mb-12 italic tracking-[0.4em]">Administração Distribuidora</p>
+                        <div class="text-6xl font-[950] text-rose-600 mb-2 italic uppercase tracking-tighter text-center">AppEgg</div>
+                        <p class="text-slate-400 font-bold text-[10px] uppercase mb-12 italic tracking-[0.4em] text-center">Painel Platinum Master</p>
                         <form onsubmit="window.handleLogin(event)" class="space-y-4">
                             <input id="loginEmail" type="email" value="thon@lojista.com.br" class="input-egg text-center font-bold" required>
                             <input id="loginPass" type="password" placeholder="Digite a Senha" class="input-egg text-center font-bold" required>
-                            <button class="w-full bg-rose-600 text-white py-6 rounded-[32px] font-black uppercase shadow-xl mt-8 italic active:scale-95 transition-all tracking-widest leading-none">Entrar no Dashboard</button>
+                            <button class="w-full bg-rose-600 text-white py-6 rounded-[32px] font-black uppercase shadow-xl mt-8 italic active:scale-95 transition-all text-center">Aceder ao Painel</button>
                         </form>
                     </div>
                 </div>`;
         }
 
         function renderDashboard() {
-            const active = window.state.logs.filter(l => !['FINALIZADO', 'CANCELADO'].includes(l.status));
+            const active = window.state.logs.filter(l => l.status === "EM SEPARAÇÃO");
             const alerts = window.state.produtos.filter(p => p.quantidade < 15);
-            const totalStock = window.state.produtos.reduce((acc,p)=>acc+(Number(p.quantidade)||0),0);
-            
+            const totalEstoque = window.state.produtos.reduce((acc,p)=>acc+(Number(p.quantidade)||0),0);
             return `
-                <div class="space-y-12 text-left">
-                    <h2 class="text-4xl font-[950] text-slate-900 tracking-tighter uppercase italic">Resumo Operacional</h2>
+                <div class="space-y-12 text-left fade-in">
+                    <h2 class="text-4xl font-[950] text-slate-900 tracking-tighter uppercase italic text-left">Resumo Operacional</h2>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
                         <div class="bg-rose-600 p-10 rounded-[40px] text-white shadow-xl">
-                            <p class="text-[10px] font-black uppercase opacity-60 mb-2 italic tracking-widest">Encomendas Ativas</p>
-                            <h3 class="text-5xl font-[950] italic ${active.length > 0 ? 'pulse-order' : ''}">${active.length}</h3>
+                            <p class="text-[10px] font-black uppercase opacity-60 mb-2 italic text-left">Em Separação</p>
+                            <h3 class="text-5xl font-[950] italic text-left">${active.length}</h3>
                         </div>
-                        <div class="bg-white border p-10 rounded-[40px] shadow-sm text-slate-800">
-                            <p class="text-[10px] font-black uppercase text-slate-400 mb-2 italic tracking-widest">Variedades</p>
+                        <div class="bg-white border p-10 rounded-[40px] shadow-sm text-slate-800 text-left">
+                            <p class="text-[10px] font-black uppercase text-slate-400 mb-2 italic text-left">Variedades</p>
                             <h3 class="text-5xl font-[950] italic text-left">${window.state.produtos.length}</h3>
                         </div>
-                        <div class="bg-slate-900 p-10 rounded-[40px] text-white shadow-2xl">
-                            <p class="text-[10px] font-black uppercase opacity-50 mb-2 italic tracking-widest">Stock Total</p>
-                            <h3 class="text-5xl font-[950] italic text-left">${totalStock} un</h3>
+                        <div class="bg-slate-900 p-10 rounded-[40px] text-white shadow-2xl text-left">
+                            <p class="text-[10px] font-black uppercase opacity-50 mb-2 italic text-left">Estoque Total</p>
+                            <h3 class="text-5xl font-[950] italic text-left">${totalEstoque} un</h3>
                         </div>
                     </div>
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 text-left">
-                        <div class="bg-white rounded-[40px] p-10 border shadow-sm">
-                            <h4 class="font-black uppercase text-sm text-slate-400 border-b pb-6 mb-8 italic">Monitor de Pedidos</h4>
+                        <div class="bg-white rounded-[40px] p-10 border shadow-sm text-left">
+                            <h4 class="font-black uppercase text-sm text-slate-400 border-b pb-6 mb-8 italic text-left">Últimas Encomendas</h4>
                             <div class="space-y-4">
                                 ${active.slice(0, 5).map(l => `
                                     <div class="p-5 bg-slate-50 rounded-3xl border flex justify-between items-center text-left">
-                                        <div>
-                                            <p class="font-[950] text-slate-800 uppercase text-xs tracking-tight text-left leading-none">${l.clienteNome || 'Cliente'}</p>
-                                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-left">${l.quantidade}x ${l.produto}</p>
+                                        <div class="text-left">
+                                            <p class="font-[950] text-slate-800 uppercase text-xs tracking-tight text-left">${l.clienteNome || 'Cliente'}</p>
+                                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-left">${l.produto || 'Encomenda'}</p>
                                         </div>
-                                        <span class="px-4 py-1.5 bg-rose-100 text-rose-600 rounded-full font-black text-[8px] uppercase italic tracking-tighter">${l.status}</span>
+                                        <span class="px-4 py-1.5 bg-rose-100 text-rose-600 rounded-full font-black text-[8px] uppercase italic">AGUARDANDO</span>
                                     </div>
-                                `).join('') || '<p class="text-center font-black text-slate-200 uppercase text-xs py-10 italic">Tudo em dia!</p>'}
+                                `).join('') || '<p class="text-center font-black text-slate-200 py-10 italic uppercase">Sem pedidos pendentes</p>'}
                             </div>
                         </div>
-                        <div class="bg-white rounded-[40px] p-10 border shadow-sm">
-                            <h4 class="font-black uppercase text-sm text-slate-400 border-b pb-6 mb-8 italic tracking-widest text-left">Alerta de Reposição</h4>
+                        <div class="bg-white rounded-[40px] p-10 border shadow-sm text-left">
+                            <h4 class="font-black uppercase text-sm text-slate-400 border-b pb-6 mb-8 italic tracking-widest text-left">Reposição de Stock</h4>
                             <div class="space-y-4 text-left">
                                 ${alerts.map(p => `
                                     <div class="flex justify-between items-center p-4 border-b border-slate-50 last:border-0 text-left">
-                                        <p class="text-xs font-[950] text-slate-800 uppercase italic text-left tracking-tight">${p.nome}</p>
+                                        <p class="text-xs font-[950] text-slate-800 uppercase italic text-left">${p.nome}</p>
                                         <span class="bg-rose-50 text-rose-600 px-4 py-1.5 rounded-full font-black text-[10px] uppercase animate-pulse">${p.quantidade} un</span>
                                     </div>
-                                `).join('') || '<p class="text-center font-black text-emerald-400 uppercase text-xs py-10 italic">Stock Abastecido!</p>'}
+                                `).join('') || '<p class="text-center font-black text-emerald-400 py-10 italic uppercase text-xs">Stock em dia!</p>'}
                             </div>
                         </div>
                     </div>
@@ -324,64 +422,62 @@
 
         function renderEstoque() {
             const p = window.state.editando || { nome: CATEGORIES[0], preco: '', preco_custo: '', quantidade: '', foto_url: '', embalagem: PACKAGING[0] };
-            const isSaving = window.state.saving;
-
             return `
-                <div class="space-y-12 fade-in text-left">
+                <div class="space-y-12 text-left fade-in">
                     <div class="flex justify-between items-center">
-                        <div>
-                            <h2 class="text-4xl font-[950] text-slate-900 tracking-tighter uppercase italic text-left">Gestão de Stock</h2>
-                            <p class="text-slate-400 font-bold text-sm italic text-left">Controlo de variedades e inventário.</p>
+                        <div class="text-left">
+                            <h2 class="text-4xl font-[950] text-slate-900 tracking-tighter uppercase italic text-left">Gestão de Estoque</h2>
+                            <p class="text-slate-400 font-bold text-sm italic text-left">Variedades e inventário em tempo real.</p>
                         </div>
-                        <button onclick="window.setView('estoque')" class="bg-slate-900 text-white px-8 py-5 rounded-[28px] font-black uppercase text-[10px] tracking-widest shadow-xl active:scale-95 transition-all">+ Novo Produto</button>
+                        <button onclick="window.state.editando=null;window.render();" class="bg-slate-900 text-white px-8 py-5 rounded-[28px] font-black uppercase text-[10px] tracking-widest shadow-xl flex items-center gap-3 active:scale-95 transition-all text-center">+ Novo Item</button>
                     </div>
-
                     <div class="bg-white rounded-[48px] p-12 border shadow-sm text-left">
                         <form id="formEstoque" class="grid grid-cols-1 md:grid-cols-3 gap-8 text-left">
                             <div class="md:row-span-2 text-left">
-                                <label class="text-[10px] font-black uppercase text-slate-300 ml-4 italic block mb-2 tracking-widest">Foto Realista</label>
+                                <label class="text-[10px] font-black uppercase text-slate-300 ml-4 italic block mb-2 tracking-widest text-left">Fotografia</label>
                                 <div onclick="document.getElementById('file-input').click()" class="upload-area group text-center">
-                                    <div id="preview-container" class="w-full h-full flex items-center justify-center">
-                                        ${(window.state.tempB64 || p.foto_url) ? `<img src="${window.state.tempB64 || p.foto_url}" class="w-full h-full object-cover">` : `<div class="text-slate-200 text-center uppercase font-black text-[9px] tracking-widest">Carregar Fotografia</div>`}
+                                    <div id="preview-container" class="w-full h-full flex items-center justify-center text-center">
+                                        ${(window.state.tempB64 || p.foto_url) ? `<img src="${window.state.tempB64 || p.foto_url}" class="w-full h-full object-cover">` : `<div class="text-slate-200 uppercase font-black text-[9px] text-center">Inserir Imagem</div>`}
                                     </div>
                                     <input type="file" id="file-input" class="hidden" accept="image/*" onchange="window.handleFileSelect(event)">
                                 </div>
                             </div>
                             <div class="space-y-4 text-left">
-                                <div class="space-y-1"><label class="text-[10px] font-black uppercase text-slate-300 ml-4 italic tracking-widest">Variedade</label>
-                                <select name="nome" class="input-egg text-xs uppercase">${CATEGORIES.map(c=>`<option value="${c}" ${p.nome===c?'selected':''}>${c}</option>`).join('')}</select></div>
-                                <div class="space-y-1"><label class="text-[10px] font-black uppercase text-slate-300 ml-4 italic tracking-widest">Embalagem</label>
-                                <select name="embalagem" class="input-egg text-xs uppercase">${PACKAGING.map(pk=>`<option value="${pk}" ${p.embalagem===pk?'selected':''}>${pk}</option>`).join('')}</select></div>
+                                <label class="text-[10px] font-black uppercase text-slate-300 ml-4 italic tracking-widest text-left">Variedade</label>
+                                <select name="nome" class="input-egg uppercase text-left">${CATEGORIES.map(c=>`<option value="${c}" ${p.nome===c?'selected':''}>${c}</option>`).join('')}</select>
+                                <label class="text-[10px] font-black uppercase text-slate-300 ml-4 italic tracking-widest text-left">Embalagem</label>
+                                <select name="embalagem" class="input-egg uppercase text-left">${PACKAGING.map(pk=>`<option value="${pk}" ${p.embalagem===pk?'selected':''}>${pk}</option>`).join('')}</select>
                             </div>
                             <div class="space-y-4 text-left">
-                                <div class="space-y-1"><label class="text-[10px] font-black uppercase text-slate-300 ml-4 italic text-rose-600 tracking-widest">Venda (R$)</label>
-                                <input name="preco" type="number" step="0.01" value="${p.preco}" class="input-egg text-rose-600 font-black text-center" required placeholder="0.00"></div>
-                                <div class="space-y-1"><label class="text-[10px] font-black uppercase text-slate-300 ml-4 italic tracking-widest">Custo (R$)</label>
-                                <input name="preco_custo" type="number" step="0.01" value="${p.preco_custo}" class="input-egg text-center font-bold" required placeholder="0.00"></div>
+                                <label class="text-[10px] font-black uppercase text-slate-300 ml-4 italic text-rose-600 tracking-widest text-left">Venda (R$)</label>
+                                <input name="preco" type="number" step="0.01" value="${p.preco}" class="input-egg text-rose-600 font-black text-center" placeholder="0.00" required>
+                                <label class="text-[10px] font-black uppercase text-slate-300 ml-4 italic tracking-widest text-left">Custo (R$)</label>
+                                <input name="preco_custo" type="number" step="0.01" value="${p.preco_custo}" class="input-egg text-center font-bold" placeholder="0.00" required>
                             </div>
                             <div class="lg:col-span-2 text-left">
-                                <label class="text-[10px] font-black uppercase text-slate-300 ml-4 italic tracking-widest">Quantidade Total</label>
-                                <input name="quantidade" type="number" value="${p.quantidade}" class="input-egg text-center font-black" required placeholder="0">
+                                <label class="text-[10px] font-black uppercase text-slate-300 ml-4 italic tracking-widest text-left">Quantidade Total</label>
+                                <input name="quantidade" type="number" value="${p.quantidade}" class="input-egg text-center font-black" placeholder="0" required>
                             </div>
-                            <button type="button" onclick="window.handleSaveProduct(event)" class="lg:col-span-1 bg-rose-600 text-white py-6 rounded-[32px] font-black uppercase text-xs shadow-xl active:scale-95 transition-all italic tracking-widest leading-none">${isSaving ? 'A GRAVAR...' : (window.state.editando ? 'SALVAR ALTERAÇÕES' : 'LANÇAR NO ESTOQUE')}</button>
+                            <button type="submit" class="lg:col-span-1 bg-rose-600 text-white py-6 rounded-[32px] font-black uppercase text-xs shadow-xl active:scale-95 transition-all italic tracking-widest text-center" onclick="window.handleSaveProduct(event)">
+                                ${window.state.saving ? 'SINC...' : (window.state.editando ? 'ATUALIZAR' : 'LANÇAR ITEM')}
+                            </button>
                         </form>
                     </div>
-
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 text-left">
-                        ${window.state.produtos.map((p, i) => `
-                            <div class="bg-white rounded-[40px] border shadow-sm overflow-hidden text-left hover:shadow-xl transition-all group">
-                                <div class="h-56 bg-slate-100 relative text-center">
-                                    <img src="${p.foto_url || 'https://via.placeholder.com/300'}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700">
-                                    <div class="absolute top-4 right-4 bg-white/95 backdrop-blur px-3 py-1.5 rounded-full text-[10px] font-black uppercase italic shadow-sm text-center">Qtd: ${p.quantidade}</div>
+                        ${window.state.produtos.map((p) => `
+                            <div class="bg-white rounded-[40px] border shadow-sm overflow-hidden hover:shadow-xl transition-all group text-left">
+                                <div class="h-56 bg-slate-100 relative overflow-hidden text-center">
+                                    <img src="${p.foto_url || 'https://via.placeholder.com/300'}" class="w-full h-full object-cover group-hover:scale-105 duration-700">
+                                    <div class="absolute top-4 right-4 bg-white/95 backdrop-blur px-3 py-1.5 rounded-full text-[10px] font-black uppercase shadow-sm">Qtd: ${p.quantidade}</div>
                                 </div>
                                 <div class="p-8 text-left">
-                                    <h3 class="font-black text-slate-800 uppercase text-xs mb-1 tracking-tight leading-tight">${p.nome}</h3>
-                                    <p class="text-[10px] font-bold text-slate-300 uppercase italic mb-6 tracking-widest">${p.embalagem}</p>
-                                    <div class="flex justify-between items-center border-t border-slate-50 pt-6 text-left">
-                                        <span class="text-2xl font-[950] text-rose-600 italic tracking-tighter text-left leading-none">R$ ${Number(p.preco).toFixed(2)}</span>
+                                    <h3 class="font-black text-slate-800 uppercase text-xs mb-1 tracking-tight text-left text-left">${p.nome}</h3>
+                                    <p class="text-[10px] font-bold text-slate-300 uppercase italic mb-6 text-left text-left">${p.embalagem}</p>
+                                    <div class="flex justify-between items-center border-t border-slate-50 pt-6 text-left text-left">
+                                        <span class="text-2xl font-[950] text-rose-600 italic text-left text-left">R$ ${Number(p.preco).toFixed(2)}</span>
                                         <div class="flex gap-2">
-                                            <button onclick="window.handleEdit('${p.id}')" class="w-11 h-11 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-400 hover:text-rose-600 shadow-inner text-center">✎</button>
-                                            <button onclick="window.pedirConfirmExcluir('${p.id}')" class="w-11 h-11 bg-rose-50 rounded-2xl flex items-center justify-center text-rose-400 hover:text-rose-600 shadow-inner text-center">✕</button>
+                                            <button onclick="window.handleEdit('${p.id}')" class="w-10 h-10 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-400 hover:text-rose-600 transition-all">✎</button>
+                                            <button onclick="window.pedirConfirmExcluir('${p.id}')" class="w-10 h-10 bg-rose-50 rounded-2xl flex items-center justify-center text-rose-400">✕</button>
                                         </div>
                                     </div>
                                 </div>
@@ -395,20 +491,22 @@
             const pending = window.state.logs.filter(l => !['FINALIZADO','CANCELADO'].includes(l.status));
             return `
                 <div class="space-y-12 fade-in text-left">
-                    <h2 class="text-4xl font-[950] text-slate-900 tracking-tighter uppercase italic text-left text-left">Fila de Encomendas</h2>
-                    <div class="grid gap-6">
+                    <h2 class="text-4xl font-[950] text-slate-900 tracking-tighter uppercase italic text-left">Fila de Encomendas</h2>
+                    <div class="grid gap-6 text-left text-left">
                         ${pending.map(l => `
-                            <div class="bg-white p-10 rounded-[48px] border-l-[20px] border-rose-600 shadow-sm flex flex-col md:flex-row justify-between items-center gap-8 text-left">
-                                <div class="text-left flex-1">
-                                    <h3 class="text-2xl font-black text-slate-900 uppercase italic tracking-tighter text-left leading-none mb-2">${l.clienteNome || 'Cliente'}</h3>
-                                    <p class="text-xs font-bold text-slate-400 uppercase tracking-widest italic mb-2 text-left">${l.quantidade}x ${l.produto}</p>
-                                    <p class="text-2xl font-[950] text-rose-600 italic tracking-tighter text-left leading-none">R$ ${Number(l.valorTotal).toFixed(2)}</p>
+                            <div class="bg-white p-10 rounded-[48px] border-l-[20px] ${l.status==='EM SEPARAÇÃO' ? 'border-rose-600' : 'border-slate-300'} shadow-sm flex flex-col md:flex-row justify-between items-center gap-8 text-left">
+                                <div class="text-left flex-1 text-left">
+                                    <h3 class="text-2xl font-black text-slate-900 uppercase italic tracking-tighter mb-2 text-left">${l.clienteNome || 'Cliente'}</h3>
+                                    <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 text-left">${l.items ? l.items.map(i=>`${i.quantidade}x ${i.produto}`).join(', ') : `${l.quantidade}x ${l.produto}`}</p>
+                                    <p class="text-2xl font-[950] text-rose-600 italic text-left">R$ ${Number(l.valorTotal).toFixed(2)}</p>
                                 </div>
-                                <select onchange="window.handleStatusUpdate('${l.id}', this.value)" class="w-full md:w-64 p-5 bg-slate-900 text-white rounded-3xl font-black text-[10px] uppercase outline-none shadow-xl cursor-pointer tracking-widest text-center">
-                                    ${STATUS_OPTIONS.map(opt => `<option value="${opt}" ${l.status===opt?'selected':''}>${opt}</option>`).join('')}
-                                </select>
+                                <div class="text-right text-right">
+                                    <select onchange="window.handleStatusUpdate('${l.id}', this.value)" class="w-full md:w-64 p-5 bg-slate-900 text-white rounded-3xl font-black text-[10px] uppercase outline-none shadow-xl cursor-pointer text-center">
+                                        ${STATUS_OPTIONS.map(opt => `<option value="${opt}" ${l.status===opt?'selected':''}>${opt}</option>`).join('')}
+                                    </select>
+                                </div>
                             </div>
-                        `).join('') || '<p class="text-center py-20 font-black text-slate-200 uppercase tracking-widest italic">A aguardar novas encomendas...</p>'}
+                        `).join('') || '<p class="text-center py-20 font-black text-slate-200 uppercase italic text-center">Nenhum pedido na fila</p>'}
                     </div>
                 </div>`;
         }
@@ -416,18 +514,43 @@
         function renderFinanceiro() {
             const finished = window.state.logs.filter(l => l.status === 'FINALIZADO');
             const total = finished.reduce((acc,l)=>acc+Number(l.valorTotal),0);
-            const lucro = finished.reduce((acc,l)=>acc+(Number(l.valorTotal) - (Number(l.custoUnitario||0) * l.quantidade)),0);
+            const lucro = finished.reduce((acc,l)=>acc+(Number(l.valorTotal) - (Number(l.custoUnitario||0) * (l.quantidade || 1))),0);
+            const p = window.state.pixConfig;
             return `
                 <div class="space-y-12 fade-in text-left">
-                    <h2 class="text-4xl font-[950] text-slate-900 tracking-tighter uppercase italic text-left">Resultados</h2>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 text-center">
+                    <h2 class="text-4xl font-[950] text-slate-900 tracking-tighter uppercase italic text-left text-left">Gestão Financeira</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 text-left text-left">
                         <div class="bg-white rounded-[48px] p-12 border shadow-sm text-center">
-                            <p class="text-[10px] font-black uppercase text-slate-400 mb-2 italic tracking-widest text-center">Faturamento Bruto</p>
-                            <h3 class="text-6xl font-[950] text-rose-600 italic tracking-tighter text-center leading-none">R$ ${total.toFixed(2)}</h3>
+                            <p class="text-[10px] font-black uppercase text-slate-400 mb-2 italic text-center text-center">Faturamento Bruto</p>
+                            <h3 class="text-6xl font-[950] text-rose-600 italic text-center text-center">R$ ${total.toFixed(2)}</h3>
                         </div>
-                        <div class="bg-slate-900 rounded-[48px] p-12 shadow-2xl text-center">
-                            <p class="text-[10px] font-black uppercase text-white/40 mb-2 italic tracking-widest text-center">Lucro Estimado Real</p>
-                            <h3 class="text-6xl font-[950] text-emerald-400 italic tracking-tighter text-center leading-none">R$ ${lucro.toFixed(2)}</h3>
+                        <div class="bg-slate-900 rounded-[48px] p-12 shadow-2xl text-center text-center">
+                            <p class="text-[10px] font-black uppercase text-white/40 mb-2 italic text-center text-center">Lucro Estimado</p>
+                            <h3 class="text-6xl font-[950] text-emerald-400 italic text-center text-center">R$ ${lucro.toFixed(2)}</h3>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-[48px] p-12 border shadow-sm text-left text-left">
+                        <div class="flex flex-col md:flex-row justify-between items-center gap-10 text-left text-left">
+                            <div class="flex-1 text-left text-left">
+                                <h3 class="text-xl font-black uppercase text-slate-800 tracking-tighter mb-10 text-left text-left">Chave de Recebimento PIX</h3>
+                                <form onsubmit="window.handleSavePixConfig(event)" class="grid grid-cols-1 md:grid-cols-2 gap-8 text-left text-left">
+                                    <div class="text-left text-left">
+                                        <label class="text-[10px] font-black uppercase text-slate-400 ml-4 italic text-left text-left">Tipo de Chave</label>
+                                        <select id="pixType" class="input-egg text-xs uppercase text-left">${PIX_TYPES.map(t => `<option value="${t}" ${p.type===t?'selected':''}>${t}</option>`).join('')}</select>
+                                    </div>
+                                    <div class="text-left text-left">
+                                        <label class="text-[10px] font-black uppercase text-slate-400 ml-4 italic text-left text-left">Chave PIX</label>
+                                        <input id="pixKey" value="${p.key || ''}" class="input-egg font-bold text-center" placeholder="Insira a chave" required>
+                                    </div>
+                                    <button type="submit" class="md:col-span-2 w-full bg-slate-900 text-white py-6 rounded-[32px] font-black uppercase text-xs italic text-center text-center">Sincronizar Chave</button>
+                                </form>
+                            </div>
+                            <div class="w-full md:w-64 bg-slate-50 p-8 rounded-[40px] text-center text-center">
+                                <p class="text-[9px] font-black text-slate-300 uppercase mb-4 italic text-center text-center">QR Code Cliente</p>
+                                <div id="qrPreview" class="bg-white p-4 rounded-3xl shadow-inner text-center text-center">
+                                    ${p.copiaCola ? `<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(p.copiaCola)}" alt="QR Code">` : `<div class="w-32 h-32 flex items-center justify-center text-slate-200 uppercase font-black text-[8px] italic text-center text-center">Sem Chave</div>`}
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>`;
@@ -436,34 +559,60 @@
         function renderModalExcluir() {
             return `
                 <div class="fixed inset-0 modal-blur z-[1000] flex items-center justify-center p-4">
-                    <div class="bg-white rounded-[40px] p-8 max-w-sm w-full shadow-2xl text-center animate-in zoom-in duration-300">
-                        <div class="w-16 h-16 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center mx-auto mb-6 text-3xl font-black">!</div>
-                        <h3 class="text-xl font-black text-slate-900 mb-2 uppercase italic tracking-tighter text-center">Remover Produto?</h3>
-                        <p class="text-slate-500 text-sm font-medium mb-8 leading-relaxed italic text-center">Esta ação é irreversível e removerá o item permanentemente do stock.</p>
-                        <div class="flex flex-col gap-3">
-                            <button onclick="window.handleExcluirReal()" class="w-full py-4 rounded-2xl bg-rose-600 text-white font-black text-xs uppercase shadow-xl italic tracking-widest leading-none">Confirmar Exclusão</button>
-                            <button onclick="window.state.confirmExcluir=null;window.render()" class="w-full py-4 rounded-2xl text-slate-400 bg-slate-50 font-black text-xs uppercase italic">Cancelar</button>
+                    <div class="bg-white rounded-[40px] p-8 max-w-sm w-full shadow-2xl text-center text-center">
+                        <div class="w-16 h-16 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center mx-auto mb-6 text-3xl font-black text-center text-center">!</div>
+                        <h3 class="text-xl font-black text-slate-900 mb-2 uppercase italic text-center text-center">Remover Artigo?</h3>
+                        <p class="text-slate-500 text-sm font-medium mb-8 italic text-center text-center">Esta ação removerá o item permanentemente.</p>
+                        <div class="flex flex-col gap-3 text-center text-center">
+                            <button onclick="window.handleExcluirReal()" class="w-full py-4 rounded-2xl bg-rose-600 text-white font-black text-xs uppercase italic text-center text-center">Confirmar</button>
+                            <button onclick="window.state.confirmExcluir=null;window.render()" class="w-full py-4 rounded-2xl text-slate-400 bg-slate-50 font-black text-xs uppercase italic text-center text-center">Cancelar</button>
                         </div>
                     </div>
                 </div>`;
         }
 
-        // --- OBSERVAR ESTADO DE AUTH E DADOS ---
+        // --- LISTENERS OTIMIZADOS ---
+
         onAuthStateChanged(auth, u => {
             window.state.user = u;
             if (u && u.email === 'thon@lojista.com.br') {
+                // Snapshot Estoque
                 onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'estoque'), s => {
-                    window.state.produtos = s.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b)=>(a.nome||"").localeCompare(b.nome||""));
-                    window.state.loading = false; window.render();
+                    const data = s.docs.map(d => ({ id: d.id, ...d.data() }));
+                    const hash = JSON.stringify(data);
+                    if (hash !== lastStockHash) {
+                        lastStockHash = hash;
+                        window.state.produtos = data.sort((a,b)=>(a.nome||"").localeCompare(b.nome||""));
+                        window.state.loading = false; window.render();
+                    }
                 });
+
+                // Snapshot Pedidos
                 onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'vendas_logs'), s => {
-                    window.state.logs = s.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b)=>(b.criadoEm?.seconds||0)-(a.criadoEm?.seconds||0));
-                    window.render();
+                    const data = s.docs.map(d => ({ id: d.id, ...d.data() }));
+                    const hash = JSON.stringify(data);
+                    if (hash !== lastLogsHash) {
+                        if (data.length > window.state.lastOrderCount && window.state.lastOrderCount !== 0) {
+                            window.state.hasNewOrder = true; window.showToast("NOVO PEDIDO RECEBIDO!");
+                        }
+                        window.state.lastOrderCount = data.length;
+                        window.state.logs = data.sort((a,b)=>(b.timestamp?.seconds||0)-(a.timestamp?.seconds||0));
+                        lastLogsHash = hash; window.render();
+                    }
                 });
-            } else { 
-                window.state.loading = false; 
-                window.render(); 
-            }
+
+                // Snapshot PIX
+                onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'pix_config'), snap => {
+                    if (snap.exists()) { 
+                        const data = snap.data();
+                        const hash = JSON.stringify(data);
+                        if (hash !== lastPixHash) {
+                            lastPixHash = hash;
+                            window.state.pixConfig = data; window.render(); 
+                        }
+                    } else { window.state.loading = false; window.render(); }
+                });
+            } else { window.state.loading = false; window.render(); }
         });
     </script>
 </body>
