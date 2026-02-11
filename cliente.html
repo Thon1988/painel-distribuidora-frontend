@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>AppEgg | Sua Distribuidora de Ovos</title>
-    <!-- Tailwind CSS com versão fixa (sem aviso de produção) -->
+    <!-- Tailwind CSS – versão fixa para eliminar aviso de produção -->
     <script src="https://cdn.tailwindcss.com/3.4.13"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
@@ -18,7 +18,6 @@
             -webkit-tap-highlight-color: transparent;
         }
 
-        /* --- Estética Refinada Zé Delivery --- */
         .logo-font { font-weight: 800; color: #e11d48; font-size: 1.4rem; letter-spacing: -1px; }
         
         .nav-bottom { 
@@ -69,6 +68,7 @@
         .loading-screen { 
             position: fixed; inset: 0; background: white; z-index: 1000; 
             display: flex; flex-direction: column; align-items: center; justify-content: center; 
+            font-family: 'Inter', sans-serif;
         }
         
         .btn-add-circle {
@@ -113,6 +113,8 @@
         import { 
             getAuth, onAuthStateChanged, signOut, signInWithEmailAndPassword, updatePassword, signInAnonymously, signInWithCustomToken 
         } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+
+        console.log("Script iniciado");
 
         // --- CONFIGURAÇÃO FIREBASE ---
         const firebaseConfig = JSON.parse(__firebase_config || '{"apiKey":"AIzaSyD3Otz9-zdZH-E5Feg9IOGWPzVycoe8gro","authDomain":"distribuidora-de-ovos-aline.firebaseapp.com","projectId":"distribuidora-de-ovos-aline","storageBucket":"distribuidora-de-ovos-aline.firebasestorage.app","messagingSenderId":"92187548716","appId":"1:92187548716:web:d61d18a29aa76aead7c589"}');
@@ -169,11 +171,20 @@
 
         window.copyToClipboard = (text) => {
             if (!text) return;
-            navigator.clipboard.writeText(text).then(() => {
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            textArea.style.position = "fixed";
+            textArea.style.left = "-9999px";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            try {
+                document.execCommand('copy');
                 window.showToast('Código PIX copiado!');
-            }).catch(() => {
-                window.showToast('Erro ao copiar.');
-            });
+            } catch (err) {
+                console.error('Erro ao copiar:', err);
+            }
+            document.body.removeChild(textArea);
         };
 
         window.maskTel = (i) => { 
@@ -233,22 +244,24 @@
             window.scheduleRender();
         };
 
-        // ... (mantenha as demais funções de negócio que você já tinha: handleFinalizeOrder, confirmarPagamentoPix, etc.)
+        // ... (adicione aqui as demais funções de negócio que você tinha: handleFinalizeOrder, confirmarPagamentoPix, etc.)
 
         // --- RENDERIZAÇÃO ---
         window.render = () => {
             const root = document.getElementById('app-root');
             if (!root) {
-                console.warn("Elemento #app-root não encontrado");
+                console.error("Elemento #app-root não encontrado no DOM");
                 return;
             }
 
             const s = window.state;
+            console.log("Renderizando... loading:", s.loading, "user:", !!s.user);
+
             if (s.loading) {
                 root.innerHTML = `
                     <div class="loading-screen">
-                        <div class="logo-font animate-bounce mb-4">AppEgg</div>
-                        <p class="text-gray-500 text-sm">Carregando sua experiência...</p>
+                        <div class="logo-font animate-bounce mb-4 text-5xl">AppEgg</div>
+                        <p class="text-gray-500 text-sm font-medium">Carregando sua experiência...</p>
                     </div>`;
                 return;
             }
@@ -273,24 +286,19 @@
                 return;
             }
 
-            // Conteúdo quando logado (seu HTML principal aqui)
+            // Conteúdo quando logado (adicione aqui seu HTML principal de loja/pedidos)
             root.innerHTML = `
-                <div class="max-w-md mx-auto pb-32">
-                    <header class="sticky top-0 bg-white/90 backdrop-blur-md z-50 border-b border-gray-100 px-6 py-4">
-                        <div class="flex justify-between items-center">
-                            <div class="logo-font text-3xl">AppEgg</div>
-                            <div class="bg-rose-50 px-4 py-2 rounded-full text-xs font-bold text-rose-600">
-                                Cliente Premium
-                            </div>
+                <div class="max-w-md mx-auto pb-32 px-6 pt-6">
+                    <header class="flex justify-between items-center mb-8">
+                        <div class="logo-font text-3xl">AppEgg</div>
+                        <div class="bg-rose-50 px-4 py-2 rounded-full text-xs font-bold text-rose-600">
+                            Cliente Premium
                         </div>
                     </header>
-                    <main class="px-6 pt-6 pb-24">
-                        <!-- Seu conteúdo logado aqui (loja, carrinho, pedidos, etc.) -->
-                        <div class="text-center py-20">
-                            <h1 class="text-3xl font-bold text-gray-800">Bem-vindo, ${s.user.email.split('@')[0]}!</h1>
-                            <p class="text-gray-500 mt-2">Escolha uma opção no menu inferior</p>
-                        </div>
-                    </main>
+                    <div class="text-center py-20">
+                        <h1 class="text-3xl font-bold text-gray-800">Bem-vindo!</h1>
+                        <p class="text-gray-500 mt-2">Escolha uma opção no menu inferior</p>
+                    </div>
                     <nav class="nav-bottom">
                         <button onclick="window.setView('loja')" class="nav-item ${s.view==='loja'?'active':''}">Loja</button>
                         <button onclick="window.setView('pedidos')" class="nav-item ${s.view==='pedidos'?'active':''}">Pedidos</button>
@@ -316,23 +324,45 @@
                 await signInWithEmailAndPassword(auth, email, password);
                 window.showToast("Login realizado!");
             } catch (err) {
-                console.error("Erro login:", err);
-                window.showToast("Dados incorretos ou erro de conexão");
+                console.error("Erro login:", err.code, err.message);
+                let msg = "Erro ao fazer login.";
+                if (err.code === 'auth/wrong-password') msg = "Senha incorreta.";
+                if (err.code === 'auth/user-not-found') msg = "Usuário não encontrado.";
+                if (err.code === 'auth/invalid-email') msg = "Email inválido.";
+                window.showToast(msg);
             }
         };
 
         // Inicialização segura
         document.addEventListener('DOMContentLoaded', () => {
-            console.log("DOM carregado → iniciando render");
-            window.render(); // Primeiro render
+            console.log("DOM totalmente carregado → iniciando app");
+            window.render(); // Primeiro render (mostra tela de login ou loading)
 
             onAuthStateChanged(auth, (user) => {
-                console.log("Auth mudou:", user ? "Logado" : "Deslogado");
+                console.log("Estado de autenticação mudou:", user ? "Logado como " + user.email : "Deslogado");
                 window.state.user = user;
                 window.state.loading = false;
                 window.scheduleRender();
             });
         });
+
+        // Timeout de segurança: se loading > 10s, mostra erro
+        setTimeout(() => {
+            if (window.state.loading) {
+                const root = document.getElementById('app-root');
+                if (root) {
+                    root.innerHTML = `
+                        <div class="min-h-screen flex items-center justify-center text-center p-6">
+                            <div>
+                                <h1 class="text-2xl font-bold text-red-600 mb-4">Ops... parece que algo deu errado</h1>
+                                <p class="text-gray-600 mb-6">Verifique sua conexão ou abra o console (F12) para ver o erro.</p>
+                                <button onclick="location.reload()" class="btn-primary">Tentar novamente</button>
+                            </div>
+                        </div>`;
+                }
+                console.error("Loading travado após 10 segundos");
+            }
+        }, 10000);
     </script>
 </body>
 </html>
