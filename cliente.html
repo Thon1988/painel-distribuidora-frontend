@@ -1,13 +1,13 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-PT">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AppEgg | Sua Loja de Ovos</title>
+    <title>AppEgg | A Sua Loja de Ovos</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800;900&display=swap');
         
         body { 
             font-family: 'Inter', sans-serif; 
@@ -37,67 +37,52 @@
         .card-egg { 
             background: white; border: 1px solid #f1f5f9; border-radius: 40px; 
             padding: 24px; margin-bottom: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.02); 
-            transition: 0.3s; position: relative;
+            transition: 0.3s; 
         }
+        .card-egg:active { transform: scale(0.96); }
         
         .btn-main { 
-            background: #e11d48; color: white; padding: 20px; border-radius: 28px; 
+            background: #e11d48; color: white; padding: 22px; border-radius: 28px; 
             font-weight: 900; text-transform: uppercase; font-size: 13px; 
             box-shadow: 0 10px 25px rgba(225, 29, 72, 0.2); width: 100%; 
             transition: 0.2s; cursor: pointer; border: none;
         }
-        .btn-main:disabled { background: #cbd5e1; box-shadow: none; cursor: not-allowed; }
         
         .input-egg { 
-            width: 100%; padding: 18px; background: #f1f5f9; border-radius: 20px; 
-            border: 2px solid transparent; font-weight: 700; font-size: 14px; outline: none; transition: 0.2s; 
+            width: 100%; padding: 20px; background: #f9fafb; border-radius: 24px; 
+            border: 2px solid transparent; font-weight: 700; font-size: 14px; 
+            outline: none; transition: 0.2s; 
         }
         .input-egg:focus { border-color: #e11d48; background: #fff; }
 
-        .btn-add-fast {
-            background: #e11d48; color: white; width: 44px; height: 44px;
-            border-radius: 16px; display: flex; align-items: center; justify-content: center;
-            font-size: 24px; font-weight: 900; transition: 0.2s;
-        }
-        .btn-add-fast:active { transform: scale(0.9); }
-
-        .option-card {
-            border: 2px solid #f1f5f9; border-radius: 24px; padding: 16px;
-            transition: 0.2s; cursor: pointer; text-align: left;
-        }
-        .option-card.active { border-color: #e11d48; background: #fff1f2; }
-
-        .btn-filter {
-            padding: 10px 14px; border-radius: 16px; font-size: 10px; font-weight: 800;
-            text-transform: uppercase; transition: 0.2s; border: 2px solid #f1f5f9;
-            color: #64748b; background: white; white-space: nowrap;
-        }
-        .btn-filter.active { background: #e11d48; color: white; border-color: #e11d48; }
-
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .pix-box { background: #f8fafc; border: 2px dashed #e2e8f0; border-radius: 24px; padding: 20px; margin-top: 15px; text-align: center; }
+        .modal-up { animation: slideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
         
-        .text-label-red { color: #e11d48; font-weight: 800; text-transform: uppercase; font-size: 10px; letter-spacing: 0.05em; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
 
-        .qr-container { background: white; padding: 15px; border-radius: 20px; display: inline-block; box-shadow: inset 0 0 10px rgba(0,0,0,0.05); }
+        /* Mensagens Customizadas */
+        .toast-container {
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+            z-index: 1000; pointer-events: none;
+        }
+        .toast-msg {
+            background: #1e293b; color: white; padding: 12px 24px; border-radius: 16px;
+            font-weight: 700; font-size: 14px; box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            margin-bottom: 10px; animation: fadeInDown 0.3s ease-out;
+        }
+        @keyframes fadeInDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body class="no-scrollbar">
 
+    <div id="toast-root" class="toast-container"></div>
     <div id="app-root"></div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-        import { 
-            getFirestore, collection, onSnapshot, doc, getDoc, addDoc, 
-            serverTimestamp, increment, updateDoc, setDoc, runTransaction 
-        } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
-        import { 
-            getAuth, onAuthStateChanged, signOut, signInWithEmailAndPassword, updatePassword 
-        } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
-        import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-messaging.js";
+        import { getFirestore, collection, onSnapshot, doc, getDoc, addDoc, serverTimestamp, increment, updateDoc } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+        import { getAuth, onAuthStateChanged, signOut, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
 
-        // --- CONFIGURAÇÃO FIREBASE ---
         const firebaseConfig = {
             apiKey: "AIzaSyD3Otz9-zdZH-E5Feg9IOGWPzVycoe8gro",
             authDomain: "distribuidora-de-ovos-aline.firebaseapp.com",
@@ -110,329 +95,257 @@
         const appFB = initializeApp(firebaseConfig);
         const db = getFirestore(appFB);
         const auth = getAuth(appFB);
-        
         const appId = "app-egg-pro-transacional";
-        const DISTRIBUIDORA_ENDERECO = "R. Antônio Freire da Silva, 67 - Jardim das Camelias, São Paulo - SP, 08050-300";
 
-        // --- ESTADO GLOBAL ---
+        // Estado Global
         window.state = { 
             user: null, 
-            profile: null,
             view: 'loja', 
             produtos: [], 
             pedidos: [], 
-            cart: [],
-            pix: { key: '', type: '', copiaCola: '' }, 
-            checkout: { tipoEntrega: 'entrega', endereco: null, metodoPagamento: 'pix_agora' },
-            profileMode: 'view',
-            ordersFilter: 'aberto', 
-            ordersDate: '', 
+            comprando: null, 
+            qtd: 1, 
             loading: true, 
-            processing: false,
-            payingOrder: null
+            processing: false 
         };
 
-        // --- FUNÇÕES GLOBAIS ---
-
-        window.handleLogin = async (e) => {
-            if (e) e.preventDefault();
-            const email = document.getElementById('le').value.trim();
-            const pass = document.getElementById('lp').value;
-            try { 
-                await signInWithEmailAndPassword(auth, email, pass);
-                // Ativar notificações após login
-                window.registerPushNotifications();
-            } catch (err) { 
-                alert("Dados de acesso incorretos."); 
-            }
+        // Funções de Interface
+        window.showMessage = (msg) => {
+            const container = document.getElementById('toast-root');
+            const el = document.createElement('div');
+            el.className = 'toast-msg';
+            el.innerText = msg;
+            container.appendChild(el);
+            setTimeout(() => el.remove(), 3000);
         };
 
         window.setView = (v) => { 
             window.state.view = v; 
-            window.state.profileMode = 'view';
-            window.state.payingOrder = null;
+            window.render(); 
+        };
+
+        window.abrirCompra = (id) => { 
+            window.state.comprando = window.state.produtos.find(x => x.id === id); 
+            window.state.qtd = 1; 
+            window.render(); 
+        };
+
+        window.updateQtd = (val) => { 
+            window.state.qtd = Math.max(1, window.state.qtd + val); 
             window.render(); 
         };
 
         window.handleSignOut = () => signOut(auth);
 
-        window.maskDoc = (i) => {
-            let v = i.value.replace(/\D/g, "");
-            if (v.length <= 11) i.value = v.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/g, "$1.$2.$3-$4");
-            else i.value = v.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/g, "$1.$2.$3/$4-$5");
-        };
-
-        window.maskTel = (i) => { 
-            let v = i.value.replace(/\D/g, ""); 
-            i.value = v.replace(/^(\d{2})(\d)/g, "($1) $2").replace(/(\d{5})(\d)/, "$1-$2").substring(0, 15); 
-        };
-
-        window.maskCEP = (i) => { 
-            let v = i.value.replace(/\D/g, ""); 
-            i.value = v.replace(/(\d{5})(\d)/, "$1-$2").substring(0, 9); 
-        };
-
-        window.addToCart = (id) => {
-            const p = window.state.produtos.find(x => x.id === id);
-            if (!p) return;
-            const existing = window.state.cart.find(x => x.id === id);
-            if (existing) {
-                if (existing.qtd + 1 > p.quantidade) { alert("Stock máximo atingido!"); return; }
-                existing.qtd++;
-            } else {
-                if (p.quantidade < 1) { alert("Produto esgotado!"); return; }
-                window.state.cart.push({ ...p, qtd: 1 });
-            }
+        // Lógica de Compra
+        window.handlePurchase = async (e) => {
+            if (e) e.preventDefault();
+            if (window.state.processing || !window.state.comprando) return;
+            window.state.processing = true; 
             window.render();
-        };
 
-        window.repeatOrder = (pedidoId) => {
-            const pedido = window.state.pedidos.find(p => p.id === pedidoId);
-            if (!pedido) return;
-            const items = pedido.items || [{ produto: pedido.produto, quantidade: pedido.quantidade }];
-            items.forEach(item => {
-                const p = window.state.produtos.find(x => x.nome === item.produto);
-                if (p && p.quantidade >= item.quantidade) {
-                    const existing = window.state.cart.find(x => x.id === p.id);
-                    if (existing) existing.qtd += item.quantidade; else window.state.cart.push({ ...p, qtd: item.quantidade });
-                }
-            });
-            window.state.view = 'carrinho'; window.render();
-        };
-
-        window.updateCartQtd = (id, val) => {
-            const item = window.state.cart.find(x => x.id === id);
-            const p = window.state.produtos.find(x => x.id === id);
-            if (!item) return;
-            item.qtd = Math.max(0, item.qtd + val);
-            if (item.qtd > p.quantidade) item.qtd = p.quantidade;
-            if (item.qtd === 0) window.state.cart = window.state.cart.filter(x => x.id !== id);
-            window.render();
-        };
-
-        window.copyPixCopiaCola = (texto) => {
-            if (!texto) { alert("Aguardando código PIX..."); return; }
-            navigator.clipboard.writeText(texto).then(() => {
-                alert("Código PIX Copia e Cola copiado!");
-            }).catch(() => {
-                const el = document.createElement('textarea'); el.value = texto; document.body.appendChild(el);
-                el.select(); document.execCommand('copy'); document.body.removeChild(el); 
-                alert("Código PIX copiado!");
-            });
-        };
-
-        // ✅ CONFIRMAR PAGAMENTO: UNIFICADO PARA PIX_PAGO COM ATUALIZAÇÃO LOCAL
-        window.confirmarPagamentoPix = async (pedidoId) => {
+            const p = window.state.comprando;
             try {
-                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'vendas_logs', pedidoId), {
-                    'pagamento.pago': true,
-                    'pagamento.confirmadoEm': serverTimestamp(),
-                    status: 'PIX_PAGO'
-                });
+                const prodRef = doc(db, 'artifacts', appId, 'public', 'data', 'estoque', p.id);
+                const snap = await getDoc(prodRef);
                 
-                // ✅ ATUALIZAÇÃO LOCAL IMEDIATA
-                const pedIdx = window.state.pedidos.findIndex(p => p.id === pedidoId);
-                if (pedIdx !== -1) {
-                    window.state.pedidos[pedIdx].status = 'PIX_PAGO';
-                    if(window.state.pedidos[pedIdx].pagamento) window.state.pedidos[pedIdx].pagamento.pago = true;
-                }
+                if (!snap.exists()) throw new Error("Produto não encontrado!");
+                if (Number(snap.data().quantidade) < window.state.qtd) throw new Error("Stock insuficiente!");
 
-                alert("Obrigado! O lojista foi notificado do seu pagamento.");
-                window.state.payingOrder = null;
-                window.state.view = 'pedidos';
-                window.render();
-            } catch (e) {
-                alert("Erro ao confirmar pagamento.");
-            }
-        };
+                // Débito atómico
+                await updateDoc(prodRef, { quantidade: increment(-window.state.qtd) });
 
-        window.handleUpdateProfile = async (e) => {
-            e.preventDefault();
-            if (window.state.processing) return;
-            window.state.processing = true; window.render();
-            const f = new FormData(e.target);
-            const newData = {
-                name: f.get('name'), doc: f.get('doc'), phone: f.get('phone'),
-                address: { rua: f.get('rua'), numero: f.get('numero'), bairro: f.get('bairro'), cep: f.get('cep'), cidade: f.get('cidade'), estado: f.get('estado').toUpperCase() },
-                updatedAt: serverTimestamp()
-            };
-            try {
-                await setDoc(doc(db, 'artifacts', appId, 'users', window.state.user.uid, 'profiles', 'main'), newData, { merge: true });
-                window.state.profileMode = 'view';
-                alert("Dados atualizados com sucesso!");
-            } catch (err) { alert("Erro ao atualizar perfil."); } 
-            finally { window.state.processing = false; window.render(); }
-        };
-
-        window.handleUpdatePassword = async (e) => {
-            e.preventDefault();
-            const newPass = document.getElementById('newPass').value;
-            if (newPass.length < 6) { alert("A senha deve ter no mínimo 6 caracteres."); return; }
-            window.state.processing = true; window.render();
-            try {
-                await updatePassword(auth.currentUser, newPass);
-                alert("Senha alterada com sucesso!");
-                window.state.profileMode = 'view';
-            } catch (err) { alert("Erro ao trocar senha: " + err.message); } 
-            finally { window.state.processing = false; window.render(); }
-        };
-
-        window.handleSaveCheckoutAddress = (e) => {
-            e.preventDefault();
-            const f = new FormData(e.target);
-            window.state.checkout.endereco = { rua: f.get('rua'), numero: f.get('numero'), bairro: f.get('bairro'), cep: f.get('cep'), cidade: f.get('cidade'), estado: f.get('estado').toUpperCase() };
-            window.state.checkout.tipoEntrega = 'entrega';
-            window.state.view = 'checkout-endereco';
-            window.render();
-        };
-
-        // --- FINALIZAÇÃO ATÔMICA COM PEDIDO CONSOLIDADO ---
-        window.handleFinalizeOrder = async () => {
-            if (window.state.processing || window.state.cart.length === 0) return;
-            window.state.processing = true; window.render();
-            try {
-                const s = window.state;
-                const totalPedido = s.cart.reduce((acc, i) => acc + (i.preco * i.qtd), 0);
-                const finalAddr = s.checkout.tipoEntrega === 'retirada' ? DISTRIBUIDORA_ENDERECO : (s.checkout.endereco ? `${s.checkout.endereco.rua}, ${s.checkout.endereco.numero} - ${s.checkout.endereco.bairro}` : `${s.profile?.address?.rua || ''}, ${s.profile?.address?.numero || ''}`);
-
-                let pedidoCriadoId = "";
-
-                await runTransaction(db, async (transaction) => {
-                    const stockUpdates = [];
-                    for (const item of s.cart) {
-                        const prodRef = doc(db, 'artifacts', appId, 'public', 'data', 'estoque', item.id);
-                        const prodSnap = await transaction.get(prodRef);
-                        if (!prodSnap.exists()) throw new Error(`Produto ${item.nome} indisponível.`);
-                        const currentQty = Number(prodSnap.data().quantidade);
-                        if (currentQty < item.qtd) throw new Error(`Estoque insuficiente para ${item.nome}.`);
-                        stockUpdates.push({ ref: prodRef, newQty: currentQty - item.qtd });
-                    }
-
-                    stockUpdates.forEach(upd => transaction.update(upd.ref, { quantidade: upd.newQty }));
-                    
-                    const orderRef = doc(collection(db, 'artifacts', appId, 'public', 'data', 'vendas_logs'));
-                    pedidoCriadoId = orderRef.id;
-                    
-                    transaction.set(orderRef, {
-                        clienteId: auth.currentUser.uid,
-                        clienteNome: s.profile?.name || auth.currentUser.email?.split('@')[0],
-                        items: s.cart.map(i => ({ produto: i.nome, quantidade: i.qtd, precoUn: i.preco, embalagem: i.embalagem })),
-                        valorTotal: totalPedido,
-                        tipoEntrega: s.checkout.tipoEntrega,
-                        enderecoEntrega: finalAddr,
-                        status: 'EM SEPARAÇÃO', // ✅ REGRA DE NEGÓCIO: STATUS INICIAL AUTOMÁTICO
-                        pagamento: {
-                            metodo: s.checkout.metodoPagamento,
-                            pago: false,
-                            pix: s.checkout.metodoPagamento === 'pix_agora' ? { copiaCola: s.pix.copiaCola, keyUsed: s.pix.key } : null
-                        },
-                        criadoEm: serverTimestamp()
-                    });
+                // Criação do pedido
+                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'vendas_logs'), {
+                    clienteId: auth.currentUser.uid,
+                    clienteNome: auth.currentUser.email?.split('@')[0] || 'Cliente',
+                    produtoId: p.id,
+                    produto: p.nome,
+                    embalagem: p.embalagem || 'Cartela',
+                    quantidade: window.state.qtd,
+                    valorTotal: Number(p.preco) * window.state.qtd,
+                    custoUnitario: Number(p.preco_custo || 0),
+                    status: 'PEDIDO CRIADO',
+                    criadoEm: serverTimestamp()
                 });
 
-                if (s.checkout.metodoPagamento === 'pix_agora') {
-                    window.state.payingOrder = { id: pedidoCriadoId, valor: totalPedido, pixString: s.pix.copiaCola };
-                } else {
-                    window.state.view = 'pedidos';
-                    alert("Pedido em separação! 🥚✨");
-                }
-
-                window.state.cart = [];
-                window.render();
-            } catch (e) { alert(e.message); } finally { window.state.processing = false; window.render(); }
-        };
-
-        // ── NOTIFICAÇÕES PUSH ────────────────────────────────────────────────
-
-        window.registerPushNotifications = async () => {
-            if (!('Notification' in window) || !('serviceWorker' in navigator)) {
-                alert("Notificações não suportadas neste navegador.");
-                return;
-            }
-
-            try {
-                // 1. Registra o SW
-                const reg = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-                console.log('Service Worker FCM registrado');
-
-                // 2. Pede permissão
-                const permission = await Notification.requestPermission();
-                if (permission !== 'granted') {
-                    alert("Permissão de notificações negada.");
-                    return;
-                }
-
-                // 3. Obtém token FCM
-                const messaging = getMessaging(appFB);
-
-                // SUBSTITUA PELA SUA CHAVE VAPID PÚBLICA (Firebase Console > Cloud Messaging > Web Push certificates)
-                const vapidKey = 'SUA_CHAVE_VAPID_PUBLICA_AQUI';  // ← cole aqui!
-
-                const token = await getToken(messaging, { 
-                    vapidKey,
-                    serviceWorkerRegistration: reg 
-                });
-
-                if (token) {
-                    console.log('Token FCM obtido:', token);
-
-                    // Salva no Firestore
-                    await setDoc(doc(db, 'artifacts', appId, 'users', auth.currentUser.uid, 'notifications', 'main'), {
-                        token: token,
-                        updatedAt: serverTimestamp(),
-                        userAgent: navigator.userAgent,
-                        platform: 'web'
-                    }, { merge: true });
-
-                    alert("Notificações push ativadas! 🔔");
-                }
-            } catch (err) {
-                console.error('Erro ao ativar push:', err);
-                alert("Erro ao ativar notificações.");
+                window.state.comprando = null; 
+                window.state.view = 'pedidos'; 
+                window.showMessage("Pedido realizado com sucesso! 🥚");
+            } catch (err) { 
+                window.showMessage(err.message); 
+            } finally { 
+                window.state.processing = false; 
+                window.render(); 
             }
         };
 
-        // Mensagens em foreground (app aberto)
-        const messaging = getMessaging(appFB);
-        onMessage(messaging, (payload) => {
-            console.log('Mensagem push em foreground:', payload);
-            const title = payload.notification?.title || 'AppEgg';
-            const body = payload.notification?.body || 'Nova atualização!';
-            alert(`${title}\n${body}`);
-        });
+        window.handleLogin = async (e) => {
+            e.preventDefault();
+            const em = document.getElementById('le').value.trim();
+            const ps = document.getElementById('lp').value;
+            try { 
+                await signInWithEmailAndPassword(auth, em, ps); 
+            } catch (err) { 
+                window.showMessage("Dados de acesso incorretos."); 
+            }
+        };
 
         const safeImg = (url) => (url && url.startsWith('data:image')) ? url : "https://via.placeholder.com/300x300?text=AppEgg";
 
-        // --- RENDERIZAÇÃO DAS TELAS ---
+        // Renderização Dinâmica
         window.render = () => {
             const root = document.getElementById('app-root');
             const s = window.state;
-            if (s.loading) { root.innerHTML = `<div class="h-screen flex items-center justify-center font-black text-rose-600 animate-pulse text-2xl uppercase italic text-center">AppEgg...</div>`; return; }
-            if (!s.user) { root.innerHTML = renderLogin(); return; }
+
+            if (s.loading) { 
+                root.innerHTML = `<div class="h-screen flex items-center justify-center font-black text-rose-600 animate-pulse text-2xl uppercase italic">AppEgg...</div>`; 
+                return; 
+            }
+
+            if (!s.user) { 
+                root.innerHTML = renderLogin(); 
+                return; 
+            }
 
             root.innerHTML = `
-                <div class="p-6 max-w-lg mx-auto text-left">
-                    <header class="flex justify-between items-center mb-8">
+                <div class="p-8 max-w-lg mx-auto text-left">
+                    <header class="flex justify-between items-center mb-12">
                         <div class="logo-text italic uppercase">AppEgg</div>
-                        <div class="bg-slate-100 px-4 py-2 rounded-2xl text-[9px] font-black text-slate-400 uppercase italic">Cliente Platinum</div>
+                        <div class="bg-slate-100 px-4 py-2 rounded-2xl text-[9px] font-black text-slate-400 uppercase italic text-center">Cliente VIP</div>
                     </header>
-                    ${s.view === 'loja' ? renderLoja() : 
-                      s.view === 'carrinho' ? renderCarrinho() : 
-                      s.view === 'checkout-endereco' ? renderCheckoutEndereco() : 
-                      s.view === 'checkout-novo-endereco' ? renderCheckoutNovoEndereco() : 
-                      s.view === 'checkout-pagamento' ? renderCheckoutPagamento() : 
-                      s.view === 'pedidos' ? renderPedidos() : 
-                      renderPerfil()}
+                    ${s.view === 'loja' ? renderLoja() : renderPedidos()}
                 </div>
+                
                 <nav class="nav-bottom">
-                    <button onclick="window.setView('loja')" class="nav-item ${s.view==='loja'?'active':''}">Loja</button>
-                    <button onclick="window.setView('carrinho')" class="nav-item ${s.view==='carrinho'?'active':''} relative">${s.cart.length > 0 ? `<span class="absolute -top-1 right-2 bg-rose-600 text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full border-2 border-[#0f172a]">${s.cart.reduce((a,b)=>a+b.qtd,0)}</span>` : ''}Carrinho</button>
-                    <button onclick="window.setView('pedidos')" class="nav-item ${s.view==='pedidos'?'active':''}">Meus Pedidos</button>
-                    <button onclick="window.setView('perfil')" class="nav-item ${s.view==='perfil'?'active':''}">Perfil</button>
+                    <button onclick="window.setView('loja')" class="nav-item ${s.view==='loja'?'active':''}">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+                        Loja
+                    </button>
+                    <button onclick="window.setView('pedidos')" class="nav-item ${s.view==='pedidos'?'active':''}">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+                        Pedidos
+                    </button>
+                    <button onclick="window.handleSignOut()" class="nav-item text-rose-500 font-black">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                        Sair
+                    </button>
                 </nav>
-                ${s.payingOrder ? renderPixModal() : ''}
+                
+                ${s.comprando ? renderModalCompra() : ''}
             `;
         };
 
-        function renderLoja() { return `<div class="space-y-6 text-left"><h2 class="text-2xl font-black text-slate-800 italic uppercase">Ovos Frescos</h2><div class="grid gap-6">${window.state.produtos.map(p => `<div class="card-egg flex items-center gap-6 shadow-sm"><div class="w-24 h-24 bg-slate-50 rounded-[32px] overflow-hidden flex items-center justify-center text-center"><img src="${safeImg(p.foto_url)}" class="w-full h-full object-cover"></div><div class="flex-1 text-left"><h3 class="font-black text-xs uppercase text-slate-800 leading-none mb-1 text-left">${p.nome}</h3><p class="text-slate-400 text-[10px] font-bold uppercase mb-2 text-left">${p.embalagem}</p><p class="text-rose-600 font-[950] text-2xl tracking-tighter italic text-left leading-none">R$ ${Number(p.preco).toFixed(2)}</p></div><button onclick="window.addToCart('${p.id}')" class="btn-add-fast shadow-lg shadow-rose-200 text-center">+</button></div>`).join('')}</div></div>${window.state.cart.length > 0 ? `<div class="fixed bottom-32 left-8 right-8 z-[150] animate-bounce text-center"><button onclick="window.setView('carrinho')" class="btn-main flex items-center justify-center gap-3 shadow-2xl">Ir para o Carrinho (R$ ${window.state.cart.reduce((a,b)=>a+(b.preco*b.qtd),0).toFixed(2)})</button></div>` : ''}`; }
-        function renderCarrinho() { const total = window.state.cart.reduce((acc, item) => acc + (item.preco * item.qtd), 0); return `<div class="space-y-8 fade-in text-left text-left text-left"><h2 class="text-2xl font-black text-slate-800 italic uppercase text-left text-left">Seu Carrinho</h2>${window.state.cart.length === 0 ? `<div class="py-20 text-center"><p class="text-slate-300 font-black uppercase text-xs mb-8">Carrinho Vazio</p><button onclick="window.setView('loja')" class="btn-main">Voltar à Loja</button></div>` : `<div class="space-y-4 text-left">${window.state.cart.map(item =>
+        function renderLogin() {
+            return `
+                <div class="min-h-screen bg-white flex flex-col items-center justify-center p-8 text-center">
+                    <h1 class="text-6xl font-[950] text-rose-600 italic uppercase tracking-tighter mb-12 text-center">AppEgg</h1>
+                    <form onsubmit="window.handleLogin(event)" class="w-full max-w-sm space-y-4">
+                        <input id="le" type="email" value="teste@lojista.com.br" class="input-egg text-center font-bold" required>
+                        <input id="lp" type="password" placeholder="Digite a Senha" class="input-egg text-center font-bold" required>
+                        <button class="btn-main mt-6 active:scale-95 transition-all tracking-widest italic">Entrar na Loja</button>
+                    </form>
+                </div>`;
+        }
+
+        function renderLoja() {
+            return `
+                <div class="space-y-6 text-left">
+                    <div class="text-left"><p class="text-[11px] font-black text-slate-300 uppercase tracking-[0.4em] mb-1 italic">Qualidade de Granja</p><h2 class="text-2xl font-black text-slate-800 italic uppercase tracking-tight text-left">Ovos Frescos</h2></div>
+                    <div class="grid gap-6">
+                        ${window.state.produtos.map(p => `
+                            <div onclick="window.abrirCompra('${p.id}')" class="card-egg flex items-center gap-6 shadow-sm cursor-pointer border-2 border-transparent hover:border-rose-100 text-left">
+                                <div class="w-24 h-24 bg-slate-50 rounded-[32px] overflow-hidden flex items-center justify-center shadow-inner text-center">
+                                    <img src="${safeImg(p.foto_url)}" class="w-full h-full object-cover">
+                                </div>
+                                <div class="flex-1 text-left">
+                                    <h3 class="font-black text-xs uppercase text-slate-800 mb-1 leading-none text-left">${p.nome}</h3>
+                                    <p class="text-slate-400 text-[10px] font-bold uppercase italic text-left">${p.embalagem}</p>
+                                    <p class="text-rose-600 font-[950] text-2xl mt-2 tracking-tighter italic text-left">R$ ${Number(p.preco).toFixed(2)}</p>
+                                </div>
+                                <div class="bg-rose-50 p-3 rounded-2xl text-rose-600">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                                </div>
+                            </div>
+                        `).join('') || '<p class="text-center py-20 font-black text-slate-200 uppercase text-center">A aguardar catálogo...</p>'}
+                    </div>
+                </div>`;
+        }
+
+        function renderPedidos() {
+            return `
+                <div class="space-y-6 text-left">
+                    <h2 class="text-[11px] font-black text-slate-300 uppercase italic tracking-widest text-left">Meus Pedidos</h2>
+                    <div class="space-y-6">
+                        ${window.state.pedidos.map(p => `
+                            <div class="bg-white p-8 rounded-[48px] border-t-[12px] border-rose-500 shadow-sm text-left">
+                                <div class="flex justify-between items-start mb-4 text-left">
+                                    <div>
+                                        <h4 class="font-black uppercase text-sm text-slate-800 leading-tight text-left">${p.quantidade}x ${p.produto}</h4>
+                                        <p class="text-[9px] font-black text-slate-300 uppercase italic tracking-widest mt-1">#${p.id.substring(0,6).toUpperCase()}</p>
+                                    </div>
+                                    <span class="bg-rose-50 text-rose-600 px-4 py-1.5 rounded-full font-black text-[9px] uppercase tracking-tighter italic text-center">${p.status}</span>
+                                </div>
+                                <p class="text-rose-600 font-[950] text-3xl tracking-tighter italic border-t pt-4 text-left">R$ ${Number(p.valorTotal).toFixed(2)}</p>
+                            </div>
+                        `).join('') || '<p class="text-center py-20 font-black text-slate-200 uppercase text-center">Nenhum pedido efetuado.</p>'}
+                    </div>
+                </div>`;
+        }
+
+        function renderModalCompra() {
+            const p = window.state.comprando;
+            const isProcessing = window.state.processing;
+            return `
+                <div class="fixed inset-0 bg-slate-900/90 backdrop-blur-md z-[200] flex items-end">
+                    <div class="bg-white w-full p-10 rounded-t-[56px] shadow-2xl modal-up text-center">
+                        <div class="flex gap-5 items-center mb-10 text-left">
+                            <div class="w-16 h-16 bg-slate-50 rounded-[28px] overflow-hidden text-center">
+                                <img src="${safeImg(p.foto_url)}" class="w-full h-full object-cover">
+                            </div>
+                            <div class="text-left">
+                                <h3 class="font-black uppercase text-xl text-slate-900 italic tracking-tighter leading-none mb-1 text-left">${p.nome}</h3>
+                                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest italic text-left">${p.embalagem}</p>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-center justify-between bg-slate-50 p-4 rounded-[32px] border-2 border-slate-100 mb-6 text-center">
+                            <button onclick="window.updateQtd(-1)" class="w-14 h-14 bg-white rounded-2xl font-black text-3xl text-rose-600 active:scale-90 transition shadow-sm text-center">-</button>
+                            <div class="text-center">
+                                <span class="text-4xl font-[950] text-slate-800 italic leading-none text-center">${window.state.qtd}</span>
+                                <p class="text-[8px] font-black text-slate-300 uppercase tracking-widest mt-1 text-center">unidades</p>
+                            </div>
+                            <button onclick="window.updateQtd(1)" class="w-14 h-14 bg-white rounded-2xl font-black text-3xl text-emerald-600 active:scale-90 transition shadow-sm text-center">+</button>
+                        </div>
+                        
+                        <button onclick="window.handlePurchase()" ${isProcessing ? 'disabled' : ''} class="btn-main py-7 rounded-[40px] font-black shadow-2xl active:scale-95 italic tracking-widest text-center">
+                            ${isProcessing ? 'A PROCESSAR...' : `CONFIRMAR • R$ ${(p.preco * window.state.qtd).toFixed(2)}`}
+                        </button>
+                        
+                        <button onclick="window.state.comprando=null;window.render()" class="w-full py-8 text-slate-300 font-black text-[10px] uppercase tracking-widest text-center">Cancelar</button>
+                    </div>
+                </div>`;
+        }
+
+        // Sincronização
+        onAuthStateChanged(auth, u => {
+            window.state.user = u;
+            if (u && (u.email === 'teste@lojista.com.br' || u.isAnonymous)) {
+                onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'estoque'), s => {
+                    window.state.produtos = s.docs.map(d => ({id: d.id, ...d.data()})).sort((a,b)=>(a.nome||"").localeCompare(b.nome||""));
+                    window.state.loading = false; 
+                    window.render();
+                });
+                onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'vendas_logs'), s => {
+                    const data = s.docs.map(d => ({id: d.id, ...d.data()}));
+                    window.state.pedidos = data.filter(p => p.clienteId === auth.currentUser?.uid).sort((a,b)=>(b.criadoEm?.seconds||0)-(a.criadoEm?.seconds||0));
+                    window.render();
+                });
+            } else { 
+                window.state.loading = false; 
+                window.render(); 
+            }
+        });
+    </script>
+</body>
+</html>
