@@ -1,351 +1,146 @@
-<!DOCTYPE html>
-<html lang="pt-PT">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AppEgg | A Sua Loja de Ovos</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800;900&display=swap');
-        
-        body { 
-            font-family: 'Inter', sans-serif; 
-            background: #f8fafc; 
-            padding-bottom: 120px; 
-            color: #1e293b; 
-            overflow-x: hidden; 
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+    import { getFirestore, collection, onSnapshot, doc, getDoc, addDoc, serverTimestamp, increment, updateDoc } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged, signOut, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyD3Otz9-zdZH-E5Feg9IOGWPzVycoe8gro",
+        authDomain: "distribuidora-de-ovos-aline.firebaseapp.com",
+        projectId: "distribuidora-de-ovos-aline",
+        storageBucket: "distribuidora-de-ovos-aline.firebasestorage.app",
+        messagingSenderId: "92187548716",
+        appId: "1:92187548716:web:d61d18a29aa76aead7c589"
+    };
+
+    const appFB = initializeApp(firebaseConfig);
+    const db = getFirestore(appFB);
+    const auth = getAuth(appFB);
+    const appId = "app-egg-pro-transacional";
+
+    // Estado Global
+    window.state = {
+        user: null,
+        view: 'loja',
+        produtos: [],
+        pedidos: [],
+        comprando: null,
+        qtd: 1,
+        loading: true,
+        processing: false
+    };
+
+    // Funções de Interface
+    window.showMessage = (msg) => {
+        const container = document.getElementById('toast-root');
+        const el = document.createElement('div');
+        el.className = 'toast-msg';
+        el.innerText = msg;
+        container.appendChild(el);
+        setTimeout(() => el.remove(), 3000);
+    };
+
+    window.setView = (v) => {
+        window.state.view = v;
+        window.render();
+    };
+
+    window.abrirCompra = (id) => {
+        window.state.comprando = window.state.produtos.find(x => x.id === id);
+        window.state.qtd = 1;
+        window.render();
+    };
+
+    window.updateQtd = (val) => {
+        window.state.qtd = Math.max(1, window.state.qtd + val);
+        window.render();
+    };
+
+    window.handleSignOut = () => signOut(auth);
+
+    // Login corrigido e com feedback claro
+    window.handleLogin = async (e) => {
+        e.preventDefault();
+
+        const emailInput = document.getElementById('le');
+        const passInput = document.getElementById('lp');
+
+        if (!emailInput || !passInput) {
+            window.showMessage("Erro: formulário não encontrado.");
+            return;
         }
 
-        .logo-text { font-weight: 900; color: #e11d48; font-size: 1.8rem; letter-spacing: -1px; }
-        
-        .nav-bottom { 
-            position: fixed; bottom: 20px; left: 15px; right: 15px; 
-            background: #0f172a; border-radius: 32px; display: flex; 
-            justify-content: space-around; padding: 18px; z-index: 100; 
-            box-shadow: 0 20px 40px rgba(0,0,0,0.2); 
-            border-top: 1px solid rgba(255,255,255,0.05);
+        const email = emailInput.value.trim();
+        const password = passInput.value;
+
+        if (!email || !password) {
+            window.showMessage("Preencha email e senha.");
+            return;
         }
-        
-        .nav-item { 
-            flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; 
-            color: #64748b; font-size: 9px; font-weight: 900; text-transform: uppercase; 
-            border: none; background: transparent; cursor: pointer; transition: 0.3s;
-        }
-        .nav-item.active { color: #fff; transform: scale(1.1); }
-        
-        .card-egg { 
-            background: white; border: 1px solid #f1f5f9; border-radius: 40px; 
-            padding: 24px; margin-bottom: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.02); 
-            transition: 0.3s; 
-        }
-        .card-egg:active { transform: scale(0.96); }
-        
-        .btn-main { 
-            background: #e11d48; color: white; padding: 22px; border-radius: 28px; 
-            font-weight: 900; text-transform: uppercase; font-size: 13px; 
-            box-shadow: 0 10px 25px rgba(225, 29, 72, 0.2); width: 100%; 
-            transition: 0.2s; cursor: pointer; border: none;
-        }
-        
-        .input-egg { 
-            width: 100%; padding: 20px; background: #f9fafb; border-radius: 24px; 
-            border: 2px solid transparent; font-weight: 700; font-size: 14px; 
-            outline: none; transition: 0.2s; 
-        }
-        .input-egg:focus { border-color: #e11d48; background: #fff; }
 
-        .modal-up { animation: slideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
-        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-        
-        .no-scrollbar::-webkit-scrollbar { display: none; }
+        window.state.loading = true;
+        window.render();
 
-        /* Mensagens Customizadas */
-        .toast-container {
-            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
-            z-index: 1000; pointer-events: none;
-        }
-        .toast-msg {
-            background: #1e293b; color: white; padding: 12px 24px; border-radius: 16px;
-            font-weight: 700; font-size: 14px; box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-            margin-bottom: 10px; animation: fadeInDown 0.3s ease-out;
-        }
-        @keyframes fadeInDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
-    </style>
-</head>
-<body class="no-scrollbar">
+        try {
+            const userCredential = await signInWithEmailAndPassword(auth, email, password);
+            window.showMessage("Login realizado com sucesso! 🥚");
+            // O onAuthStateChanged vai detectar e atualizar tudo automaticamente
+        } catch (error) {
+            console.error("Erro no login:", error.code, error.message);
 
-    <div id="toast-root" class="toast-container"></div>
-    <div id="app-root"></div>
+            let mensagem = "Erro ao fazer login.";
+            if (error.code === 'auth/wrong-password') {
+                mensagem = "Senha incorreta.";
+            } else if (error.code === 'auth/user-not-found') {
+                mensagem = "Usuário não encontrado.";
+            } else if (error.code === 'auth/invalid-email') {
+                mensagem = "Email inválido.";
+            } else if (error.code === 'auth/too-many-requests') {
+                mensagem = "Muitas tentativas. Tente novamente mais tarde.";
+            }
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, doc, getDoc, addDoc, serverTimestamp, increment, updateDoc } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
-        import { getAuth, onAuthStateChanged, signOut, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
-
-        const firebaseConfig = {
-            apiKey: "AIzaSyD3Otz9-zdZH-E5Feg9IOGWPzVycoe8gro",
-            authDomain: "distribuidora-de-ovos-aline.firebaseapp.com",
-            projectId: "distribuidora-de-ovos-aline",
-            storageBucket: "distribuidora-de-ovos-aline.firebasestorage.app",
-            messagingSenderId: "92187548716",
-            appId: "1:92187548716:web:d61d18a29aa76aead7c589"
-        };
-
-        const appFB = initializeApp(firebaseConfig);
-        const db = getFirestore(appFB);
-        const auth = getAuth(appFB);
-        const appId = "app-egg-pro-transacional";
-
-        // Estado Global
-        window.state = { 
-            user: null, 
-            view: 'loja', 
-            produtos: [], 
-            pedidos: [], 
-            comprando: null, 
-            qtd: 1, 
-            loading: true, 
-            processing: false 
-        };
-
-        // Funções de Interface
-        window.showMessage = (msg) => {
-            const container = document.getElementById('toast-root');
-            const el = document.createElement('div');
-            el.className = 'toast-msg';
-            el.innerText = msg;
-            container.appendChild(el);
-            setTimeout(() => el.remove(), 3000);
-        };
-
-        window.setView = (v) => { 
-            window.state.view = v; 
-            window.render(); 
-        };
-
-        window.abrirCompra = (id) => { 
-            window.state.comprando = window.state.produtos.find(x => x.id === id); 
-            window.state.qtd = 1; 
-            window.render(); 
-        };
-
-        window.updateQtd = (val) => { 
-            window.state.qtd = Math.max(1, window.state.qtd + val); 
-            window.render(); 
-        };
-
-        window.handleSignOut = () => signOut(auth);
-
-        // Lógica de Compra
-        window.handlePurchase = async (e) => {
-            if (e) e.preventDefault();
-            if (window.state.processing || !window.state.comprando) return;
-            window.state.processing = true; 
+            window.showMessage(mensagem);
+        } finally {
+            window.state.loading = false;
             window.render();
-
-            const p = window.state.comprando;
-            try {
-                const prodRef = doc(db, 'artifacts', appId, 'public', 'data', 'estoque', p.id);
-                const snap = await getDoc(prodRef);
-                
-                if (!snap.exists()) throw new Error("Produto não encontrado!");
-                if (Number(snap.data().quantidade) < window.state.qtd) throw new Error("Stock insuficiente!");
-
-                // Débito atómico
-                await updateDoc(prodRef, { quantidade: increment(-window.state.qtd) });
-
-                // Criação do pedido
-                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'vendas_logs'), {
-                    clienteId: auth.currentUser.uid,
-                    clienteNome: auth.currentUser.email?.split('@')[0] || 'Cliente',
-                    produtoId: p.id,
-                    produto: p.nome,
-                    embalagem: p.embalagem || 'Cartela',
-                    quantidade: window.state.qtd,
-                    valorTotal: Number(p.preco) * window.state.qtd,
-                    custoUnitario: Number(p.preco_custo || 0),
-                    status: 'PEDIDO CRIADO',
-                    criadoEm: serverTimestamp()
-                });
-
-                window.state.comprando = null; 
-                window.state.view = 'pedidos'; 
-                window.showMessage("Pedido realizado com sucesso! 🥚");
-            } catch (err) { 
-                window.showMessage(err.message); 
-            } finally { 
-                window.state.processing = false; 
-                window.render(); 
-            }
-        };
-
-        window.handleLogin = async (e) => {
-            e.preventDefault();
-            const em = document.getElementById('le').value.trim();
-            const ps = document.getElementById('lp').value;
-            try { 
-                await signInWithEmailAndPassword(auth, em, ps); 
-            } catch (err) { 
-                window.showMessage("Dados de acesso incorretos."); 
-            }
-        };
-
-        const safeImg = (url) => (url && url.startsWith('data:image')) ? url : "https://via.placeholder.com/300x300?text=AppEgg";
-
-        // Renderização Dinâmica
-        window.render = () => {
-            const root = document.getElementById('app-root');
-            const s = window.state;
-
-            if (s.loading) { 
-                root.innerHTML = `<div class="h-screen flex items-center justify-center font-black text-rose-600 animate-pulse text-2xl uppercase italic">AppEgg...</div>`; 
-                return; 
-            }
-
-            if (!s.user) { 
-                root.innerHTML = renderLogin(); 
-                return; 
-            }
-
-            root.innerHTML = `
-                <div class="p-8 max-w-lg mx-auto text-left">
-                    <header class="flex justify-between items-center mb-12">
-                        <div class="logo-text italic uppercase">AppEgg</div>
-                        <div class="bg-slate-100 px-4 py-2 rounded-2xl text-[9px] font-black text-slate-400 uppercase italic text-center">Cliente VIP</div>
-                    </header>
-                    ${s.view === 'loja' ? renderLoja() : renderPedidos()}
-                </div>
-                
-                <nav class="nav-bottom">
-                    <button onclick="window.setView('loja')" class="nav-item ${s.view==='loja'?'active':''}">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
-                        Loja
-                    </button>
-                    <button onclick="window.setView('pedidos')" class="nav-item ${s.view==='pedidos'?'active':''}">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
-                        Pedidos
-                    </button>
-                    <button onclick="window.handleSignOut()" class="nav-item text-rose-500 font-black">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-                        Sair
-                    </button>
-                </nav>
-                
-                ${s.comprando ? renderModalCompra() : ''}
-            `;
-        };
-
-        function renderLogin() {
-            return `
-                <div class="min-h-screen bg-white flex flex-col items-center justify-center p-8 text-center">
-                    <h1 class="text-6xl font-[950] text-rose-600 italic uppercase tracking-tighter mb-12 text-center">AppEgg</h1>
-                    <form onsubmit="window.handleLogin(event)" class="w-full max-w-sm space-y-4">
-                        <input id="le" type="email" value="teste@lojista.com.br" class="input-egg text-center font-bold" required>
-                        <input id="lp" type="password" placeholder="Digite a Senha" class="input-egg text-center font-bold" required>
-                        <button class="btn-main mt-6 active:scale-95 transition-all tracking-widest italic">Entrar na Loja</button>
-                    </form>
-                </div>`;
         }
+    };
 
-        function renderLoja() {
-            return `
-                <div class="space-y-6 text-left">
-                    <div class="text-left"><p class="text-[11px] font-black text-slate-300 uppercase tracking-[0.4em] mb-1 italic">Qualidade de Granja</p><h2 class="text-2xl font-black text-slate-800 italic uppercase tracking-tight text-left">Ovos Frescos</h2></div>
-                    <div class="grid gap-6">
-                        ${window.state.produtos.map(p => `
-                            <div onclick="window.abrirCompra('${p.id}')" class="card-egg flex items-center gap-6 shadow-sm cursor-pointer border-2 border-transparent hover:border-rose-100 text-left">
-                                <div class="w-24 h-24 bg-slate-50 rounded-[32px] overflow-hidden flex items-center justify-center shadow-inner text-center">
-                                    <img src="${safeImg(p.foto_url)}" class="w-full h-full object-cover">
-                                </div>
-                                <div class="flex-1 text-left">
-                                    <h3 class="font-black text-xs uppercase text-slate-800 mb-1 leading-none text-left">${p.nome}</h3>
-                                    <p class="text-slate-400 text-[10px] font-bold uppercase italic text-left">${p.embalagem}</p>
-                                    <p class="text-rose-600 font-[950] text-2xl mt-2 tracking-tighter italic text-left">R$ ${Number(p.preco).toFixed(2)}</p>
-                                </div>
-                                <div class="bg-rose-50 p-3 rounded-2xl text-rose-600">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
-                                </div>
-                            </div>
-                        `).join('') || '<p class="text-center py-20 font-black text-slate-200 uppercase text-center">A aguardar catálogo...</p>'}
-                    </div>
-                </div>`;
+    // ... (mantenha todas as outras funções: handlePurchase, renderLoja, renderPedidos, renderModalCompra, etc.)
+
+    // Sincronização (já estava boa, só adicionamos mais proteção)
+    onAuthStateChanged(auth, (user) => {
+        window.state.user = user;
+        window.state.loading = !!user; // loading só enquanto sincroniza
+
+        if (user && (user.email === 'teste@lojista.com.br' || user.isAnonymous)) {
+            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'estoque'), (snapshot) => {
+                window.state.produtos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+                    .sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
+                window.state.loading = false;
+                window.render();
+            }, (err) => {
+                console.error("Erro ao carregar estoque:", err);
+                window.state.loading = false;
+                window.render();
+            });
+
+            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'vendas_logs'), (snapshot) => {
+                const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                window.state.pedidos = data
+                    .filter(p => p.clienteId === user.uid)
+                    .sort((a, b) => (b.criadoEm?.seconds || 0) - (a.criadoEm?.seconds || 0));
+                window.render();
+            }, (err) => {
+                console.error("Erro ao carregar pedidos:", err);
+            });
+        } else {
+            window.state.loading = false;
+            window.render();
         }
+    });
 
-        function renderPedidos() {
-            return `
-                <div class="space-y-6 text-left">
-                    <h2 class="text-[11px] font-black text-slate-300 uppercase italic tracking-widest text-left">Meus Pedidos</h2>
-                    <div class="space-y-6">
-                        ${window.state.pedidos.map(p => `
-                            <div class="bg-white p-8 rounded-[48px] border-t-[12px] border-rose-500 shadow-sm text-left">
-                                <div class="flex justify-between items-start mb-4 text-left">
-                                    <div>
-                                        <h4 class="font-black uppercase text-sm text-slate-800 leading-tight text-left">${p.quantidade}x ${p.produto}</h4>
-                                        <p class="text-[9px] font-black text-slate-300 uppercase italic tracking-widest mt-1">#${p.id.substring(0,6).toUpperCase()}</p>
-                                    </div>
-                                    <span class="bg-rose-50 text-rose-600 px-4 py-1.5 rounded-full font-black text-[9px] uppercase tracking-tighter italic text-center">${p.status}</span>
-                                </div>
-                                <p class="text-rose-600 font-[950] text-3xl tracking-tighter italic border-t pt-4 text-left">R$ ${Number(p.valorTotal).toFixed(2)}</p>
-                            </div>
-                        `).join('') || '<p class="text-center py-20 font-black text-slate-200 uppercase text-center">Nenhum pedido efetuado.</p>'}
-                    </div>
-                </div>`;
-        }
-
-        function renderModalCompra() {
-            const p = window.state.comprando;
-            const isProcessing = window.state.processing;
-            return `
-                <div class="fixed inset-0 bg-slate-900/90 backdrop-blur-md z-[200] flex items-end">
-                    <div class="bg-white w-full p-10 rounded-t-[56px] shadow-2xl modal-up text-center">
-                        <div class="flex gap-5 items-center mb-10 text-left">
-                            <div class="w-16 h-16 bg-slate-50 rounded-[28px] overflow-hidden text-center">
-                                <img src="${safeImg(p.foto_url)}" class="w-full h-full object-cover">
-                            </div>
-                            <div class="text-left">
-                                <h3 class="font-black uppercase text-xl text-slate-900 italic tracking-tighter leading-none mb-1 text-left">${p.nome}</h3>
-                                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest italic text-left">${p.embalagem}</p>
-                            </div>
-                        </div>
-                        
-                        <div class="flex items-center justify-between bg-slate-50 p-4 rounded-[32px] border-2 border-slate-100 mb-6 text-center">
-                            <button onclick="window.updateQtd(-1)" class="w-14 h-14 bg-white rounded-2xl font-black text-3xl text-rose-600 active:scale-90 transition shadow-sm text-center">-</button>
-                            <div class="text-center">
-                                <span class="text-4xl font-[950] text-slate-800 italic leading-none text-center">${window.state.qtd}</span>
-                                <p class="text-[8px] font-black text-slate-300 uppercase tracking-widest mt-1 text-center">unidades</p>
-                            </div>
-                            <button onclick="window.updateQtd(1)" class="w-14 h-14 bg-white rounded-2xl font-black text-3xl text-emerald-600 active:scale-90 transition shadow-sm text-center">+</button>
-                        </div>
-                        
-                        <button onclick="window.handlePurchase()" ${isProcessing ? 'disabled' : ''} class="btn-main py-7 rounded-[40px] font-black shadow-2xl active:scale-95 italic tracking-widest text-center">
-                            ${isProcessing ? 'A PROCESSAR...' : `CONFIRMAR • R$ ${(p.preco * window.state.qtd).toFixed(2)}`}
-                        </button>
-                        
-                        <button onclick="window.state.comprando=null;window.render()" class="w-full py-8 text-slate-300 font-black text-[10px] uppercase tracking-widest text-center">Cancelar</button>
-                    </div>
-                </div>`;
-        }
-
-        // Sincronização
-        onAuthStateChanged(auth, u => {
-            window.state.user = u;
-            if (u && (u.email === 'teste@lojista.com.br' || u.isAnonymous)) {
-                onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'estoque'), s => {
-                    window.state.produtos = s.docs.map(d => ({id: d.id, ...d.data()})).sort((a,b)=>(a.nome||"").localeCompare(b.nome||""));
-                    window.state.loading = false; 
-                    window.render();
-                });
-                onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'vendas_logs'), s => {
-                    const data = s.docs.map(d => ({id: d.id, ...d.data()}));
-                    window.state.pedidos = data.filter(p => p.clienteId === auth.currentUser?.uid).sort((a,b)=>(b.criadoEm?.seconds||0)-(a.criadoEm?.seconds||0));
-                    window.render();
-                });
-            } else { 
-                window.state.loading = false; 
-                window.render(); 
-            }
-        });
-    </script>
-</body>
-</html>
+    // Primeiro render ao carregar a página
+    document.addEventListener('DOMContentLoaded', () => {
+        window.render();
+    });
+</script>
