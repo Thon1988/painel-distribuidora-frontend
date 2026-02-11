@@ -1,90 +1,338 @@
-<script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-    import { 
-        getFirestore, collection, onSnapshot, doc, getDoc, addDoc, 
-        serverTimestamp, increment, updateDoc, setDoc, runTransaction 
-    } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
-    
-    // Importação CORRETA e completa do firebase-auth
-    import { 
-        getAuth, 
-        onAuthStateChanged, 
-        signOut, 
-        signInWithEmailAndPassword, 
-        updatePassword, 
-        signInAnonymously, 
-        signInWithCustomToken 
-    } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
-
-    // (opcional - se for usar notificações push)
-    // import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-messaging.js";
-
-    // --- CONFIGURAÇÃO FIREBASE ---
-    const firebaseConfig = JSON.parse(__firebase_config || '{"apiKey":"AIzaSyD3Otz9-zdZH-E5Feg9IOGWPzVycoe8gro","authDomain":"distribuidora-de-ovos-aline.firebaseapp.com","projectId":"distribuidora-de-ovos-aline","storageBucket":"distribuidora-de-ovos-aline.firebasestorage.app","messagingSenderId":"92187548716","appId":"1:92187548716:web:d61d18a29aa76aead7c589"}');
-    const appFB = initializeApp(firebaseConfig);
-    const db = getFirestore(appFB);
-    const auth = getAuth(appFB);
-    
-    const appId = typeof __app_id !== 'undefined' ? __app_id : "app-egg-pro-transacional";
-    const DISTRIBUIDORA_ENDERECO = "R. Antônio Freire da Silva, 67 - Jd. Camelias, SP";
-
-    // --- ESTADO GLOBAL ---
-    window.state = { 
-        user: null, 
-        profile: null,
-        view: 'loja', 
-        produtos: [], 
-        pedidos: [], 
-        cart: [],
-        pix: { key: '', type: '', copiaCola: '' }, 
-        checkout: { tipoEntrega: 'entrega', endereco: null, metodoPagamento: 'pix_agora' },
-        profileMode: 'view',
-        ordersFilter: 'aberto', 
-        loading: true, 
-        processing: false,
-        payingOrder: null,
-        toast: null
-    };
-
-    let lastStateHash = "";
-    let renderTimeout = null;
-
-    // ... (mantenha todas as suas funções auxiliares: scheduleRender, showToast, setView, copyToClipboard, maskTel, maskCEP, maskDoc, gerarPix, addToCart, updateCartQtd, etc.)
-
-    // --- RENDERIZAÇÃO (exemplo simplificado – adapte conforme seu render completo) ---
-    window.render = () => {
-        const root = document.getElementById('app-root');
-        if (!root) return;
-
-        const s = window.state;
-        if (s.loading) {
-            root.innerHTML = `<div class="loading-screen">Carregando...</div>`;
-            return;
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AppEgg | Sua Distribuidora de Ovos</title>
+    <!-- Tailwind CSS com versão fixa (sem aviso de produção) -->
+    <script src="https://cdn.tailwindcss.com/3.4.13"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background: #ffffff; 
+            color: #0f172a; 
+            padding-bottom: 100px; 
+            overflow-x: hidden; 
+            -webkit-tap-highlight-color: transparent;
         }
 
-        if (!s.user) {
+        /* --- Estética Refinada Zé Delivery --- */
+        .logo-font { font-weight: 800; color: #e11d48; font-size: 1.4rem; letter-spacing: -1px; }
+        
+        .nav-bottom { 
+            position: fixed; bottom: 0; left: 0; right: 0; 
+            background: #ffffff; border-top: 1px solid #f1f5f9;
+            display: flex; justify-content: space-around; padding: 12px 0 24px 0; z-index: 100; 
+            box-shadow: 0 -4px 15px rgba(0,0,0,0.03);
+        }
+        
+        .nav-item { 
+            flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; 
+            color: #94a3b8; font-size: 10px; font-weight: 600; 
+            border: none; background: transparent; cursor: pointer; transition: 0.2s;
+        }
+        .nav-item.active { color: #e11d48; }
+        
+        .card-product { 
+            background: white; border: 1px solid #f1f5f9; border-radius: 16px; 
+            overflow: hidden; transition: 0.2s ease; position: relative;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.01);
+        }
+        .card-product:active { transform: scale(0.98); border-color: #e11d48; }
+        
+        .btn-primary { 
+            background: #e11d48; color: white; padding: 16px; border-radius: 14px; 
+            font-weight: 700; font-size: 14px; width: 100%; 
+            transition: 0.2s; cursor: pointer; border: none; text-transform: uppercase;
+        }
+        .btn-primary:active { background: #be123c; transform: scale(0.98); }
+        .btn-primary:disabled { background: #f1f5f9; color: #cbd5e1; cursor: not-allowed; }
+        
+        .input-refined { 
+            width: 100%; padding: 14px 16px; background: #f8fafc; border-radius: 12px; 
+            border: 1px solid #e2e8f0; font-weight: 500; font-size: 14px; outline: none; transition: 0.2s; 
+        }
+        .input-refined:focus { border-color: #e11d48; background: #fff; box-shadow: 0 0 0 3px rgba(225, 29, 72, 0.08); }
+
+        .badge-status {
+            padding: 4px 10px; border-radius: 8px; font-size: 10px; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 0.02em;
+        }
+
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        
+        .fade-in { animation: fadeIn 0.3s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+        .loading-screen { 
+            position: fixed; inset: 0; background: white; z-index: 1000; 
+            display: flex; flex-direction: column; align-items: center; justify-content: center; 
+        }
+        
+        .btn-add-circle {
+            width: 36px; height: 36px; background: #e11d48; color: white;
+            border-radius: 12px; display: flex; align-items: center; justify-content: center;
+            transition: 0.2s; box-shadow: 0 4px 10px rgba(225, 29, 72, 0.15);
+        }
+        .btn-add-circle:active { transform: scale(0.85); }
+
+        .cart-count {
+            position: absolute; top: -2px; right: -2px; background: #e11d48; color: white;
+            font-size: 9px; font-weight: 800; width: 16px; height: 16px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; border: 2px solid white;
+        }
+
+        .toast-container {
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+            z-index: 2000; padding: 12px 24px; border-radius: 12px; background: #1e293b;
+            color: white; font-weight: 600; font-size: 13px; box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+
+        .option-card {
+            border: 1.5px solid #f1f5f9; border-radius: 16px; padding: 16px;
+            transition: 0.2s; cursor: pointer; text-align: left; background: #fff;
+            display: flex; align-items: center; gap: 12px;
+        }
+        .option-card.active { border-color: #e11d48; background: #fff1f2; }
+
+        .qr-frame { background: #f8fafc; padding: 16px; border-radius: 20px; border: 1px dashed #e2e8f0; display: inline-block; }
+    </style>
+</head>
+<body class="no-scrollbar">
+
+    <div id="app-root"></div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+        import { 
+            getFirestore, collection, onSnapshot, doc, getDoc, addDoc, 
+            serverTimestamp, increment, updateDoc, setDoc, runTransaction 
+        } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+        import { 
+            getAuth, onAuthStateChanged, signOut, signInWithEmailAndPassword, updatePassword, signInAnonymously, signInWithCustomToken 
+        } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+
+        // --- CONFIGURAÇÃO FIREBASE ---
+        const firebaseConfig = JSON.parse(__firebase_config || '{"apiKey":"AIzaSyD3Otz9-zdZH-E5Feg9IOGWPzVycoe8gro","authDomain":"distribuidora-de-ovos-aline.firebaseapp.com","projectId":"distribuidora-de-ovos-aline","storageBucket":"distribuidora-de-ovos-aline.firebasestorage.app","messagingSenderId":"92187548716","appId":"1:92187548716:web:d61d18a29aa76aead7c589"}');
+        const appFB = initializeApp(firebaseConfig);
+        const db = getFirestore(appFB);
+        const auth = getAuth(appFB);
+        
+        const appId = typeof __app_id !== 'undefined' ? __app_id : "app-egg-pro-transacional";
+        const DISTRIBUIDORA_ENDERECO = "R. Antônio Freire da Silva, 67 - Jd. Camelias, SP";
+
+        // --- ESTADO GLOBAL ---
+        window.state = { 
+            user: null, 
+            profile: null,
+            view: 'loja', 
+            produtos: [], 
+            pedidos: [], 
+            cart: [],
+            pix: { key: '', type: '', copiaCola: '' }, 
+            checkout: { tipoEntrega: 'entrega', endereco: null, metodoPagamento: 'pix_agora' },
+            profileMode: 'view',
+            ordersFilter: 'aberto', 
+            loading: true, 
+            processing: false,
+            payingOrder: null,
+            toast: null
+        };
+
+        let lastStateHash = "";
+        let renderTimeout = null;
+
+        // --- FUNÇÕES AUXILIARES ---
+
+        window.scheduleRender = () => {
+            clearTimeout(renderTimeout);
+            renderTimeout = setTimeout(() => { window.render(); }, 16);
+        };
+
+        window.showToast = (msg) => {
+            window.state.toast = msg;
+            window.scheduleRender();
+            setTimeout(() => {
+                window.state.toast = null;
+                window.scheduleRender();
+            }, 3000);
+        };
+
+        window.setView = (v) => { 
+            window.state.view = v; 
+            window.state.profileMode = 'view';
+            window.state.payingOrder = null;
+            window.scheduleRender(); 
+        };
+
+        window.copyToClipboard = (text) => {
+            if (!text) return;
+            navigator.clipboard.writeText(text).then(() => {
+                window.showToast('Código PIX copiado!');
+            }).catch(() => {
+                window.showToast('Erro ao copiar.');
+            });
+        };
+
+        window.maskTel = (i) => { 
+            let v = i.value.replace(/\D/g, ""); 
+            i.value = v.replace(/^(\d{2})(\d)/g, "($1) $2").replace(/(\d{5})(\d)/, "$1-$2").substring(0, 15); 
+        };
+
+        window.maskCEP = (i) => { 
+            let v = i.value.replace(/\D/g, ""); 
+            i.value = v.replace(/(\d{5})(\d)/, "$1-$2").substring(0, 9); 
+        };
+
+        window.maskDoc = (i) => {
+            let v = i.value.replace(/\D/g, "");
+            if (v.length <= 11) i.value = v.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/g, "$1.$2.$3-$4");
+            else i.value = v.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/g, "$1.$2.$3/$4-$5");
+        };
+
+        // --- GERAÇÃO DE PIX DINÂMICO ---
+        function gerarPix({ chave, tipo, valor, txid }) {
+            function tlv(id, value) {
+                return id + value.length.toString().padStart(2, '0') + value;
+            }
+            let chaveFinal = chave;
+            if (tipo === 'Celular') chaveFinal = '+55' + chave.replace(/\D/g, '');
+            let payload = '000201' + tlv('26', tlv('00', 'BR.GOV.BCB.PIX') + tlv('01', chaveFinal)) + '52040000' + '5303986' + tlv('54', valor.toFixed(2)) + '5802BR' + tlv('59', 'APPEGG') + tlv('60', 'SAOPAULO') + tlv('62', tlv('05', txid.substring(0, 25))) + '6304';
+            let crc = 0xFFFF;
+            for (let i = 0; i < payload.length; i++) {
+                crc ^= payload.charCodeAt(i) << 8;
+                for (let j = 0; j < 8; j++) { crc = crc & 0x8000 ? (crc << 1) ^ 0x1021 : crc << 1; }
+            }
+            return payload + (crc & 0xFFFF).toString(16).toUpperCase().padStart(4, '0');
+        }
+
+        // --- LÓGICA DE NEGÓCIO ---
+
+        window.addToCart = (id) => {
+            const p = window.state.produtos.find(x => x.id === id);
+            if (!p) return;
+            const existing = window.state.cart.find(x => x.id === id);
+            if (existing) {
+                if (existing.qtd + 1 > p.quantidade) return window.showToast("Stock insuficiente.");
+                existing.qtd++;
+            } else {
+                if (p.quantidade < 1) return window.showToast("Produto esgotado.");
+                window.state.cart.push({ ...p, qtd: 1 });
+            }
+            window.scheduleRender();
+        };
+
+        window.updateCartQtd = (id, val) => {
+            const item = window.state.cart.find(x => x.id === id);
+            if (!item) return;
+            item.qtd = Math.max(0, item.qtd + val);
+            if (item.qtd > (window.state.produtos.find(x => x.id === id)?.quantidade || 0)) item.qtd = window.state.produtos.find(x => x.id).quantidade;
+            if (item.qtd === 0) window.state.cart = window.state.cart.filter(x => x.id !== id);
+            window.scheduleRender();
+        };
+
+        // ... (mantenha as demais funções de negócio que você já tinha: handleFinalizeOrder, confirmarPagamentoPix, etc.)
+
+        // --- RENDERIZAÇÃO ---
+        window.render = () => {
+            const root = document.getElementById('app-root');
+            if (!root) {
+                console.warn("Elemento #app-root não encontrado");
+                return;
+            }
+
+            const s = window.state;
+            if (s.loading) {
+                root.innerHTML = `
+                    <div class="loading-screen">
+                        <div class="logo-font animate-bounce mb-4">AppEgg</div>
+                        <p class="text-gray-500 text-sm">Carregando sua experiência...</p>
+                    </div>`;
+                return;
+            }
+
+            if (!s.user) {
+                root.innerHTML = `
+                    <div class="min-h-screen flex items-center justify-center bg-gradient-to-b from-rose-50 to-white p-6">
+                        <div class="w-full max-w-md">
+                            <div class="text-center mb-10">
+                                <div class="logo-font text-6xl mb-2">AppEgg</div>
+                                <p class="text-rose-600 font-bold text-lg uppercase tracking-wider">Distribuidora Premium</p>
+                            </div>
+                            <div class="bg-white rounded-3xl shadow-2xl p-8">
+                                <form onsubmit="window.handleLogin(event)" class="space-y-6">
+                                    <input id="le" type="email" value="teste@lojista.com.br" class="input-refined text-center" placeholder="Seu e-mail" required>
+                                    <input id="lp" type="password" class="input-refined text-center" placeholder="Sua senha" required>
+                                    <button type="submit" class="btn-primary text-lg shadow-lg">Entrar na Loja</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>`;
+                return;
+            }
+
+            // Conteúdo quando logado (seu HTML principal aqui)
             root.innerHTML = `
-                <div class="min-h-screen flex items-center justify-center">
-                    <form onsubmit="window.handleLogin(event)">
-                        <input id="le" type="email" placeholder="Email">
-                        <input id="lp" type="password" placeholder="Senha">
-                        <button type="submit">Entrar</button>
-                    </form>
-                </div>`;
-            return;
-        }
+                <div class="max-w-md mx-auto pb-32">
+                    <header class="sticky top-0 bg-white/90 backdrop-blur-md z-50 border-b border-gray-100 px-6 py-4">
+                        <div class="flex justify-between items-center">
+                            <div class="logo-font text-3xl">AppEgg</div>
+                            <div class="bg-rose-50 px-4 py-2 rounded-full text-xs font-bold text-rose-600">
+                                Cliente Premium
+                            </div>
+                        </div>
+                    </header>
+                    <main class="px-6 pt-6 pb-24">
+                        <!-- Seu conteúdo logado aqui (loja, carrinho, pedidos, etc.) -->
+                        <div class="text-center py-20">
+                            <h1 class="text-3xl font-bold text-gray-800">Bem-vindo, ${s.user.email.split('@')[0]}!</h1>
+                            <p class="text-gray-500 mt-2">Escolha uma opção no menu inferior</p>
+                        </div>
+                    </main>
+                    <nav class="nav-bottom">
+                        <button onclick="window.setView('loja')" class="nav-item ${s.view==='loja'?'active':''}">Loja</button>
+                        <button onclick="window.setView('pedidos')" class="nav-item ${s.view==='pedidos'?'active':''}">Pedidos</button>
+                        <button onclick="window.handleSignOut()" class="nav-item text-rose-600">Sair</button>
+                    </nav>
+                    ${s.toast ? `<div class="toast-container fade-in">${s.toast}</div>` : ''}
+                </div>
+            `;
+        };
 
-        // Seu conteúdo principal quando logado
-        root.innerHTML = `<div>Bem-vindo! View: ${s.view}</div>`;
-    };
+        // --- LOGIN ---
+        window.handleLogin = async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('le')?.value?.trim();
+            const password = document.getElementById('lp')?.value;
 
-    // --- INICIALIZAÇÃO E AUTH ---
-    onAuthStateChanged(auth, (user) => {
-        window.state.user = user;
-        window.state.loading = false;
-        window.scheduleRender();  // ou window.render() se não usar schedule
-    });
+            if (!email || !password) {
+                window.showToast("Preencha email e senha");
+                return;
+            }
 
-    // Primeira renderização
-    window.scheduleRender();
-</script>
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+                window.showToast("Login realizado!");
+            } catch (err) {
+                console.error("Erro login:", err);
+                window.showToast("Dados incorretos ou erro de conexão");
+            }
+        };
+
+        // Inicialização segura
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log("DOM carregado → iniciando render");
+            window.render(); // Primeiro render
+
+            onAuthStateChanged(auth, (user) => {
+                console.log("Auth mudou:", user ? "Logado" : "Deslogado");
+                window.state.user = user;
+                window.state.loading = false;
+                window.scheduleRender();
+            });
+        });
+    </script>
+</body>
+</html>
