@@ -1,265 +1,90 @@
-<!DOCTYPE html>
-<html lang="pt-PT">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AppEgg | Sua Distribuidora de Ovos</title>
-    <!-- Tailwind CSS – versão fixa para produção -->
-    <script src="https://cdn.tailwindcss.com/3.4.13"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
-        
-        :root {
-            --primary: #e11d48;
-            --primary-dark: #be123c;
-            --bg: #ffffff;
-            --text: #0f172a;
-            --gray: #64748b;
-            --light-gray: #f1f5f9;
-            --success: #10b981;
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+    import { 
+        getFirestore, collection, onSnapshot, doc, getDoc, addDoc, 
+        serverTimestamp, increment, updateDoc, setDoc, runTransaction 
+    } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+    
+    // Importação CORRETA e completa do firebase-auth
+    import { 
+        getAuth, 
+        onAuthStateChanged, 
+        signOut, 
+        signInWithEmailAndPassword, 
+        updatePassword, 
+        signInAnonymously, 
+        signInWithCustomToken 
+    } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+
+    // (opcional - se for usar notificações push)
+    // import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-messaging.js";
+
+    // --- CONFIGURAÇÃO FIREBASE ---
+    const firebaseConfig = JSON.parse(__firebase_config || '{"apiKey":"AIzaSyD3Otz9-zdZH-E5Feg9IOGWPzVycoe8gro","authDomain":"distribuidora-de-ovos-aline.firebaseapp.com","projectId":"distribuidora-de-ovos-aline","storageBucket":"distribuidora-de-ovos-aline.firebasestorage.app","messagingSenderId":"92187548716","appId":"1:92187548716:web:d61d18a29aa76aead7c589"}');
+    const appFB = initializeApp(firebaseConfig);
+    const db = getFirestore(appFB);
+    const auth = getAuth(appFB);
+    
+    const appId = typeof __app_id !== 'undefined' ? __app_id : "app-egg-pro-transacional";
+    const DISTRIBUIDORA_ENDERECO = "R. Antônio Freire da Silva, 67 - Jd. Camelias, SP";
+
+    // --- ESTADO GLOBAL ---
+    window.state = { 
+        user: null, 
+        profile: null,
+        view: 'loja', 
+        produtos: [], 
+        pedidos: [], 
+        cart: [],
+        pix: { key: '', type: '', copiaCola: '' }, 
+        checkout: { tipoEntrega: 'entrega', endereco: null, metodoPagamento: 'pix_agora' },
+        profileMode: 'view',
+        ordersFilter: 'aberto', 
+        loading: true, 
+        processing: false,
+        payingOrder: null,
+        toast: null
+    };
+
+    let lastStateHash = "";
+    let renderTimeout = null;
+
+    // ... (mantenha todas as suas funções auxiliares: scheduleRender, showToast, setView, copyToClipboard, maskTel, maskCEP, maskDoc, gerarPix, addToCart, updateCartQtd, etc.)
+
+    // --- RENDERIZAÇÃO (exemplo simplificado – adapte conforme seu render completo) ---
+    window.render = () => {
+        const root = document.getElementById('app-root');
+        if (!root) return;
+
+        const s = window.state;
+        if (s.loading) {
+            root.innerHTML = `<div class="loading-screen">Carregando...</div>`;
+            return;
         }
 
-        body {
-            font-family: 'Inter', sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            min-height: 100vh;
-            overflow-x: hidden;
-            -webkit-tap-highlight-color: transparent;
-        }
-
-        .logo-font {
-            font-weight: 900;
-            color: var(--primary);
-            font-size: 1.75rem;
-            letter-spacing: -1px;
-            line-height: 1;
-        }
-
-        /* Navegação inferior premium */
-        .nav-bottom {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: white;
-            border-top: 1px solid var(--light-gray);
-            display: flex;
-            justify-content: space-around;
-            padding: 12px 0 28px 0;
-            z-index: 1000;
-            box-shadow: 0 -4px 20px rgba(0,0,0,0.06);
-        }
-
-        .nav-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 4px;
-            color: var(--gray);
-            font-size: 10px;
-            font-weight: 700;
-            text-transform: uppercase;
-            transition: all 0.2s ease;
-        }
-        .nav-item.active {
-            color: var(--primary);
-            transform: scale(1.08);
-        }
-        .nav-item svg {
-            width: 24px;
-            height: 24px;
-            stroke-width: 2.5;
-        }
-
-        /* Cards premium */
-        .card-premium {
-            background: white;
-            border-radius: 24px;
-            overflow: hidden;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.06);
-            border: 1px solid rgba(241,245,249,0.8);
-            transition: all 0.25s ease;
-        }
-        .card-premium:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 16px 48px rgba(0,0,0,0.1);
-        }
-
-        /* Botões premium */
-        .btn-primary {
-            background: var(--primary);
-            color: white;
-            padding: 18px;
-            border-radius: 20px;
-            font-weight: 800;
-            font-size: 15px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            box-shadow: 0 10px 30px rgba(225,29,72,0.25);
-            transition: all 0.2s ease;
-            width: 100%;
-        }
-        .btn-primary:active {
-            transform: scale(0.97);
-            box-shadow: 0 6px 20px rgba(225,29,72,0.2);
-        }
-
-        /* Inputs premium */
-        .input-premium {
-            width: 100%;
-            padding: 16px 20px;
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 16px;
-            font-weight: 600;
-            font-size: 15px;
-            transition: all 0.2s ease;
-        }
-        .input-premium:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 4px rgba(225,29,72,0.1);
-            background: white;
-        }
-
-        .toast-container {
-            position: fixed;
-            top: 24px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 9999;
-            max-width: 90%;
-        }
-        .toast-msg {
-            background: rgba(30,41,59,0.95);
-            backdrop-filter: blur(10px);
-            color: white;
-            padding: 14px 28px;
-            border-radius: 20px;
-            font-weight: 700;
-            font-size: 14px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.25);
-            animation: fadeInDown 0.4s ease-out;
-        }
-
-        @keyframes fadeInDown {
-            from { opacity: 0; transform: translateY(-20px); }
-            to   { opacity: 1; transform: translateY(0); }
-        }
-
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-    </style>
-</head>
-<body class="no-scrollbar">
-
-    <div id="toast-root" class="toast-container"></div>
-    <div id="app-root"></div>
-
-    <script type="module">
-        // ... (mantenha todos os imports e configurações Firebase que você já tinha)
-
-        // Funções auxiliares (já existentes, mantidas)
-        window.showToast = (msg) => {
-            const container = document.getElementById('toast-root');
-            const el = document.createElement('div');
-            el.className = 'toast-msg';
-            el.innerText = msg;
-            container.appendChild(el);
-            setTimeout(() => el.remove(), 4000);
-        };
-
-        // Renderização refinada (apenas as partes visuais mudaram)
-        window.render = () => {
-            const root = document.getElementById('app-root');
-            const s = window.state;
-
-            if (s.loading) {
-                root.innerHTML = `
-                    <div class="min-h-screen flex items-center justify-center">
-                        <div class="text-center">
-                            <div class="logo-font text-6xl animate-pulse mb-4">AppEgg</div>
-                            <p class="text-gray-400 font-medium">Carregando sua experiência premium...</p>
-                        </div>
-                    </div>`;
-                return;
-            }
-
-            if (!s.user) {
-                root.innerHTML = `
-                    <div class="min-h-screen bg-gradient-to-b from-rose-50 to-white flex flex-col items-center justify-center p-6">
-                        <div class="text-center mb-12">
-                            <div class="logo-font text-7xl mb-2">AppEgg</div>
-                            <p class="text-rose-600 font-bold text-lg tracking-wider uppercase">Distribuidora Premium</p>
-                        </div>
-                        <div class="w-full max-w-md bg-white rounded-3xl shadow-2xl p-8">
-                            <form onsubmit="window.handleLogin(event)" class="space-y-6">
-                                <input id="le" type="email" value="teste@lojista.com.br" class="input-premium text-center" placeholder="Seu e-mail" required>
-                                <input id="lp" type="password" class="input-premium text-center" placeholder="Sua senha" required>
-                                <button type="submit" class="btn-primary text-lg">Entrar na Loja</button>
-                            </form>
-                        </div>
-                    </div>`;
-                return;
-            }
-
+        if (!s.user) {
             root.innerHTML = `
-                <div class="max-w-md mx-auto pb-32">
-                    <!-- Header premium -->
-                    <header class="sticky top-0 bg-white/80 backdrop-blur-md z-50 border-b border-gray-100 px-6 py-4">
-                        <div class="flex justify-between items-center">
-                            <div class="logo-font text-3xl">AppEgg</div>
-                            <div class="flex items-center gap-3">
-                                <div class="bg-rose-50 px-4 py-2 rounded-full text-xs font-bold text-rose-600">
-                                    Cliente Premium
-                                </div>
-                            </div>
-                        </div>
-                    </header>
+                <div class="min-h-screen flex items-center justify-center">
+                    <form onsubmit="window.handleLogin(event)">
+                        <input id="le" type="email" placeholder="Email">
+                        <input id="lp" type="password" placeholder="Senha">
+                        <button type="submit">Entrar</button>
+                    </form>
+                </div>`;
+            return;
+        }
 
-                    <!-- Conteúdo principal -->
-                    <main class="px-6 pt-6 pb-24">
-                        ${renderActiveView()}
-                    </main>
+        // Seu conteúdo principal quando logado
+        root.innerHTML = `<div>Bem-vindo! View: ${s.view}</div>`;
+    };
 
-                    <!-- Navegação inferior premium -->
-                    <nav class="nav-bottom">
-                        <button onclick="window.setView('loja')" class="nav-item ${s.view==='loja'?'active':''}">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
-                            Loja
-                        </button>
-                        <button onclick="window.setView('carrinho')" class="nav-item ${s.view==='carrinho'?'active':''} relative">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
-                            Sacola
-                            ${s.cart.length > 0 ? `<span class="cart-count">${s.cart.reduce((a,b)=>a+b.qtd,0)}</span>` : ''}
-                        </button>
-                        <button onclick="window.setView('pedidos')" class="nav-item ${s.view==='pedidos'?'active':''}">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
-                            Pedidos
-                        </button>
-                        <button onclick="window.setView('perfil')" class="nav-item ${s.view==='perfil'?'active':''}">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
-                            Perfil
-                        </button>
-                    </nav>
+    // --- INICIALIZAÇÃO E AUTH ---
+    onAuthStateChanged(auth, (user) => {
+        window.state.user = user;
+        window.state.loading = false;
+        window.scheduleRender();  // ou window.render() se não usar schedule
+    });
 
-                    <!-- Toast global -->
-                    ${s.toast ? `<div class="toast-container fade-in">${s.toast}</div>` : ''}
-                </div>
-
-                ${s.payingOrder ? renderPixModal() : ''}
-                ${s.comprando ? renderModalCompra() : ''}
-            `;
-        };
-
-        // ... (mantenha todas as funções existentes: renderLoja, renderCarrinho, renderPedidos, renderModalCompra, handlePurchase, gerarPix, etc.)
-
-        // Inicialização
-        onAuthStateChanged(auth, (u) => {
-            window.state.user = u;
-            window.state.loading = false;
-            window.render();
-        });
-    </script>
-</body>
-</html>
+    // Primeira renderização
+    window.scheduleRender();
+</script>
