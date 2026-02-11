@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>AppEgg | Sua Distribuidora de Ovos</title>
     <script src="https://cdn.tailwindcss.com/3.4.13"></script>
+    <!-- Stripe.js (obrigatório para integração) -->
+    <script src="https://js.stripe.com/v3/"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
         
@@ -48,6 +50,13 @@
         .btn-primary:active { background: #be123c; transform: scale(0.98); }
         .btn-primary:disabled { background: #f1f5f9; color: #cbd5e1; cursor: not-allowed; }
         
+        .btn-stripe {
+            background: #635bff; color: white; padding: 16px; border-radius: 14px;
+            font-weight: 700; font-size: 14px; width: 100%; text-transform: uppercase;
+            transition: 0.2s; cursor: pointer; border: none;
+        }
+        .btn-stripe:active { background: #4f46e5; transform: scale(0.98); }
+        
         .input-refined { 
             width: 100%; padding: 14px 16px; background: #f8fafc; border-radius: 12px; 
             border: 1px solid #e2e8f0; font-weight: 500; font-size: 14px; outline: none; transition: 0.2s; 
@@ -64,11 +73,7 @@
         .fade-in { animation: fadeIn 0.3s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
-        .loading-screen { 
-            position: fixed; inset: 0; background: white; z-index: 1000; 
-            display: flex; flex-direction: column; align-items: center; justify-content: center; 
-            font-family: 'Inter', sans-serif;
-        }
+        .loading-screen { position: fixed; inset: 0; background: white; z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
         
         .btn-add-circle {
             width: 36px; height: 36px; background: #e11d48; color: white;
@@ -88,6 +93,15 @@
             z-index: 2000; padding: 12px 24px; border-radius: 12px; background: #1e293b;
             color: white; font-weight: 600; font-size: 13px; box-shadow: 0 10px 25px rgba(0,0,0,0.1);
         }
+
+        .option-card {
+            border: 1.5px solid #f1f5f9; border-radius: 16px; padding: 16px;
+            transition: 0.2s; cursor: pointer; text-align: left; background: #fff;
+            display: flex; align-items: center; gap: 12px;
+        }
+        .option-card.active { border-color: #e11d48; background: #fff1f2; }
+
+        .qr-frame { background: #f8fafc; padding: 16px; border-radius: 20px; border: 1px dashed #e2e8f0; display: inline-block; }
     </style>
 </head>
 <body class="no-scrollbar">
@@ -98,38 +112,46 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
         import { 
             getFirestore, collection, onSnapshot, doc, getDoc, addDoc, 
-            serverTimestamp, query, orderBy
+            serverTimestamp, increment, updateDoc, setDoc, runTransaction 
         } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
         import { 
-            getAuth, onAuthStateChanged, signOut, signInWithEmailAndPassword
+            getAuth, onAuthStateChanged, signOut, signInWithEmailAndPassword, updatePassword, signInAnonymously, signInWithCustomToken 
         } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
 
         // --- CONFIGURAÇÃO FIREBASE ---
-        const firebaseConfig = {
-            apiKey: "AIzaSyD3Otz9-zdZH-E5Feg9IOGWPzVycoe8gro",
-            authDomain: "distribuidora-de-ovos-aline.firebaseapp.com",
-            projectId: "distribuidora-de-ovos-aline",
-            storageBucket: "distribuidora-de-ovos-aline.firebasestorage.app",
-            messagingSenderId: "92187548716",
-            appId: "1:92187548716:web:d61d18a29aa76aead7c589"
-        };
+        const firebaseConfig = JSON.parse(__firebase_config);
         const appFB = initializeApp(firebaseConfig);
         const db = getFirestore(appFB);
         const auth = getAuth(appFB);
+        
+        const appId = typeof __app_id !== 'undefined' ? __app_id : "app-egg-pro-transacional";
+        const DISTRIBUIDORA_ENDERECO = "R. Antônio Freire da Silva, 67 - Jd. Camelias, SP";
+
+        // --- CHAVE PÚBLICA STRIPE (substitua pela sua real!) ---
+        const stripe = Stripe('pk_test_SUA_CHAVE_PUBLICA_AQUI');  // ← COLOQUE AQUI SUA CHAVE PUBLICA DO STRIPE
 
         // --- ESTADO GLOBAL ---
         window.state = { 
             user: null, 
+            profile: null,
             view: 'loja', 
             produtos: [], 
             pedidos: [], 
             cart: [],
-            pixConfig: { chave: '41913385800', tipo: 'CPF' }, 
+            pix: { key: '', type: '', copiaCola: '' }, 
+            checkout: { tipoEntrega: 'entrega', endereco: null, metodoPagamento: 'pix_agora' },
+            profileMode: 'view',
+            ordersFilter: 'aberto', 
             loading: true, 
+            processing: false,
+            payingOrder: null,
             toast: null
         };
 
+        let lastStateHash = "";
         let renderTimeout = null;
+
+        // --- FUNÇÕES AUXILIARES (mantidas iguais) ---
 
         window.scheduleRender = () => {
             clearTimeout(renderTimeout);
@@ -147,215 +169,165 @@
 
         window.setView = (v) => { 
             window.state.view = v; 
+            window.state.profileMode = 'view';
+            window.state.payingOrder = null;
             window.scheduleRender(); 
         };
 
-        // --- LÓGICA DE PIX ---
-        function gerarPix(valor, txid) {
-            function tlv(id, value) { return id + value.length.toString().padStart(2, '0') + value; }
-            const chave = window.state.pixConfig.chave;
-            let payload = '000201' + tlv('26', tlv('00', 'BR.GOV.BCB.PIX') + tlv('01', chave)) + '52040000' + '5303986' + tlv('54', valor.toFixed(2)) + '5802BR' + tlv('59', 'APPEGG') + tlv('60', 'SAOPAULO') + tlv('62', tlv('05', txid.substring(0, 20))) + '6304';
-            let crc = 0xFFFF;
-            for (let i = 0; i < payload.length; i++) {
-                crc ^= payload.charCodeAt(i) << 8;
-                for (let j = 0; j < 8; j++) crc = crc & 0x8000 ? (crc << 1) ^ 0x1021 : crc << 1;
+        window.copyToClipboard = (text) => {
+            if (!text) return;
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            textArea.style.position = "fixed";
+            textArea.style.left = "-9999px";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                window.showToast('Código PIX copiado!');
+            } catch (err) {
+                console.error('Erro ao copiar:', err);
             }
-            return payload + (crc & 0xFFFF).toString(16).toUpperCase().padStart(4, '0');
+            document.body.removeChild(textArea);
+        };
+
+        // ... (mantenha maskTel, maskCEP, maskDoc, gerarPix, addToCart, updateCartQtd, etc.)
+
+        // --- FINALIZAR PEDIDO COM STRIPE OU PIX ---
+        window.handleFinalizeOrder = async (paymentMethod = 'pix_agora') => {
+            if (window.state.processing || window.state.cart.length === 0) return;
+            window.state.processing = true; window.scheduleRender();
+
+            try {
+                const s = window.state;
+                const totalPedido = s.cart.reduce((acc, i) => acc + (i.preco * i.qtd), 0);
+                const finalAddr = s.checkout.tipoEntrega === 'retirada' ? DISTRIBUIDORA_ENDERECO : (s.checkout.endereco ? `${s.checkout.endereco.rua}, ${s.checkout.endereco.numero}` : `${s.profile?.address?.rua || ''}, ${s.profile?.address?.numero || ''}`);
+
+                let pedidoCriadoId = "";
+                let pixGerado = "";
+
+                await runTransaction(db, async (transaction) => {
+                    for (const item of s.cart) {
+                        const prodRef = doc(db, 'artifacts', appId, 'public', 'data', 'estoque', item.id);
+                        const prodSnap = await transaction.get(prodRef);
+                        const curQty = Number(prodSnap.data()?.quantidade || 0);
+                        if (curQty < item.qtd) throw new Error(`Stock insuficiente para ${item.nome}.`);
+                        transaction.update(prodRef, { quantidade: curQty - item.qtd });
+                    }
+
+                    const orderRef = doc(collection(db, 'artifacts', appId, 'public', 'data', 'vendas_logs'));
+                    pedidoCriadoId = orderRef.id;
+
+                    if (paymentMethod === 'stripe') {
+                        // Cria sessão Stripe
+                        const response = await fetch('https://sua-url-de-backend.com/create-checkout-session', {  // ← SUBSTITUA PELA SUA URL DE BACKEND
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                amount: Math.round(totalPedido * 100), // em centavos
+                                currency: 'brl',
+                                orderId: pedidoCriadoId,
+                                customerEmail: auth.currentUser.email
+                            })
+                        });
+
+                        const { sessionId } = await response.json();
+                        stripe.redirectToCheckout({ sessionId });
+                        return;
+                    } else {
+                        // PIX (fallback)
+                        pixGerado = gerarPix({ chave: s.pix.key_raw || s.pix.key, tipo: s.pix.type, valor: totalPedido, txid: pedidoCriadoId });
+                    }
+
+                    transaction.set(orderRef, {
+                        clienteId: auth.currentUser.uid,
+                        clienteNome: s.profile?.name || "Cliente",
+                        items: s.cart.map(i => ({ produto: i.nome, quantidade: i.qtd, precoUn: i.preco, embalagem: i.embalagem })),
+                        valorTotal: totalPedido,
+                        status: paymentMethod === 'stripe' ? 'PENDENTE_STRIPE' : 'PENDENTE_PAGAMENTO',
+                        pix_payload: pixGerado || null,
+                        tipoEntrega: s.checkout.tipoEntrega,
+                        enderecoEntrega: finalAddr,
+                        pagamento: { metodo: paymentMethod, pago: false, status: 'PENDENTE' },
+                        criadoEm: serverTimestamp()
+                    });
+                });
+
+                if (paymentMethod === 'stripe') {
+                    // O redirecionamento já aconteceu
+                    return;
+                }
+
+                if (paymentMethod === 'pix_agora') {
+                    window.state.payingOrder = { id: pedidoCriadoId, valor: totalPedido, pixString: pixGerado };
+                } else {
+                    window.setView('pedidos');
+                    window.showToast("Pedido confirmado! Aguarde separação 🥚");
+                }
+
+                window.state.cart = [];
+                window.scheduleRender();
+            } catch (e) {
+                window.showToast(e.message || "Erro ao finalizar pedido.");
+            } finally {
+                window.state.processing = false;
+                window.scheduleRender();
+            }
+        };
+
+        // ... (mantenha as demais funções: confirmarPagamentoPix, render, etc.)
+
+        // --- RENDERIZAÇÃO DO CARRINHO (com botão Stripe) ---
+        function renderCarrinho() {
+            const total = window.state.cart.reduce((acc, i) => acc + (i.preco * i.qtd), 0);
+            return `
+                <div class="space-y-6 fade-in">
+                    <h2 class="text-2xl font-extrabold text-slate-900">Seu Carrinho</h2>
+                    ${window.state.cart.length === 0 ? `
+                        <p class="text-center text-slate-400 py-12">Seu carrinho está vazio</p>
+                    ` : `
+                        <div class="space-y-4">
+                            ${window.state.cart.map(item => `
+                                <div class="flex items-center justify-between p-4 bg-white rounded-xl shadow-sm border">
+                                    <div>
+                                        <p class="font-bold">${item.nome}</p>
+                                        <p class="text-sm text-slate-500">R$ ${item.preco.toFixed(2)} × ${item.qtd}</p>
+                                    </div>
+                                    <div class="flex items-center gap-3">
+                                        <button onclick="window.updateCartQtd('${item.id}', -1)" class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-xl font-bold">-</button>
+                                        <span class="font-bold text-lg">${item.qtd}</span>
+                                        <button onclick="window.updateCartQtd('${item.id}', 1)" class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-xl font-bold">+</button>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <div class="bg-slate-50 p-6 rounded-2xl mt-6">
+                            <div class="flex justify-between text-xl font-bold">
+                                <span>Total</span>
+                                <span class="text-rose-600">R$ ${total.toFixed(2)}</span>
+                            </div>
+                            <div class="grid grid-cols-1 gap-4 mt-6">
+                                <button onclick="window.handleFinalizeOrder('stripe')" class="btn-stripe">
+                                    Pagar com Cartão (Stripe)
+                                </button>
+                                <button onclick="window.handleFinalizeOrder('pix_agora')" class="btn-primary">
+                                    Pagar com PIX
+                                </button>
+                            </div>
+                        </div>
+                    `}
+                </div>`;
         }
 
-        window.copyToClipboard = (text) => {
-            navigator.clipboard.writeText(text).then(() => window.showToast("Copiado com sucesso!"));
-        };
+        // ... (mantenha o resto do seu render, incluindo renderPixModal, renderLogin, etc.)
 
-        // --- FUNÇÕES DA LOJA ---
-        window.addToCart = (id) => {
-            const p = window.state.produtos.find(x => x.id === id);
-            const item = window.state.cart.find(x => x.id === id);
-            if (item) {
-                item.qtd++;
-            } else {
-                window.state.cart.push({ ...p, qtd: 1 });
-            }
-            window.showToast(`${p.nome} adicionado!`);
-            window.scheduleRender();
-        };
-
-        window.updateCartQtd = (id, val) => {
-            const item = window.state.cart.find(x => x.id === id);
-            if (!item) return;
-            item.qtd += val;
-            if (item.qtd <= 0) window.state.cart = window.state.cart.filter(x => x.id !== id);
-            window.scheduleRender();
-        };
-
-        window.handleFinalizeOrder = async () => {
-            if (window.state.cart.length === 0) return;
-            const total = window.state.cart.reduce((acc, i) => acc + (i.preco * i.qtd), 0);
-            const txid = Math.random().toString(36).substring(2, 10).toUpperCase();
-            
-            const pedido = {
-                uid: window.state.user.uid,
-                itens: window.state.cart,
-                total: total,
-                status: 'pendente',
-                createdAt: serverTimestamp(),
-                pixCopiaCola: gerarPix(total, txid)
-            };
-
-            try {
-                await addDoc(collection(db, "pedidos"), pedido);
-                window.state.cart = [];
-                window.state.view = 'pedidos';
-                window.showToast("Pedido realizado!");
-            } catch (e) {
-                window.showToast("Erro ao salvar pedido.");
-            }
-        };
-
-        window.handleLogin = async (e) => {
-            e.preventDefault();
-            const email = document.getElementById('le').value;
-            const pass = document.getElementById('lp').value;
-            try {
-                await signInWithEmailAndPassword(auth, email, pass);
-            } catch (err) {
-                window.showToast("Falha na autenticação.");
-            }
-        };
-
-        window.handleSignOut = () => signOut(auth);
-
-        // --- RENDERIZAÇÃO ---
-        window.render = () => {
-            const root = document.getElementById('app-root');
-            const s = window.state;
-
-            if (s.loading) {
-                root.innerHTML = `<div class="loading-screen"><div class="logo-font animate-bounce text-5xl">AppEgg</div></div>`;
-                return;
-            }
-
-            if (!s.user) {
-                root.innerHTML = `
-                    <div class="min-h-screen flex items-center justify-center bg-gradient-to-b from-rose-50 to-white p-6">
-                        <div class="w-full max-w-md bg-white rounded-3xl shadow-2xl p-8">
-                            <div class="text-center mb-10">
-                                <div class="logo-font text-6xl">AppEgg</div>
-                                <p class="text-rose-600 font-bold uppercase tracking-widest mt-2">Distribuidora</p>
-                            </div>
-                            <form onsubmit="window.handleLogin(event)" class="space-y-4">
-                                <input id="le" type="email" class="input-refined" placeholder="E-mail" required>
-                                <input id="lp" type="password" class="input-refined" placeholder="Senha" required>
-                                <button type="submit" class="btn-primary mt-4">Entrar</button>
-                            </form>
-                        </div>
-                    </div>`;
-                return;
-            }
-
-            const totalCart = s.cart.reduce((acc, i) => acc + (i.preco * i.qtd), 0);
-
-            root.innerHTML = `
-                <div class="max-w-md mx-auto p-6">
-                    <header class="flex justify-between items-center mb-6">
-                        <div class="logo-font text-3xl">AppEgg</div>
-                        <div class="relative" onclick="window.setView('carrinho')">
-                            <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
-                            ${s.cart.length ? `<span class="cart-count">${s.cart.length}</span>` : ''}
-                        </div>
-                    </header>
-
-                    ${s.view === 'loja' ? `
-                        <div class="grid grid-cols-2 gap-4">
-                            ${s.produtos.map(p => `
-                                <div class="card-product p-4">
-                                    <div class="h-32 bg-gray-100 rounded-xl mb-3 flex items-center justify-center text-3xl">🥚</div>
-                                    <h3 class="font-bold text-sm">${p.nome}</h3>
-                                    <p class="text-rose-600 font-extrabold text-lg">R$ ${p.preco.toFixed(2)}</p>
-                                    <button onclick="window.addToCart('${p.id}')" class="btn-add-circle mt-2 ml-auto">+</button>
-                                </div>
-                            `).join('')}
-                        </div>
-                    ` : ''}
-
-                    ${s.view === 'carrinho' ? `
-                        <div class="fade-in">
-                            <h2 class="text-2xl font-bold mb-4">Seu Carrinho</h2>
-                            ${s.cart.length === 0 ? '<p class="text-gray-400">Vazio...</p>' : `
-                                <div class="space-y-4 mb-8">
-                                    ${s.cart.map(i => `
-                                        <div class="flex justify-between items-center bg-slate-50 p-4 rounded-xl">
-                                            <div>
-                                                <p class="font-bold">${i.nome}</p>
-                                                <p class="text-xs text-gray-500">R$ ${i.preco.toFixed(2)} un.</p>
-                                            </div>
-                                            <div class="flex items-center gap-3">
-                                                <button onclick="window.updateCartQtd('${i.id}', -1)" class="w-8 h-8 rounded-full bg-white border">-</button>
-                                                <span class="font-bold">${i.qtd}</span>
-                                                <button onclick="window.updateCartQtd('${i.id}', 1)" class="w-8 h-8 rounded-full bg-white border">+</button>
-                                            </div>
-                                        </div>
-                                    `).join('')}
-                                    <div class="border-t pt-4 flex justify-between text-xl font-bold">
-                                        <span>Total</span>
-                                        <span class="text-rose-600">R$ ${totalCart.toFixed(2)}</span>
-                                    </div>
-                                    <button onclick="window.handleFinalizeOrder()" class="btn-primary">Finalizar Pedido</button>
-                                </div>
-                            `}
-                        </div>
-                    ` : ''}
-
-                    ${s.view === 'pedidos' ? `
-                        <div class="fade-in space-y-4">
-                            <h2 class="text-2xl font-bold mb-4">Meus Pedidos</h2>
-                            ${s.pedidos.map(p => `
-                                <div class="bg-white border rounded-2xl p-4 shadow-sm">
-                                    <div class="flex justify-between mb-2">
-                                        <span class="text-xs font-mono text-gray-400">#${p.id.substring(0,6)}</span>
-                                        <span class="badge-status ${p.status === 'pendente' ? 'bg-amber-100 text-amber-600' : 'bg-green-100 text-green-600'}">${p.status}</span>
-                                    </div>
-                                    <p class="font-bold">Total: R$ ${p.total.toFixed(2)}</p>
-                                    ${p.status === 'pendente' ? `
-                                        <button onclick="window.copyToClipboard('${p.pixCopiaCola}')" class="mt-3 w-full py-2 bg-slate-100 rounded-lg text-xs font-bold">COPIAR PIX</button>
-                                    ` : ''}
-                                </div>
-                            `).join('')}
-                        </div>
-                    ` : ''}
-
-                    <nav class="nav-bottom">
-                        <button onclick="window.setView('loja')" class="nav-item ${s.view==='loja'?'active':''}">LOJA</button>
-                        <button onclick="window.setView('pedidos')" class="nav-item ${s.view==='pedidos'?'active':''}">PEDIDOS</button>
-                        <button onclick="window.handleSignOut()" class="nav-item">SAIR</button>
-                    </nav>
-                    ${s.toast ? `<div class="toast-container fade-in">${s.toast}</div>` : ''}
-                </div>`;
-        };
-
-        // --- LISTENERS ---
-        onAuthStateChanged(auth, (user) => {
-            window.state.user = user;
+        // Inicialização
+        onAuthStateChanged(auth, (u) => {
+            window.state.user = u;
             window.state.loading = false;
-            
-            if (user) {
-                // Escutar Produtos
-                onSnapshot(collection(db, "produtos"), (snap) => {
-                    window.state.produtos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                    window.scheduleRender();
-                });
-                // Escutar Pedidos do Usuário
-                const q = query(collection(db, "pedidos"), orderBy("createdAt", "desc"));
-                onSnapshot(q, (snap) => {
-                    window.state.pedidos = snap.docs
-                        .map(d => ({ id: d.id, ...d.data() }))
-                        .filter(p => p.uid === user.uid);
-                    window.scheduleRender();
-                });
-            }
             window.scheduleRender();
         });
-
     </script>
 </body>
 </html>
