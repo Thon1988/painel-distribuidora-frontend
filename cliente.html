@@ -3,127 +3,86 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AppEgg | Sua Distribuidora de Ovos</title>
-    <script src="https://cdn.tailwindcss.com/3.4.13"></script>
-    <!-- Stripe.js -->
-    <script src="https://js.stripe.com/v3/"></script>
+    <title>AppEgg | A Sua Loja de Ovos</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800;900&display=swap');
         
         body { 
             font-family: 'Inter', sans-serif; 
-            background: #ffffff; 
-            color: #0f172a; 
-            padding-bottom: 100px; 
+            background: #f8fafc; 
+            padding-bottom: 120px; 
+            color: #1e293b; 
             overflow-x: hidden; 
-            -webkit-tap-highlight-color: transparent;
         }
 
-        .logo-font { font-weight: 800; color: #e11d48; font-size: 1.4rem; letter-spacing: -1px; }
+        .logo-text { font-weight: 900; color: #e11d48; font-size: 1.8rem; letter-spacing: -1px; }
         
         .nav-bottom { 
-            position: fixed; bottom: 0; left: 0; right: 0; 
-            background: #ffffff; border-top: 1px solid #f1f5f9;
-            display: flex; justify-content: space-around; padding: 12px 0 24px 0; z-index: 100; 
-            box-shadow: 0 -4px 15px rgba(0,0,0,0.03);
+            position: fixed; bottom: 20px; left: 15px; right: 15px; 
+            background: #0f172a; border-radius: 32px; display: flex; 
+            justify-content: space-around; padding: 18px; z-index: 100; 
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2); 
+            border-top: 1px solid rgba(255,255,255,0.05);
         }
         
         .nav-item { 
             flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; 
-            color: #94a3b8; font-size: 10px; font-weight: 600; 
-            border: none; background: transparent; cursor: pointer; transition: 0.2s;
+            color: #64748b; font-size: 9px; font-weight: 900; text-transform: uppercase; 
+            border: none; background: transparent; cursor: pointer; transition: 0.3s;
         }
-        .nav-item.active { color: #e11d48; }
+        .nav-item.active { color: #fff; transform: scale(1.1); }
         
-        .card-product { 
-            background: white; border: 1px solid #f1f5f9; border-radius: 16px; 
-            overflow: hidden; transition: 0.2s ease; position: relative;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.01);
+        .card-egg { 
+            background: white; border: 1px solid #f1f5f9; border-radius: 40px; 
+            padding: 24px; margin-bottom: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.02); 
+            transition: 0.3s; 
         }
-        .card-product:active { transform: scale(0.98); border-color: #e11d48; }
+        .card-egg:active { transform: scale(0.96); }
         
-        .btn-primary { 
-            background: #e11d48; color: white; padding: 16px; border-radius: 14px; 
-            font-weight: 700; font-size: 14px; width: 100%; 
-            transition: 0.2s; cursor: pointer; border: none; text-transform: uppercase;
-        }
-        .btn-primary:active { background: #be123c; transform: scale(0.98); }
-        .btn-primary:disabled { background: #f1f5f9; color: #cbd5e1; cursor: not-allowed; }
-        
-        .btn-stripe {
-            background: #635bff; color: white; padding: 16px; border-radius: 14px;
-            font-weight: 700; font-size: 14px; width: 100%; text-transform: uppercase;
+        .btn-main { 
+            background: #e11d48; color: white; padding: 22px; border-radius: 28px; 
+            font-weight: 900; text-transform: uppercase; font-size: 13px; 
+            box-shadow: 0 10px 25px rgba(225, 29, 72, 0.2); width: 100%; 
             transition: 0.2s; cursor: pointer; border: none;
         }
-        .btn-stripe:active { background: #4f46e5; transform: scale(0.98); }
         
-        .input-refined { 
-            width: 100%; padding: 14px 16px; background: #f8fafc; border-radius: 12px; 
-            border: 1px solid #e2e8f0; font-weight: 500; font-size: 14px; outline: none; transition: 0.2s; 
+        .input-egg { 
+            width: 100%; padding: 20px; background: #f9fafb; border-radius: 24px; 
+            border: 2px solid transparent; font-weight: 700; font-size: 14px; 
+            outline: none; transition: 0.2s; 
         }
-        .input-refined:focus { border-color: #e11d48; background: #fff; box-shadow: 0 0 0 3px rgba(225, 29, 72, 0.08); }
+        .input-egg:focus { border-color: #e11d48; background: #fff; }
 
-        .badge-status {
-            padding: 4px 10px; border-radius: 8px; font-size: 10px; font-weight: 700;
-            text-transform: uppercase; letter-spacing: 0.02em;
-        }
-
+        .modal-up { animation: slideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        
         .no-scrollbar::-webkit-scrollbar { display: none; }
-        
-        .fade-in { animation: fadeIn 0.3s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
-        .loading-screen { 
-            position: fixed; inset: 0; background: white; z-index: 1000; 
-            display: flex; flex-direction: column; align-items: center; justify-content: center; 
-        }
-        
-        .btn-add-circle {
-            width: 36px; height: 36px; background: #e11d48; color: white;
-            border-radius: 12px; display: flex; align-items: center; justify-content: center;
-            transition: 0.2s; box-shadow: 0 4px 10px rgba(225, 29, 72, 0.15);
-        }
-        .btn-add-circle:active { transform: scale(0.85); }
-
-        .cart-count {
-            position: absolute; top: -2px; right: -2px; background: #e11d48; color: white;
-            font-size: 9px; font-weight: 800; width: 16px; height: 16px; border-radius: 50%;
-            display: flex; align-items: center; justify-content: center; border: 2px solid white;
-        }
-
+        /* Mensagens Customizadas */
         .toast-container {
             position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
-            z-index: 2000; padding: 12px 24px; border-radius: 12px; background: #1e293b;
-            color: white; font-weight: 600; font-size: 13px; box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            z-index: 1000; pointer-events: none;
         }
-
-        .option-card {
-            border: 1.5px solid #f1f5f9; border-radius: 16px; padding: 16px;
-            transition: 0.2s; cursor: pointer; text-align: left; background: #fff;
-            display: flex; align-items: center; gap: 12px;
+        .toast-msg {
+            background: #1e293b; color: white; padding: 12px 24px; border-radius: 16px;
+            font-weight: 700; font-size: 14px; box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            margin-bottom: 10px; animation: fadeInDown 0.3s ease-out;
         }
-        .option-card.active { border-color: #e11d48; background: #fff1f2; }
-
-        .qr-frame { background: #f8fafc; padding: 16px; border-radius: 20px; border: 1px dashed #e2e8f0; display: inline-block; }
+        @keyframes fadeInDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body class="no-scrollbar">
 
+    <div id="toast-root" class="toast-container"></div>
     <div id="app-root"></div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-        import { 
-            getFirestore, collection, onSnapshot, doc, getDoc, addDoc, 
-            serverTimestamp, increment, updateDoc, setDoc, runTransaction 
-        } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
-        import { 
-            getAuth, onAuthStateChanged, signOut, signInWithEmailAndPassword, updatePassword, signInAnonymously, signInWithCustomToken 
-        } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+        import { getFirestore, collection, onSnapshot, doc, getDoc, addDoc, serverTimestamp, increment, updateDoc } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+        import { getAuth, onAuthStateChanged, signOut, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
 
-        console.log("Script carregado com sucesso");
-
-        // --- CONFIGURAÇÃO FIREBASE ---
         const firebaseConfig = {
             apiKey: "AIzaSyD3Otz9-zdZH-E5Feg9IOGWPzVycoe8gro",
             authDomain: "distribuidora-de-ovos-aline.firebaseapp.com",
@@ -132,381 +91,261 @@
             messagingSenderId: "92187548716",
             appId: "1:92187548716:web:d61d18a29aa76aead7c589"
         };
+
         const appFB = initializeApp(firebaseConfig);
         const db = getFirestore(appFB);
         const auth = getAuth(appFB);
         const appId = "app-egg-pro-transacional";
 
-        // --- CHAVE PÚBLICA STRIPE (substitua pela sua real!) ---
-        const stripe = Stripe('pk_test_51...SUA_CHAVE_PUBLICA_AQUI'); // ← OBRIGATÓRIO: sua chave pública do Stripe
-
-        // --- ESTADO GLOBAL ---
+        // Estado Global
         window.state = { 
             user: null, 
-            profile: null,
             view: 'loja', 
             produtos: [], 
             pedidos: [], 
-            cart: [],
-            pix: { key: '', type: '', copiaCola: '' }, 
-            checkout: { tipoEntrega: 'entrega', endereco: null, metodoPagamento: 'pix_agora' },
-            profileMode: 'view',
-            ordersFilter: 'aberto', 
+            comprando: null, 
+            qtd: 1, 
             loading: true, 
-            processing: false,
-            payingOrder: null,
-            toast: null
+            processing: false 
         };
 
-        let lastStateHash = "";
-        let renderTimeout = null;
-
-        // --- FUNÇÕES AUXILIARES ---
-
-        window.scheduleRender = () => {
-            clearTimeout(renderTimeout);
-            renderTimeout = setTimeout(() => { window.render(); }, 16);
-        };
-
-        window.showToast = (msg) => {
-            window.state.toast = msg;
-            window.scheduleRender();
-            setTimeout(() => {
-                window.state.toast = null;
-                window.scheduleRender();
-            }, 3000);
+        // Funções de Interface
+        window.showMessage = (msg) => {
+            const container = document.getElementById('toast-root');
+            const el = document.createElement('div');
+            el.className = 'toast-msg';
+            el.innerText = msg;
+            container.appendChild(el);
+            setTimeout(() => el.remove(), 3000);
         };
 
         window.setView = (v) => { 
             window.state.view = v; 
-            window.state.profileMode = 'view';
-            window.state.payingOrder = null;
-            window.scheduleRender(); 
+            window.render(); 
         };
 
-        window.copyToClipboard = (text) => {
-            if (!text) return;
-            const textArea = document.createElement("textarea");
-            textArea.value = text;
-            textArea.style.position = "fixed";
-            textArea.style.left = "-9999px";
-            document.body.appendChild(textArea);
-            textArea.focus();
-            textArea.select();
+        window.abrirCompra = (id) => { 
+            window.state.comprando = window.state.produtos.find(x => x.id === id); 
+            window.state.qtd = 1; 
+            window.render(); 
+        };
+
+        window.updateQtd = (val) => { 
+            window.state.qtd = Math.max(1, window.state.qtd + val); 
+            window.render(); 
+        };
+
+        window.handleSignOut = () => signOut(auth);
+
+        // Lógica de Compra
+        window.handlePurchase = async (e) => {
+            if (e) e.preventDefault();
+            if (window.state.processing || !window.state.comprando) return;
+            window.state.processing = true; 
+            window.render();
+
+            const p = window.state.comprando;
             try {
-                document.execCommand('copy');
-                window.showToast('Código PIX copiado!');
-            } catch (err) {
-                console.error('Erro ao copiar:', err);
-            }
-            document.body.removeChild(textArea);
-        };
+                const prodRef = doc(db, 'artifacts', appId, 'public', 'data', 'estoque', p.id);
+                const snap = await getDoc(prodRef);
+                
+                if (!snap.exists()) throw new Error("Produto não encontrado!");
+                if (Number(snap.data().quantidade) < window.state.qtd) throw new Error("Stock insuficiente!");
 
-        // ... (mantenha maskTel, maskCEP, maskDoc se precisar)
+                // Débito atómico
+                await updateDoc(prodRef, { quantidade: increment(-window.state.qtd) });
 
-        // --- GERAÇÃO DE PIX ---
-        function gerarPix({ chave, tipo, valor, txid }) {
-            function tlv(id, value) {
-                return id + value.length.toString().padStart(2, '0') + value;
-            }
-            let chaveFinal = chave;
-            if (tipo === 'Celular') chaveFinal = '+55' + chave.replace(/\D/g, '');
-            let payload = '000201' + tlv('26', tlv('00', 'BR.GOV.BCB.PIX') + tlv('01', chaveFinal)) + '52040000' + '5303986' + tlv('54', valor.toFixed(2)) + '5802BR' + tlv('59', 'APPEGG') + tlv('60', 'SAOPAULO') + tlv('62', tlv('05', txid.substring(0, 25))) + '6304';
-            let crc = 0xFFFF;
-            for (let i = 0; i < payload.length; i++) {
-                crc ^= payload.charCodeAt(i) << 8;
-                for (let j = 0; j < 8; j++) { crc = crc & 0x8000 ? (crc << 1) ^ 0x1021 : crc << 1; }
-            }
-            return payload + (crc & 0xFFFF).toString(16).toUpperCase().padStart(4, '0');
-        }
-
-        // --- ADICIONAR AO CARRINHO ---
-        window.addToCart = (id) => {
-            const p = window.state.produtos.find(x => x.id === id);
-            if (!p) return window.showToast("Produto não encontrado");
-            const existing = window.state.cart.find(x => x.id === id);
-            if (existing) {
-                if (existing.qtd + 1 > p.quantidade) return window.showToast("Estoque insuficiente");
-                existing.qtd++;
-            } else {
-                if (p.quantidade < 1) return window.showToast("Produto esgotado");
-                window.state.cart.push({ ...p, qtd: 1 });
-            }
-            window.showToast(`${p.nome} adicionado ao carrinho`);
-            window.scheduleRender();
-        };
-
-        // --- ATUALIZAR QUANTIDADE ---
-        window.updateCartQtd = (id, val) => {
-            const item = window.state.cart.find(x => x.id === id);
-            if (!item) return;
-            item.qtd = Math.max(0, item.qtd + val);
-            const p = window.state.produtos.find(x => x.id === id);
-            if (p && item.qtd > p.quantidade) item.qtd = p.quantidade;
-            if (item.qtd === 0) window.state.cart = window.state.cart.filter(x => x.id !== id);
-            window.scheduleRender();
-        };
-
-        // --- FINALIZAR PEDIDO (com Stripe ou PIX) ---
-        window.handleFinalizeOrder = async (paymentMethod = 'pix_agora') => {
-            if (window.state.processing || window.state.cart.length === 0) return;
-            if (!auth.currentUser) return window.showToast("Faça login para continuar");
-
-            window.state.processing = true;
-            window.scheduleRender();
-
-            try {
-                const s = window.state;
-                const totalPedido = s.cart.reduce((acc, i) => acc + (i.preco * i.qtd), 0);
-                const finalAddr = s.checkout.tipoEntrega === 'retirada' ? DISTRIBUIDORA_ENDERECO : (s.checkout.endereco ? `${s.checkout.endereco.rua}, ${s.checkout.endereco.numero}` : `${s.profile?.address?.rua || ''}, ${s.profile?.address?.numero || ''}`);
-
-                let pedidoCriadoId = "";
-                let pixGerado = "";
-
-                await runTransaction(db, async (transaction) => {
-                    // Verifica e debita estoque
-                    for (const item of s.cart) {
-                        const prodRef = doc(db, 'artifacts', appId, 'public', 'data', 'estoque', item.id);
-                        const prodSnap = await transaction.get(prodRef);
-                        const curQty = Number(prodSnap.data()?.quantidade || 0);
-                        if (curQty < item.qtd) throw new Error(`Estoque insuficiente para ${item.nome}`);
-                        transaction.update(prodRef, { quantidade: curQty - item.qtd });
-                    }
-
-                    const orderRef = doc(collection(db, 'artifacts', appId, 'public', 'data', 'vendas_logs'));
-                    pedidoCriadoId = orderRef.id;
-
-                    if (paymentMethod === 'stripe') {
-                        // Cria sessão Stripe (precisa de backend)
-                        const response = await fetch('https://sua-url-de-backend.com/create-checkout-session', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                amount: Math.round(totalPedido * 100), // centavos
-                                currency: 'brl',
-                                orderId: pedidoCriadoId,
-                                customerEmail: auth.currentUser.email
-                            })
-                        });
-
-                        if (!response.ok) throw new Error("Erro ao criar sessão Stripe");
-                        const { sessionId } = await response.json();
-                        stripe.redirectToCheckout({ sessionId });
-                        return; // redireciona, não continua
-                    } else {
-                        // PIX
-                        pixGerado = gerarPix({ chave: s.pix.key || 'sua-chave-pix', tipo: s.pix.type || 'CPF', valor: totalPedido, txid: pedidoCriadoId });
-                    }
-
-                    transaction.set(orderRef, {
-                        clienteId: auth.currentUser.uid,
-                        clienteNome: s.profile?.name || auth.currentUser.email.split('@')[0],
-                        items: s.cart.map(i => ({ produto: i.nome, quantidade: i.qtd, precoUn: i.preco, embalagem: i.embalagem })),
-                        valorTotal: totalPedido,
-                        status: paymentMethod === 'stripe' ? 'PENDENTE_STRIPE' : 'PENDENTE_PAGAMENTO',
-                        pix_payload: pixGerado || null,
-                        tipoEntrega: s.checkout.tipoEntrega,
-                        enderecoEntrega: finalAddr,
-                        pagamento: { metodo: paymentMethod, pago: false, status: 'PENDENTE' },
-                        criadoEm: serverTimestamp()
-                    });
+                // Criação do pedido
+                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'vendas_logs'), {
+                    clienteId: auth.currentUser.uid,
+                    clienteNome: auth.currentUser.email?.split('@')[0] || 'Cliente',
+                    produtoId: p.id,
+                    produto: p.nome,
+                    embalagem: p.embalagem || 'Cartela',
+                    quantidade: window.state.qtd,
+                    valorTotal: Number(p.preco) * window.state.qtd,
+                    custoUnitario: Number(p.preco_custo || 0),
+                    status: 'PEDIDO CRIADO',
+                    criadoEm: serverTimestamp()
                 });
 
-                if (paymentMethod === 'stripe') return; // já redirecionou
-
-                if (paymentMethod === 'pix_agora') {
-                    window.state.payingOrder = { id: pedidoCriadoId, valor: totalPedido, pixString: pixGerado };
-                } else {
-                    window.setView('pedidos');
-                    window.showToast("Pedido confirmado! 🥚");
-                }
-
-                window.state.cart = [];
-            } catch (e) {
-                console.error("Erro ao finalizar:", e);
-                window.showToast(e.message || "Erro ao processar pedido");
-            } finally {
-                window.state.processing = false;
-                window.scheduleRender();
+                window.state.comprando = null; 
+                window.state.view = 'pedidos'; 
+                window.showMessage("Pedido realizado com sucesso! 🥚");
+            } catch (err) { 
+                window.showMessage(err.message); 
+            } finally { 
+                window.state.processing = false; 
+                window.render(); 
             }
         };
 
-        // --- RENDERIZAÇÃO ---
+        window.handleLogin = async (e) => {
+            e.preventDefault();
+            const em = document.getElementById('le').value.trim();
+            const ps = document.getElementById('lp').value;
+            try { 
+                await signInWithEmailAndPassword(auth, em, ps); 
+            } catch (err) { 
+                window.showMessage("Dados de acesso incorretos."); 
+            }
+        };
+
+        const safeImg = (url) => (url && url.startsWith('data:image')) ? url : "https://via.placeholder.com/300x300?text=AppEgg";
+
+        // Renderização Dinâmica
         window.render = () => {
             const root = document.getElementById('app-root');
-            if (!root) return console.error("Elemento #app-root não encontrado");
-
             const s = window.state;
-            console.log("Renderizando | loading:", s.loading, "usuário:", !!s.user, "view:", s.view);
 
-            if (s.loading) {
-                root.innerHTML = `
-                    <div class="loading-screen">
-                        <div class="logo-font animate-bounce text-6xl mb-4">AppEgg</div>
-                        <p class="text-gray-500 text-sm">Carregando sua experiência...</p>
-                    </div>`;
-                return;
+            if (s.loading) { 
+                root.innerHTML = `<div class="h-screen flex items-center justify-center font-black text-rose-600 animate-pulse text-2xl uppercase italic">AppEgg...</div>`; 
+                return; 
             }
 
-            if (!s.user) {
-                root.innerHTML = `
-                    <div class="min-h-screen flex items-center justify-center bg-gradient-to-b from-rose-50 to-white p-6">
-                        <div class="w-full max-w-md bg-white rounded-3xl shadow-2xl p-8">
-                            <div class="text-center mb-10">
-                                <div class="logo-font text-6xl mb-2">AppEgg</div>
-                                <p class="text-rose-600 font-bold text-lg uppercase tracking-wider">Distribuidora Premium</p>
-                            </div>
-                            <form onsubmit="window.handleLogin(event)" class="space-y-6">
-                                <input id="le" type="email" value="teste@lojista.com.br" class="input-refined text-center" placeholder="Seu e-mail" required>
-                                <input id="lp" type="password" class="input-refined text-center" placeholder="Sua senha" required>
-                                <button type="submit" class="btn-primary text-lg shadow-lg">Entrar na Loja</button>
-                            </form>
-                        </div>
-                    </div>`;
-                return;
+            if (!s.user) { 
+                root.innerHTML = renderLogin(); 
+                return; 
             }
 
-            const totalCart = s.cart.reduce((acc, i) => acc + (i.preco * i.qtd), 0);
             root.innerHTML = `
-                <div class="max-w-md mx-auto p-6">
-                    <header class="flex justify-between items-center mb-8">
-                        <div class="logo-font text-3xl">AppEgg</div>
-                        <div class="relative" onclick="window.setView('carrinho')">
-                            <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
-                            ${s.cart.length ? `<span class="cart-count">${s.cart.reduce((a,b)=>a+b.qtd,0)}</span>` : ''}
-                        </div>
+                <div class="p-8 max-w-lg mx-auto text-left">
+                    <header class="flex justify-between items-center mb-12">
+                        <div class="logo-text italic uppercase">AppEgg</div>
+                        <div class="bg-slate-100 px-4 py-2 rounded-2xl text-[9px] font-black text-slate-400 uppercase italic text-center">Cliente VIP</div>
                     </header>
-
-                    ${s.view === 'loja' ? `
-                        <div class="grid grid-cols-2 gap-4">
-                            ${s.produtos.map(p => `
-                                <div class="card-product p-4">
-                                    <div class="h-32 bg-gray-100 rounded-xl mb-3 flex items-center justify-center text-3xl">🥚</div>
-                                    <h3 class="font-bold text-sm">${p.nome}</h3>
-                                    <p class="text-rose-600 font-extrabold text-lg">R$ ${p.preco.toFixed(2)}</p>
-                                    <button onclick="window.addToCart('${p.id}')" class="btn-add-circle mt-2 ml-auto">+</button>
-                                </div>
-                            `).join('')}
-                        </div>
-                    ` : ''}
-
-                    ${s.view === 'carrinho' ? `
-                        <div class="fade-in">
-                            <h2 class="text-2xl font-bold mb-4">Seu Carrinho</h2>
-                            ${s.cart.length === 0 ? '<p class="text-center text-slate-400 py-12">Seu carrinho está vazio</p>' : `
-                                <div class="space-y-4 mb-8">
-                                    ${s.cart.map(i => `
-                                        <div class="flex justify-between items-center bg-slate-50 p-4 rounded-xl">
-                                            <div>
-                                                <p class="font-bold">${i.nome}</p>
-                                                <p class="text-xs text-slate-500">R$ ${i.preco.toFixed(2)} × ${i.qtd}</p>
-                                            </div>
-                                            <div class="flex items-center gap-3">
-                                                <button onclick="window.updateCartQtd('${i.id}', -1)" class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-xl font-bold">-</button>
-                                                <span class="font-bold text-lg">${i.qtd}</span>
-                                                <button onclick="window.updateCartQtd('${i.id}', 1)" class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-xl font-bold">+</button>
-                                            </div>
-                                        </div>
-                                    `).join('')}
-                                </div>
-                                <div class="bg-slate-50 p-6 rounded-2xl">
-                                    <div class="flex justify-between text-xl font-bold mb-6">
-                                        <span>Total</span>
-                                        <span class="text-rose-600">R$ ${totalCart.toFixed(2)}</span>
-                                    </div>
-                                    <div class="grid grid-cols-1 gap-4">
-                                        <button onclick="window.handleFinalizeOrder('stripe')" class="btn-stripe">
-                                            Pagar com Cartão (Stripe)
-                                        </button>
-                                        <button onclick="window.handleFinalizeOrder('pix_agora')" class="btn-primary">
-                                            Pagar com PIX
-                                        </button>
-                                    </div>
-                                </div>
-                            `}
-                        </div>
-                    ` : ''}
-
-                    ${s.view === 'pedidos' ? `
-                        <div class="fade-in space-y-4">
-                            <h2 class="text-2xl font-bold mb-4">Meus Pedidos</h2>
-                            ${s.pedidos.map(p => `
-                                <div class="bg-white border rounded-2xl p-4 shadow-sm">
-                                    <div class="flex justify-between mb-2">
-                                        <span class="text-xs font-mono text-gray-400">#${p.id.substring(0,6)}</span>
-                                        <span class="badge-status ${p.status === 'pendente' ? 'bg-amber-100 text-amber-600' : 'bg-green-100 text-green-600'}">${p.status}</span>
-                                    </div>
-                                    <p class="font-bold">Total: R$ ${p.valorTotal.toFixed(2)}</p>
-                                    ${p.status === 'pendente' && p.pagamento?.metodo === 'pix_agora' ? `
-                                        <button onclick="window.copyToClipboard('${p.pix_payload}')" class="mt-3 w-full py-2 bg-slate-100 rounded-lg text-xs font-bold">COPIAR PIX</button>
-                                    ` : ''}
-                                </div>
-                            `).join('') || '<p class="text-center py-12 text-slate-400">Nenhum pedido ainda</p>'}
-                        </div>
-                    ` : ''}
-
-                    <nav class="nav-bottom">
-                        <button onclick="window.setView('loja')" class="nav-item ${s.view==='loja'?'active':''}">LOJA</button>
-                        <button onclick="window.setView('carrinho')" class="nav-item ${s.view==='carrinho'?'active':''}">CARRINHO</button>
-                        <button onclick="window.setView('pedidos')" class="nav-item ${s.view==='pedidos'?'active':''}">PEDIDOS</button>
-                        <button onclick="window.handleSignOut()" class="nav-item">SAIR</button>
-                    </nav>
-
-                    ${s.toast ? `<div class="toast-container fade-in">${s.toast}</div>` : ''}
+                    ${s.view === 'loja' ? renderLoja() : renderPedidos()}
                 </div>
+                
+                <nav class="nav-bottom">
+                    <button onclick="window.setView('loja')" class="nav-item ${s.view==='loja'?'active':''}">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+                        Loja
+                    </button>
+                    <button onclick="window.setView('pedidos')" class="nav-item ${s.view==='pedidos'?'active':''}">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+                        Pedidos
+                    </button>
+                    <button onclick="window.handleSignOut()" class="nav-item text-rose-500 font-black">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                        Sair
+                    </button>
+                </nav>
+                
+                ${s.comprando ? renderModalCompra() : ''}
             `;
         };
 
-        // --- LOGIN ---
-        window.handleLogin = async (e) => {
-            e.preventDefault();
-            const email = document.getElementById('le')?.value?.trim();
-            const password = document.getElementById('lp')?.value;
+        function renderLogin() {
+            return `
+                <div class="min-h-screen bg-white flex flex-col items-center justify-center p-8 text-center">
+                    <h1 class="text-6xl font-[950] text-rose-600 italic uppercase tracking-tighter mb-12 text-center">AppEgg</h1>
+                    <form onsubmit="window.handleLogin(event)" class="w-full max-w-sm space-y-4">
+                        <input id="le" type="email" value="teste@lojista.com.br" class="input-egg text-center font-bold" required>
+                        <input id="lp" type="password" placeholder="Digite a Senha" class="input-egg text-center font-bold" required>
+                        <button class="btn-main mt-6 active:scale-95 transition-all tracking-widest italic">Entrar na Loja</button>
+                    </form>
+                </div>`;
+        }
 
-            if (!email || !password) {
-                window.showToast("Preencha email e senha");
-                return;
-            }
-
-            try {
-                await signInWithEmailAndPassword(auth, email, password);
-                window.showToast("Login realizado com sucesso!");
-            } catch (err) {
-                console.error("Erro login:", err);
-                window.showToast("Dados incorretos ou erro de conexão");
-            }
-        };
-
-        // --- INICIALIZAÇÃO ---
-        document.addEventListener('DOMContentLoaded', () => {
-            console.log("DOM carregado → iniciando render inicial");
-            window.render(); // Mostra loading ou login imediatamente
-
-            onAuthStateChanged(auth, (user) => {
-                console.log("Auth mudou:", user ? "Logado como " + user.email : "Deslogado");
-                window.state.user = user;
-                window.state.loading = false;
-                window.scheduleRender();
-            });
-        });
-
-        // Timeout de segurança
-        setTimeout(() => {
-            if (window.state.loading) {
-                const root = document.getElementById('app-root');
-                if (root) {
-                    root.innerHTML = `
-                        <div class="min-h-screen flex items-center justify-center text-center p-6">
-                            <div>
-                                <h1 class="text-2xl font-bold text-red-600 mb-4">Ops... parece que algo travou</h1>
-                                <p class="text-gray-600 mb-6">Verifique o console (F12) ou sua conexão.</p>
-                                <button onclick="location.reload()" class="btn-primary">Recarregar</button>
+        function renderLoja() {
+            return `
+                <div class="space-y-6 text-left">
+                    <div class="text-left"><p class="text-[11px] font-black text-slate-300 uppercase tracking-[0.4em] mb-1 italic">Qualidade de Granja</p><h2 class="text-2xl font-black text-slate-800 italic uppercase tracking-tight text-left">Ovos Frescos</h2></div>
+                    <div class="grid gap-6">
+                        ${window.state.produtos.map(p => `
+                            <div onclick="window.abrirCompra('${p.id}')" class="card-egg flex items-center gap-6 shadow-sm cursor-pointer border-2 border-transparent hover:border-rose-100 text-left">
+                                <div class="w-24 h-24 bg-slate-50 rounded-[32px] overflow-hidden flex items-center justify-center shadow-inner text-center">
+                                    <img src="${safeImg(p.foto_url)}" class="w-full h-full object-cover">
+                                </div>
+                                <div class="flex-1 text-left">
+                                    <h3 class="font-black text-xs uppercase text-slate-800 mb-1 leading-none text-left">${p.nome}</h3>
+                                    <p class="text-slate-400 text-[10px] font-bold uppercase italic text-left">${p.embalagem}</p>
+                                    <p class="text-rose-600 font-[950] text-2xl mt-2 tracking-tighter italic text-left">R$ ${Number(p.preco).toFixed(2)}</p>
+                                </div>
+                                <div class="bg-rose-50 p-3 rounded-2xl text-rose-600">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                                </div>
                             </div>
-                        </div>`;
-                }
-                console.error("Loading travado após 10 segundos");
+                        `).join('') || '<p class="text-center py-20 font-black text-slate-200 uppercase text-center">A aguardar catálogo...</p>'}
+                    </div>
+                </div>`;
+        }
+
+        function renderPedidos() {
+            return `
+                <div class="space-y-6 text-left">
+                    <h2 class="text-[11px] font-black text-slate-300 uppercase italic tracking-widest text-left">Meus Pedidos</h2>
+                    <div class="space-y-6">
+                        ${window.state.pedidos.map(p => `
+                            <div class="bg-white p-8 rounded-[48px] border-t-[12px] border-rose-500 shadow-sm text-left">
+                                <div class="flex justify-between items-start mb-4 text-left">
+                                    <div>
+                                        <h4 class="font-black uppercase text-sm text-slate-800 leading-tight text-left">${p.quantidade}x ${p.produto}</h4>
+                                        <p class="text-[9px] font-black text-slate-300 uppercase italic tracking-widest mt-1">#${p.id.substring(0,6).toUpperCase()}</p>
+                                    </div>
+                                    <span class="bg-rose-50 text-rose-600 px-4 py-1.5 rounded-full font-black text-[9px] uppercase tracking-tighter italic text-center">${p.status}</span>
+                                </div>
+                                <p class="text-rose-600 font-[950] text-3xl tracking-tighter italic border-t pt-4 text-left">R$ ${Number(p.valorTotal).toFixed(2)}</p>
+                            </div>
+                        `).join('') || '<p class="text-center py-20 font-black text-slate-200 uppercase text-center">Nenhum pedido efetuado.</p>'}
+                    </div>
+                </div>`;
+        }
+
+        function renderModalCompra() {
+            const p = window.state.comprando;
+            const isProcessing = window.state.processing;
+            return `
+                <div class="fixed inset-0 bg-slate-900/90 backdrop-blur-md z-[200] flex items-end">
+                    <div class="bg-white w-full p-10 rounded-t-[56px] shadow-2xl modal-up text-center">
+                        <div class="flex gap-5 items-center mb-10 text-left">
+                            <div class="w-16 h-16 bg-slate-50 rounded-[28px] overflow-hidden text-center">
+                                <img src="${safeImg(p.foto_url)}" class="w-full h-full object-cover">
+                            </div>
+                            <div class="text-left">
+                                <h3 class="font-black uppercase text-xl text-slate-900 italic tracking-tighter leading-none mb-1 text-left">${p.nome}</h3>
+                                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest italic text-left">${p.embalagem}</p>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-center justify-between bg-slate-50 p-4 rounded-[32px] border-2 border-slate-100 mb-6 text-center">
+                            <button onclick="window.updateQtd(-1)" class="w-14 h-14 bg-white rounded-2xl font-black text-3xl text-rose-600 active:scale-90 transition shadow-sm text-center">-</button>
+                            <div class="text-center">
+                                <span class="text-4xl font-[950] text-slate-800 italic leading-none text-center">${window.state.qtd}</span>
+                                <p class="text-[8px] font-black text-slate-300 uppercase tracking-widest mt-1 text-center">unidades</p>
+                            </div>
+                            <button onclick="window.updateQtd(1)" class="w-14 h-14 bg-white rounded-2xl font-black text-3xl text-emerald-600 active:scale-90 transition shadow-sm text-center">+</button>
+                        </div>
+                        
+                        <button onclick="window.handlePurchase()" ${isProcessing ? 'disabled' : ''} class="btn-main py-7 rounded-[40px] font-black shadow-2xl active:scale-95 italic tracking-widest text-center">
+                            ${isProcessing ? 'A PROCESSAR...' : `CONFIRMAR • R$ ${(p.preco * window.state.qtd).toFixed(2)}`}
+                        </button>
+                        
+                        <button onclick="window.state.comprando=null;window.render()" class="w-full py-8 text-slate-300 font-black text-[10px] uppercase tracking-widest text-center">Cancelar</button>
+                    </div>
+                </div>`;
+        }
+
+        // Sincronização
+        onAuthStateChanged(auth, u => {
+            window.state.user = u;
+            if (u && (u.email === 'teste@lojista.com.br' || u.isAnonymous)) {
+                onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'estoque'), s => {
+                    window.state.produtos = s.docs.map(d => ({id: d.id, ...d.data()})).sort((a,b)=>(a.nome||"").localeCompare(b.nome||""));
+                    window.state.loading = false; 
+                    window.render();
+                });
+                onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'vendas_logs'), s => {
+                    const data = s.docs.map(d => ({id: d.id, ...d.data()}));
+                    window.state.pedidos = data.filter(p => p.clienteId === auth.currentUser?.uid).sort((a,b)=>(b.criadoEm?.seconds||0)-(a.criadoEm?.seconds||0));
+                    window.render();
+                });
+            } else { 
+                window.state.loading = false; 
+                window.render(); 
             }
-        }, 10000);
+        });
     </script>
 </body>
 </html>
