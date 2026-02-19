@@ -1,619 +1,193 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AppEgg Admin | Gestão Platinum</title>
-    <!-- Tailwind CSS para Estilização Premium -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
-        
-        body { 
-            font-family: 'Inter', sans-serif; 
-            background: #f8fafc; 
-            color: #1e293b; 
-            overflow-x: hidden; 
-        }
-        
-        /* Navegação Estilo Platinum */
-        .nav-link { 
-            font-size: 12px; font-weight: 800; text-transform: uppercase; color: #64748b; 
-            padding: 14px 24px; border-radius: 16px; cursor: pointer; transition: all 0.3s ease; 
-            white-space: nowrap; border: 2px solid transparent; display: flex; align-items: center; justify-content: center;
-        }
-        .nav-link:hover { background: #fff; color: #e11d48; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-        .nav-link.active { color: #e11d48; background: #fff; border-color: #ffe4e6; box-shadow: 0 4px 12px rgba(225, 29, 72, 0.08); }
-        
-        .logo-text { font-weight: 900; color: #e11d48; font-size: 1.6rem; letter-spacing: -1.5px; }
-        .card { background: #ffffff; border-radius: 32px; box-shadow: 0 10px 30px rgba(0,0,0,0.02); border: 1px solid rgba(226, 232, 240, 0.8); transition: all 0.3s ease; }
-        
-        .input-egg { 
-            width: 100%; padding: 16px 20px; background: #f1f5f9; border-radius: 20px; 
-            border: 2px solid transparent; font-weight: 700; font-size: 14px; outline: none; transition: 0.2s; 
-        }
-        .input-egg:focus { border-color: #e11d48; background: #fff; }
-        
-        /* Área de Upload Base64 */
-        .upload-area { 
-            width: 100%; height: 220px; background: #f8fafc; border: 2px dashed #cbd5e1; 
-            border-radius: 24px; display: flex; align-items: center; justify-content: center; 
-            overflow: hidden; cursor: pointer; transition: 0.3s; position: relative;
-        }
-        .upload-area img { width: 100%; height: 100%; object-fit: cover; }
-
-        .modal-blur { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(8px); }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        
-        .toast-egg {
-            position: fixed; bottom: 24px; right: 24px; padding: 16px 32px; 
-            background: #1e293b; color: white; border-radius: 20px; font-weight: 800;
-            font-size: 12px; text-transform: uppercase; z-index: 1000; box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-        }
-        
-        .pulse-order { animation: pulse 2s infinite; }
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
-
-        .fade-in { animation: fadeIn 0.4s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-        .new-order-badge {
-            background: #ef4444; color: white; padding: 2px 8px; border-radius: 8px;
-            font-size: 9px; font-weight: 900; animation: bounce 1s infinite;
-        }
-        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin — AppEgg (Ovos Aline)</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin:0; padding:0; }
+    :root {
+      --primary: #E8960C;
+      --dark:    #D4500A;
+      --brown:    #3D2B1F;
+      --cream:    #FFF8EE;
+      --muted:    #8B6F5E;
+      --white:    #FFFFFF;
+      --green:    #2E7D32;
+      --red:      #C62828;
+      --border:  #E0CFC0;
+      --shadow:  0 2px 16px rgba(61,43,31,.10);
+    }
+    body { font-family:'Segoe UI',system-ui,sans-serif; background:#F5EFE6; color:var(--brown); min-height:100vh; display:flex; flex-direction:column; }
+    header { background:linear-gradient(135deg,var(--dark),var(--primary)); color:#fff; padding:0 24px; height:64px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:100; box-shadow:0 3px 14px rgba(0,0,0,.22); }
+    .h-logo { display:flex; align-items:center; gap:10px; font-size:1.15rem; font-weight:900; }
+    .h-back { background:rgba(255,255,255,.2); border:2px solid rgba(255,255,255,.5); color:#fff; border-radius:50px; padding:6px 16px; cursor:pointer; font-size:.85rem; font-weight:700; text-decoration:none; transition:background .2s; }
+    .layout { display:flex; flex:1; }
+    .nav { width:220px; background:var(--white); border-right:1px solid var(--border); padding:20px 0; flex-shrink:0; }
+    .nav-item { display:flex; align-items:center; gap:10px; padding:12px 20px; cursor:pointer; font-size:.9rem; font-weight:600; color:var(--muted); border-left:3px solid transparent; }
+    .nav-item.active { background:#FFF3E0; color:var(--dark); border-left-color:var(--dark); }
+    .content { flex:1; padding:28px 24px; max-width:1000px; }
+    .section { display:none; }
+    .section.active { display:block; }
+    .card { background:var(--white); border-radius:16px; box-shadow:var(--shadow); padding:24px; margin-bottom:20px; border:1px solid var(--border); }
+    .form-grid { display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-top:15px; }
+    .field { display:flex; flex-direction:column; gap:5px; }
+    .field label { font-size:.75rem; font-weight:800; color:var(--muted); text-transform:uppercase; }
+    .field input, .field textarea { padding:10px; border-radius:8px; border:1.5px solid var(--border); outline:none; }
+    .btn { border:none; border-radius:50px; padding:10px 20px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:8px; }
+    .btn-primary { background:var(--dark); color:#fff; }
+    .btn-green { background:var(--green); color:#fff; }
+    .prod-item { background:var(--white); border:1px solid var(--border); border-radius:12px; padding:15px; display:flex; align-items:center; gap:15px; margin-bottom:10px; }
+    .modal-bg { position:fixed; inset:0; background:rgba(0,0,0,.6); display:none; align-items:center; justify-content:center; z-index:1000; }
+    .modal-bg.open { display:flex; }
+    .modal-box { background:#fff; padding:30px; border-radius:20px; width:500px; max-width:95%; }
+    .toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:var(--brown); color:#fff; padding:10px 25px; border-radius:50px; opacity:0; transition:opacity .3s; z-index:2000; }
+  </style>
 </head>
-<body class="no-scrollbar text-left">
-    <div id="app-root"></div>
+<body>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, doc, setDoc, getDoc, updateDoc, deleteDoc, serverTimestamp, increment } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
-        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+<header>
+  <div class="h-logo">🥚 AppEgg Admin</div>
+  <a href="#" onclick="window.location.reload()" class="h-back">Sair</a>
+</header>
 
-        // --- CONFIGURAÇÃO FIREBASE ---
-        const firebaseConfig = {
-            apiKey: "AIzaSyD3Otz9-zdZH-E5Feg9IOGWPzVycoe8gro",
-            authDomain: "distribuidora-de-ovos-aline.firebaseapp.com",
-            projectId: "distribuidora-de-ovos-aline",
-            storageBucket: "distribuidora-de-ovos-aline.firebasestorage.app",
-            messagingSenderId: "92187548716",
-            appId: "1:92187548716:web:d61d18a29aa76aead7c589"
-        };
+<div class="layout">
+  <nav class="nav">
+    <div class="nav-item active" onclick="showSec('produtos', this)">🥚 Produtos</div>
+    <div class="nav-item" onclick="showSec('pix', this)">💚 Pagamento PIX</div>
+    <div class="nav-item" onclick="showSec('loja', this)">🏪 Loja</div>
+  </nav>
 
-        const appFB = initializeApp(firebaseConfig);
-        const db = getFirestore(appFB);
-        const auth = getAuth(appFB);
-        
-        const appId = "app-egg-pro-transacional";
+  <main class="content">
+    <section id="sec-produtos" class="section active">
+      <h2>Gerenciar Catálogo</h2>
+      <button class="btn btn-primary" style="margin: 20px 0;" onclick="openModal()">+ Adicionar Ovo</button>
+      <div id="lista-produtos"></div>
+    </section>
 
-        const STATUS_OPTIONS = ["EM SEPARAÇÃO", "FINALIZADO", "CANCELADO"];
-        const CATEGORIES = ["Ovo Branco Extra", "Ovo Branco Grande", "Ovo Branco Médio", "Ovo Branco Pequeno", "Ovo Vermelho Extra", "Ovo Vermelho Grande", "Ovo Vermelho Médio", "Ovo Caipira", "Ovo de Codorna", "Ovo Jumbo", "Cesto de Ovos"];
-        const PACKAGING = ["Cartela 30", "Cartela 20", "Dúzia 12", "Caixa 360", "Fardo 20 unid"];
-        const PIX_TYPES = ["CPF", "CNPJ", "E-mail", "Celular", "Chave Aleatória"];
+    <section id="sec-pix" class="section">
+      <h2>Configuração de Recebimento</h2>
+      <div class="card">
+        <div class="field">
+          <label>Chave PIX</label>
+          <input type="text" id="pix-chave" placeholder="CPF, E-mail ou Celular">
+        </div>
+        <div class="field" style="margin-top:10px">
+          <label>Nome do Titular</label>
+          <input type="text" id="pix-nome" placeholder="ALINE OVOS">
+        </div>
+        <div style="margin-top:20px">
+          <button class="btn btn-green" onclick="savePix()">Salvar Configurações</button>
+        </div>
+        <div id="qrcode-preview" style="margin-top:20px; display:flex; justify-content:center;"></div>
+      </div>
+    </section>
 
-        // Hashes para Controle Anti-Flicker
-        let lastPixHash = "";
-        let lastStockHash = "";
-        let lastLogsHash = "";
+    <section id="sec-loja" class="section">
+      <h2>Dados da Empresa</h2>
+      <div class="card">
+        <div class="form-grid">
+          <div class="field"><label>Nome</label><input type="text" id="store-name"></div>
+          <div class="field"><label>Slogan</label><input type="text" id="store-slogan"></div>
+        </div>
+        <button class="btn btn-primary" style="margin-top:20px" onclick="saveStore()">Salvar Dados</button>
+      </div>
+    </section>
+  </main>
+</div>
 
-        // --- ESTADO GLOBAL ---
-        window.state = {
-            user: null, 
-            view: 'dashboard', 
-            produtos: [], 
-            logs: [], 
-            editando: null, 
-            loading: true, 
-            saving: false, 
-            confirmExcluir: null, 
-            tempB64: null, 
-            toast: { show: false, msg: '' },
-            pixConfig: { type: 'CPF', key: '', copiaCola: '' },
-            lastOrderCount: 0,
-            hasNewOrder: false
-        };
+<div class="modal-bg" id="modal-prod">
+  <div class="modal-box">
+    <h3>Dados do Produto</h3>
+    <div class="form-grid" style="grid-template-columns:1fr">
+      <div class="field"><label>Nome</label><input type="text" id="p-nome"></div>
+      <div class="field"><label>Preço (R$)</label><input type="number" id="p-preco" step="0.01"></div>
+      <div class="field"><label>Descrição</label><textarea id="p-desc"></textarea></div>
+    </div>
+    <div style="margin-top:20px; display:flex; gap:10px">
+      <button class="btn btn-green" onclick="addProduto()">Salvar</button>
+      <button class="btn" style="background:#eee" onclick="closeModal()">Cancelar</button>
+    </div>
+  </div>
+</div>
 
-        // --- VALIDAÇÕES RÍGIDAS ---
+<div class="toast" id="toast">Ação realizada!</div>
 
-        function validarCPF(cpf) {
-            const clean = cpf.replace(/\D/g, "");
-            if (clean.length !== 11 || /^(\d)\1+$/.test(clean)) return false;
-            let soma = 0;
-            for (let i = 0; i < 9; i++) soma += parseInt(clean[i]) * (10 - i);
-            let d1 = (soma * 10) % 11;
-            if (d1 === 10) d1 = 0;
-            if (d1 != clean[9]) return false;
-            soma = 0;
-            for (let i = 0; i < 10; i++) soma += parseInt(clean[i]) * (11 - i);
-            let d2 = (soma * 10) % 11;
-            if (d2 === 10) d2 = 0;
-            return d2 == clean[10];
-        }
+<script>
+  let produtos = JSON.parse(localStorage.getItem('appegg_prods')) || [];
+  let config = JSON.parse(localStorage.getItem('appegg_cfg')) || { chave: '', nome: '', storeName: 'Ovos Aline' };
 
-        function validarCNPJ(cnpj) {
-            const clean = cnpj.replace(/\D/g, "");
-            if (clean.length !== 14 || /^(\d)\1+$/.test(clean)) return false;
-            let tamanho = clean.length - 2;
-            let numeros = clean.substring(0, tamanho);
-            let digitos = clean.substring(tamanho);
-            let soma = 0;
-            let pos = tamanho - 7;
-            for (let i = tamanho; i >= 1; i--) {
-                soma += numeros.charAt(tamanho - i) * pos--;
-                if (pos < 2) pos = 9;
-            }
-            let resultado = soma % 11 < 2 ? 0 : 11 - (soma % 11);
-            if (resultado != digitos.charAt(0)) return false;
-            tamanho = tamanho + 1;
-            numeros = clean.substring(0, tamanho);
-            soma = 0;
-            pos = tamanho - 7;
-            for (let i = tamanho; i >= 1; i--) {
-                soma += numeros.charAt(tamanho - i) * pos--;
-                if (pos < 2) pos = 9;
-            }
-            resultado = soma % 11 < 2 ? 0 : 11 - (soma % 11);
-            return resultado == digitos.charAt(1);
-        }
+  function showSec(id, el) {
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById('sec-'+id).classList.add('active');
+    el.classList.add('active');
+  }
 
-        function validarChaveAleatoria(chave) {
-            // Padrão UUID do Banco Central
-            const regex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-            return regex.test(chave.trim());
-        }
+  function openModal() { document.getElementById('modal-prod').classList.add('open'); }
+  function closeModal() { document.getElementById('modal-prod').classList.remove('open'); }
 
-        // --- FUNÇÕES DE NAVEGAÇÃO E UI ---
-        
-        window.setView = (v) => { 
-            window.state.view = v; 
-            window.state.editando = null; 
-            window.state.tempB64 = null; 
-            if(v === 'pedidos') window.state.hasNewOrder = false;
-            window.render(); 
-        };
+  function addProduto() {
+    const p = {
+      id: Date.now(),
+      nome: document.getElementById('p-nome').value,
+      preco: document.getElementById('p-preco').value,
+      desc: document.getElementById('p-desc').value
+    };
+    produtos.push(p);
+    localStorage.setItem('appegg_prods', JSON.stringify(produtos));
+    renderProds();
+    closeModal();
+    showToast("Produto adicionado!");
+  }
 
-        window.showToast = (msg) => { 
-            window.state.toast = { show: true, msg }; 
-            window.render(); 
-            setTimeout(() => { window.state.toast.show = false; window.render(); }, 3000); 
-        };
+  function renderProds() {
+    const container = document.getElementById('lista-produtos');
+    container.innerHTML = produtos.map(p => `
+      <div class="prod-item">
+        <div style="flex:1">
+          <strong>${p.nome}</strong><br>
+          <small>R$ ${p.preco}</small>
+        </div>
+        <button class="btn" style="background:var(--red); color:#fff" onclick="removeProd(${p.id})">Excluir</button>
+      </div>
+    `).join('');
+  }
 
-        window.handleFileSelect = (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-            if (file.size > 800 * 1024) { window.showToast("MÁXIMO 800KB"); return; }
-            const reader = new FileReader();
-            reader.onload = (ev) => {
-                window.state.tempB64 = ev.target.result;
-                const container = document.getElementById('preview-container');
-                if (container) container.innerHTML = `<img src="${ev.target.result}" class="w-full h-full object-cover">`;
-            };
-            reader.readAsDataURL(file);
-        };
+  function removeProd(id) {
+    produtos = produtos.filter(p => p.id !== id);
+    localStorage.setItem('appegg_prods', JSON.stringify(produtos));
+    renderProds();
+  }
 
-        // Geração EMV Pix
-        window.gerarPixCopiaCola = (chave, nome = "APPEGG", cidade = "SAOPAULO") => {
-            const format = (id, value) => id + value.length.toString().padStart(2, '0') + value;
-            const payload = format("00", "01") + format("26", format("00", "BR.GOV.BCB.PIX") + format("01", chave)) + format("52", "0000") + format("53", "986") + format("58", "BR") + format("59", nome.substring(0, 25).toUpperCase()) + format("60", cidade.substring(0, 15).toUpperCase()) + "6304";
-            const crc16 = (str) => {
-                let crc = 0xFFFF;
-                for (let c of str) {
-                    crc ^= c.charCodeAt(0) << 8;
-                    for (let i = 0; i < 8; i++) crc = crc & 0x8000 ? (crc << 1) ^ 0x1021 : crc << 1;
-                }
-                return (crc & 0xFFFF).toString(16).toUpperCase().padStart(4, '0');
-            };
-            return payload + crc16(payload);
-        };
+  function savePix() {
+    config.chave = document.getElementById('pix-chave').value;
+    config.nome = document.getElementById('pix-nome').value;
+    localStorage.setItem('appegg_cfg', JSON.stringify(config));
+    
+    // Gerar prévia do QR Code (Valor Simbólico R$ 1,00)
+    document.getElementById('qrcode-preview').innerHTML = "";
+    new QRCode(document.getElementById('qrcode-preview'), {
+      text: `00020126330014BR.GOV.BCB.PIX0111${config.chave}52040000530398654041.005802BR5910${config.nome}6008BRASILIA62070503***6304`,
+      width: 128,
+      height: 128
+    });
+    showToast("Configurações PIX salvas!");
+  }
 
-        // --- HANDLERS FIREBASE ---
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.style.opacity = 1;
+    setTimeout(() => t.style.opacity = 0, 2000);
+  }
 
-        window.handleSaveProduct = async (e) => {
-            e.preventDefault();
-            if (window.state.saving) return;
-            window.state.saving = true; window.render();
-            const form = document.getElementById('formEstoque');
-            const data = new FormData(form);
-            const docId = window.state.editando ? window.state.editando.id : crypto.randomUUID();
-            const payload = {
-                nome: data.get('nome'),
-                embalagem: data.get('embalagem'),
-                preco: Number(data.get('preco')),
-                preco_custo: Number(data.get('preco_custo')),
-                quantidade: Number(data.get('quantidade')),
-                updatedAt: serverTimestamp()
-            };
-            if (window.state.tempB64) payload.foto_url = window.state.tempB64;
-            try {
-                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'estoque', docId), payload, { merge: true });
-                window.state.editando = null; window.state.tempB64 = null;
-                window.showToast("ESTOQUE ATUALIZADO!");
-            } catch (err) { alert("Erro ao salvar estoque."); }
-            window.state.saving = false; window.render();
-        };
+  // Inicialização
+  renderProds();
+  document.getElementById('pix-chave').value = config.chave;
+  document.getElementById('pix-nome').value = config.nome;
+</script>
 
-        window.handleEdit = (id) => {
-            const p = window.state.produtos.find(x => x.id === id);
-            window.state.editando = { ...p, preco: p.preco || 0, quantidade: p.quantidade || 0 };
-            window.state.tempB64 = null; window.render();
-            window.scrollTo({top: 0, behavior: 'smooth'});
-        };
-
-        window.pedirConfirmExcluir = (id) => { window.state.confirmExcluir = id; window.render(); };
-
-        window.handleExcluirReal = async () => {
-            if (!window.state.confirmExcluir) return;
-            try {
-                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'estoque', window.state.confirmExcluir));
-                window.state.confirmExcluir = null; window.showToast("REMOVIDO");
-                window.render();
-            } catch (e) { alert("Erro ao excluir."); }
-        };
-
-        window.handleStatusUpdate = async (id, status) => {
-            const ref = doc(db, 'artifacts', appId, 'public', 'data', 'vendas_logs', id);
-            const updates = { status };
-            if (status === 'FINALIZADO') updates.finalizadoEm = serverTimestamp();
-            await updateDoc(ref, updates);
-            window.showToast(`PEDIDO ${status}`);
-        };
-
-        // ✅ LÓGICA PIX COM NORMALIZAÇÃO E VALIDAÇÕES
-        window.handleSavePixConfig = async (e) => {
-            e.preventDefault();
-            const type = document.getElementById('pixType').value;
-            const rawKey = document.getElementById('pixKey').value.trim();
-            const cleanKey = rawKey.replace(/\D/g, "");
-            
-            let chaveFinal = rawKey;
-            let chaveVisual = rawKey;
-
-            if (type === "CPF") {
-                if (!validarCPF(cleanKey)) return window.showToast("CPF INVÁLIDO");
-                chaveFinal = cleanKey;
-                chaveVisual = cleanKey.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
-            } else if (type === "CNPJ") {
-                if (!validarCNPJ(cleanKey)) return window.showToast("CNPJ INVÁLIDO");
-                chaveFinal = cleanKey;
-                chaveVisual = cleanKey.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
-            } else if (type === "Celular") {
-                if (cleanKey.length < 10 || cleanKey.length > 11) return window.showToast("DDD + NÚMERO INVÁLIDO");
-                // Apenas DDD + Número conforme solicitado
-                chaveFinal = cleanKey;
-                chaveVisual = cleanKey.replace(/(\d{2})(\d{5}|\d{4})(\d{4})/, "($1) $2-$3");
-            } else if (type === "E-mail") {
-                if (!rawKey.includes("@") || !rawKey.includes(".")) return window.showToast("E-MAIL INVÁLIDO");
-                chaveFinal = rawKey.toLowerCase();
-                chaveVisual = chaveFinal;
-            } else if (type === "Chave Aleatória") {
-                if (!validarChaveAleatoria(rawKey)) return window.showToast("UUID ALEATÓRIO INVÁLIDO");
-                chaveFinal = rawKey;
-                chaveVisual = rawKey;
-            }
-
-            const copiaCola = window.gerarPixCopiaCola(chaveFinal);
-            try {
-                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'pix_config'), {
-                    type, key: chaveVisual, copiaCola, updatedAt: serverTimestamp()
-                }, { merge: true });
-                window.showToast("PIX CONFIGURADO!");
-            } catch (err) { alert("Erro ao salvar PIX."); }
-        };
-
-        window.handleLogin = async (e) => {
-            e.preventDefault();
-            const em = document.getElementById('loginEmail').value.trim();
-            const ps = document.getElementById('loginPass').value;
-            try { await signInWithEmailAndPassword(auth, em, ps); window.showToast("BEM-VINDO!"); } catch (err) { alert("Credenciais incorretas."); }
-        };
-
-        window.handleSignOut = () => signOut(auth);
-
-        // --- COMPONENTES DE RENDERIZAÇÃO ---
-
-        window.render = () => {
-            const root = document.getElementById('app-root');
-            if (window.state.loading) {
-                root.innerHTML = `<div class="h-screen flex items-center justify-center font-black text-rose-600 animate-pulse uppercase italic text-2xl">AppEgg Admin...</div>`;
-                return;
-            }
-
-            if (!window.state.user) { root.innerHTML = renderLogin(); return; }
-
-            root.innerHTML = `
-                <nav class="bg-white/80 backdrop-blur-md border-b sticky top-0 z-50 h-24 px-8 flex justify-between items-center">
-                    <div class="logo-text cursor-pointer uppercase italic tracking-tighter text-left" onclick="window.setView('dashboard')">AppEgg</div>
-                    <div class="flex gap-2 overflow-x-auto no-scrollbar">
-                        <button onclick="window.setView('dashboard')" class="nav-link ${window.state.view==='dashboard'?'active':''}">Dashboard</button>
-                        <button onclick="window.setView('estoque')" class="nav-link ${window.state.view==='estoque'?'active':''}">Estoque</button>
-                        <button onclick="window.setView('pedidos')" class="nav-link relative ${window.state.view==='pedidos'?'active':''}">
-                            Encomendas
-                            ${window.state.hasNewOrder ? `<span class="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-ping"></span>` : ''}
-                        </button>
-                        <button onclick="window.setView('financeiro')" class="nav-link ${window.state.view==='financeiro'?'active':''}">Financeiro</button>
-                        <button onclick="window.handleSignOut()" class="nav-link text-rose-600 font-black">Sair</button>
-                    </div>
-                </nav>
-                <main class="p-8 max-w-7xl mx-auto fade-in text-left">
-                    ${renderActiveView()}
-                </main>
-                ${window.state.confirmExcluir ? renderModalExcluir() : ''}
-                ${window.state.toast.show ? `<div class="toast-egg border-l-4 border-rose-500">${window.state.toast.msg}</div>` : ''}
-            `;
-        };
-
-        function renderActiveView() {
-            switch(window.state.view) {
-                case 'dashboard': return renderDashboard();
-                case 'estoque': return renderEstoque();
-                case 'pedidos': return renderPedidos();
-                case 'financeiro': return renderFinanceiro();
-                default: return renderDashboard();
-            }
-        }
-
-        function renderLogin() {
-            return `
-                <div class="min-h-screen bg-slate-900 flex items-center justify-center p-6 text-center">
-                    <div class="bg-white p-12 rounded-[56px] shadow-2xl w-full max-w-md">
-                        <div class="text-6xl font-[950] text-rose-600 mb-2 italic uppercase tracking-tighter text-center">AppEgg</div>
-                        <p class="text-slate-400 font-bold text-[10px] uppercase mb-12 italic tracking-[0.4em] text-center">Painel Platinum Master</p>
-                        <form onsubmit="window.handleLogin(event)" class="space-y-4">
-                            <input id="loginEmail" type="email" value="thon@lojista.com.br" class="input-egg text-center font-bold" required>
-                            <input id="loginPass" type="password" placeholder="Digite a Senha" class="input-egg text-center font-bold" required>
-                            <button class="w-full bg-rose-600 text-white py-6 rounded-[32px] font-black uppercase shadow-xl mt-8 italic active:scale-95 transition-all text-center">Aceder ao Painel</button>
-                        </form>
-                    </div>
-                </div>`;
-        }
-
-        function renderDashboard() {
-            const active = window.state.logs.filter(l => l.status === "EM SEPARAÇÃO");
-            const alerts = window.state.produtos.filter(p => p.quantidade < 15);
-            const totalEstoque = window.state.produtos.reduce((acc,p)=>acc+(Number(p.quantidade)||0),0);
-            return `
-                <div class="space-y-12 text-left fade-in">
-                    <h2 class="text-4xl font-[950] text-slate-900 tracking-tighter uppercase italic text-left">Resumo Operacional</h2>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                        <div class="bg-rose-600 p-10 rounded-[40px] text-white shadow-xl">
-                            <p class="text-[10px] font-black uppercase opacity-60 mb-2 italic text-left">Em Separação</p>
-                            <h3 class="text-5xl font-[950] italic text-left">${active.length}</h3>
-                        </div>
-                        <div class="bg-white border p-10 rounded-[40px] shadow-sm text-slate-800 text-left">
-                            <p class="text-[10px] font-black uppercase text-slate-400 mb-2 italic text-left">Variedades</p>
-                            <h3 class="text-5xl font-[950] italic text-left">${window.state.produtos.length}</h3>
-                        </div>
-                        <div class="bg-slate-900 p-10 rounded-[40px] text-white shadow-2xl text-left">
-                            <p class="text-[10px] font-black uppercase opacity-50 mb-2 italic text-left">Estoque Total</p>
-                            <h3 class="text-5xl font-[950] italic text-left">${totalEstoque} un</h3>
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 text-left">
-                        <div class="bg-white rounded-[40px] p-10 border shadow-sm text-left">
-                            <h4 class="font-black uppercase text-sm text-slate-400 border-b pb-6 mb-8 italic text-left">Últimas Encomendas</h4>
-                            <div class="space-y-4">
-                                ${active.slice(0, 5).map(l => `
-                                    <div class="p-5 bg-slate-50 rounded-3xl border flex justify-between items-center text-left">
-                                        <div class="text-left">
-                                            <p class="font-[950] text-slate-800 uppercase text-xs tracking-tight text-left">${l.clienteNome || 'Cliente'}</p>
-                                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-left">${l.produto || 'Encomenda'}</p>
-                                        </div>
-                                        <span class="px-4 py-1.5 bg-rose-100 text-rose-600 rounded-full font-black text-[8px] uppercase italic">AGUARDANDO</span>
-                                    </div>
-                                `).join('') || '<p class="text-center font-black text-slate-200 py-10 italic uppercase">Sem pedidos pendentes</p>'}
-                            </div>
-                        </div>
-                        <div class="bg-white rounded-[40px] p-10 border shadow-sm text-left">
-                            <h4 class="font-black uppercase text-sm text-slate-400 border-b pb-6 mb-8 italic tracking-widest text-left">Reposição de Stock</h4>
-                            <div class="space-y-4 text-left">
-                                ${alerts.map(p => `
-                                    <div class="flex justify-between items-center p-4 border-b border-slate-50 last:border-0 text-left">
-                                        <p class="text-xs font-[950] text-slate-800 uppercase italic text-left">${p.nome}</p>
-                                        <span class="bg-rose-50 text-rose-600 px-4 py-1.5 rounded-full font-black text-[10px] uppercase animate-pulse">${p.quantidade} un</span>
-                                    </div>
-                                `).join('') || '<p class="text-center font-black text-emerald-400 py-10 italic uppercase text-xs">Stock em dia!</p>'}
-                            </div>
-                        </div>
-                    </div>
-                </div>`;
-        }
-
-        function renderEstoque() {
-            const p = window.state.editando || { nome: CATEGORIES[0], preco: '', preco_custo: '', quantidade: '', foto_url: '', embalagem: PACKAGING[0] };
-            return `
-                <div class="space-y-12 text-left fade-in">
-                    <div class="flex justify-between items-center">
-                        <div class="text-left">
-                            <h2 class="text-4xl font-[950] text-slate-900 tracking-tighter uppercase italic text-left">Gestão de Estoque</h2>
-                            <p class="text-slate-400 font-bold text-sm italic text-left">Variedades e inventário em tempo real.</p>
-                        </div>
-                        <button onclick="window.state.editando=null;window.render();" class="bg-slate-900 text-white px-8 py-5 rounded-[28px] font-black uppercase text-[10px] tracking-widest shadow-xl flex items-center gap-3 active:scale-95 transition-all text-center">+ Novo Item</button>
-                    </div>
-                    <div class="bg-white rounded-[48px] p-12 border shadow-sm text-left">
-                        <form id="formEstoque" class="grid grid-cols-1 md:grid-cols-3 gap-8 text-left">
-                            <div class="md:row-span-2 text-left">
-                                <label class="text-[10px] font-black uppercase text-slate-300 ml-4 italic block mb-2 tracking-widest text-left">Fotografia</label>
-                                <div onclick="document.getElementById('file-input').click()" class="upload-area group text-center">
-                                    <div id="preview-container" class="w-full h-full flex items-center justify-center text-center">
-                                        ${(window.state.tempB64 || p.foto_url) ? `<img src="${window.state.tempB64 || p.foto_url}" class="w-full h-full object-cover">` : `<div class="text-slate-200 uppercase font-black text-[9px] text-center">Inserir Imagem</div>`}
-                                    </div>
-                                    <input type="file" id="file-input" class="hidden" accept="image/*" onchange="window.handleFileSelect(event)">
-                                </div>
-                            </div>
-                            <div class="space-y-4 text-left">
-                                <label class="text-[10px] font-black uppercase text-slate-300 ml-4 italic tracking-widest text-left">Variedade</label>
-                                <select name="nome" class="input-egg uppercase text-left">${CATEGORIES.map(c=>`<option value="${c}" ${p.nome===c?'selected':''}>${c}</option>`).join('')}</select>
-                                <label class="text-[10px] font-black uppercase text-slate-300 ml-4 italic tracking-widest text-left">Embalagem</label>
-                                <select name="embalagem" class="input-egg uppercase text-left">${PACKAGING.map(pk=>`<option value="${pk}" ${p.embalagem===pk?'selected':''}>${pk}</option>`).join('')}</select>
-                            </div>
-                            <div class="space-y-4 text-left">
-                                <label class="text-[10px] font-black uppercase text-slate-300 ml-4 italic text-rose-600 tracking-widest text-left">Venda (R$)</label>
-                                <input name="preco" type="number" step="0.01" value="${p.preco}" class="input-egg text-rose-600 font-black text-center" placeholder="0.00" required>
-                                <label class="text-[10px] font-black uppercase text-slate-300 ml-4 italic tracking-widest text-left">Custo (R$)</label>
-                                <input name="preco_custo" type="number" step="0.01" value="${p.preco_custo}" class="input-egg text-center font-bold" placeholder="0.00" required>
-                            </div>
-                            <div class="lg:col-span-2 text-left">
-                                <label class="text-[10px] font-black uppercase text-slate-300 ml-4 italic tracking-widest text-left">Quantidade Total</label>
-                                <input name="quantidade" type="number" value="${p.quantidade}" class="input-egg text-center font-black" placeholder="0" required>
-                            </div>
-                            <button type="submit" class="lg:col-span-1 bg-rose-600 text-white py-6 rounded-[32px] font-black uppercase text-xs shadow-xl active:scale-95 transition-all italic tracking-widest text-center" onclick="window.handleSaveProduct(event)">
-                                ${window.state.saving ? 'SINC...' : (window.state.editando ? 'ATUALIZAR' : 'LANÇAR ITEM')}
-                            </button>
-                        </form>
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 text-left">
-                        ${window.state.produtos.map((p) => `
-                            <div class="bg-white rounded-[40px] border shadow-sm overflow-hidden hover:shadow-xl transition-all group text-left">
-                                <div class="h-56 bg-slate-100 relative overflow-hidden text-center">
-                                    <img src="${p.foto_url || 'https://via.placeholder.com/300'}" class="w-full h-full object-cover group-hover:scale-105 duration-700">
-                                    <div class="absolute top-4 right-4 bg-white/95 backdrop-blur px-3 py-1.5 rounded-full text-[10px] font-black uppercase shadow-sm">Qtd: ${p.quantidade}</div>
-                                </div>
-                                <div class="p-8 text-left">
-                                    <h3 class="font-black text-slate-800 uppercase text-xs mb-1 tracking-tight text-left text-left">${p.nome}</h3>
-                                    <p class="text-[10px] font-bold text-slate-300 uppercase italic mb-6 text-left text-left">${p.embalagem}</p>
-                                    <div class="flex justify-between items-center border-t border-slate-50 pt-6 text-left text-left">
-                                        <span class="text-2xl font-[950] text-rose-600 italic text-left text-left">R$ ${Number(p.preco).toFixed(2)}</span>
-                                        <div class="flex gap-2">
-                                            <button onclick="window.handleEdit('${p.id}')" class="w-10 h-10 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-400 hover:text-rose-600 transition-all">✎</button>
-                                            <button onclick="window.pedirConfirmExcluir('${p.id}')" class="w-10 h-10 bg-rose-50 rounded-2xl flex items-center justify-center text-rose-400">✕</button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>`;
-        }
-
-        function renderPedidos() {
-            const pending = window.state.logs.filter(l => !['FINALIZADO','CANCELADO'].includes(l.status));
-            return `
-                <div class="space-y-12 fade-in text-left">
-                    <h2 class="text-4xl font-[950] text-slate-900 tracking-tighter uppercase italic text-left">Fila de Encomendas</h2>
-                    <div class="grid gap-6 text-left text-left">
-                        ${pending.map(l => `
-                            <div class="bg-white p-10 rounded-[48px] border-l-[20px] ${l.status==='EM SEPARAÇÃO' ? 'border-rose-600' : 'border-slate-300'} shadow-sm flex flex-col md:flex-row justify-between items-center gap-8 text-left">
-                                <div class="text-left flex-1 text-left">
-                                    <h3 class="text-2xl font-black text-slate-900 uppercase italic tracking-tighter mb-2 text-left">${l.clienteNome || 'Cliente'}</h3>
-                                    <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 text-left">${l.items ? l.items.map(i=>`${i.quantidade}x ${i.produto}`).join(', ') : `${l.quantidade}x ${l.produto}`}</p>
-                                    <p class="text-2xl font-[950] text-rose-600 italic text-left">R$ ${Number(l.valorTotal).toFixed(2)}</p>
-                                </div>
-                                <div class="text-right text-right">
-                                    <select onchange="window.handleStatusUpdate('${l.id}', this.value)" class="w-full md:w-64 p-5 bg-slate-900 text-white rounded-3xl font-black text-[10px] uppercase outline-none shadow-xl cursor-pointer text-center">
-                                        ${STATUS_OPTIONS.map(opt => `<option value="${opt}" ${l.status===opt?'selected':''}>${opt}</option>`).join('')}
-                                    </select>
-                                </div>
-                            </div>
-                        `).join('') || '<p class="text-center py-20 font-black text-slate-200 uppercase italic text-center">Nenhum pedido na fila</p>'}
-                    </div>
-                </div>`;
-        }
-
-        function renderFinanceiro() {
-            const finished = window.state.logs.filter(l => l.status === 'FINALIZADO');
-            const total = finished.reduce((acc,l)=>acc+Number(l.valorTotal),0);
-            const lucro = finished.reduce((acc,l)=>acc+(Number(l.valorTotal) - (Number(l.custoUnitario||0) * (l.quantidade || 1))),0);
-            const p = window.state.pixConfig;
-            return `
-                <div class="space-y-12 fade-in text-left">
-                    <h2 class="text-4xl font-[950] text-slate-900 tracking-tighter uppercase italic text-left text-left">Gestão Financeira</h2>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 text-left text-left">
-                        <div class="bg-white rounded-[48px] p-12 border shadow-sm text-center">
-                            <p class="text-[10px] font-black uppercase text-slate-400 mb-2 italic text-center text-center">Faturamento Bruto</p>
-                            <h3 class="text-6xl font-[950] text-rose-600 italic text-center text-center">R$ ${total.toFixed(2)}</h3>
-                        </div>
-                        <div class="bg-slate-900 rounded-[48px] p-12 shadow-2xl text-center text-center">
-                            <p class="text-[10px] font-black uppercase text-white/40 mb-2 italic text-center text-center">Lucro Estimado</p>
-                            <h3 class="text-6xl font-[950] text-emerald-400 italic text-center text-center">R$ ${lucro.toFixed(2)}</h3>
-                        </div>
-                    </div>
-                    <div class="bg-white rounded-[48px] p-12 border shadow-sm text-left text-left">
-                        <div class="flex flex-col md:flex-row justify-between items-center gap-10 text-left text-left">
-                            <div class="flex-1 text-left text-left">
-                                <h3 class="text-xl font-black uppercase text-slate-800 tracking-tighter mb-10 text-left text-left">Chave de Recebimento PIX</h3>
-                                <form onsubmit="window.handleSavePixConfig(event)" class="grid grid-cols-1 md:grid-cols-2 gap-8 text-left text-left">
-                                    <div class="text-left text-left">
-                                        <label class="text-[10px] font-black uppercase text-slate-400 ml-4 italic text-left text-left">Tipo de Chave</label>
-                                        <select id="pixType" class="input-egg text-xs uppercase text-left">${PIX_TYPES.map(t => `<option value="${t}" ${p.type===t?'selected':''}>${t}</option>`).join('')}</select>
-                                    </div>
-                                    <div class="text-left text-left">
-                                        <label class="text-[10px] font-black uppercase text-slate-400 ml-4 italic text-left text-left">Chave PIX</label>
-                                        <input id="pixKey" value="${p.key || ''}" class="input-egg font-bold text-center" placeholder="Insira a chave" required>
-                                    </div>
-                                    <button type="submit" class="md:col-span-2 w-full bg-slate-900 text-white py-6 rounded-[32px] font-black uppercase text-xs italic text-center text-center">Sincronizar Chave</button>
-                                </form>
-                            </div>
-                            <div class="w-full md:w-64 bg-slate-50 p-8 rounded-[40px] text-center text-center">
-                                <p class="text-[9px] font-black text-slate-300 uppercase mb-4 italic text-center text-center">QR Code Cliente</p>
-                                <div id="qrPreview" class="bg-white p-4 rounded-3xl shadow-inner text-center text-center">
-                                    ${p.copiaCola ? `<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(p.copiaCola)}" alt="QR Code">` : `<div class="w-32 h-32 flex items-center justify-center text-slate-200 uppercase font-black text-[8px] italic text-center text-center">Sem Chave</div>`}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>`;
-        }
-
-        function renderModalExcluir() {
-            return `
-                <div class="fixed inset-0 modal-blur z-[1000] flex items-center justify-center p-4">
-                    <div class="bg-white rounded-[40px] p-8 max-w-sm w-full shadow-2xl text-center text-center">
-                        <div class="w-16 h-16 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center mx-auto mb-6 text-3xl font-black text-center text-center">!</div>
-                        <h3 class="text-xl font-black text-slate-900 mb-2 uppercase italic text-center text-center">Remover Artigo?</h3>
-                        <p class="text-slate-500 text-sm font-medium mb-8 italic text-center text-center">Esta ação removerá o item permanentemente.</p>
-                        <div class="flex flex-col gap-3 text-center text-center">
-                            <button onclick="window.handleExcluirReal()" class="w-full py-4 rounded-2xl bg-rose-600 text-white font-black text-xs uppercase italic text-center text-center">Confirmar</button>
-                            <button onclick="window.state.confirmExcluir=null;window.render()" class="w-full py-4 rounded-2xl text-slate-400 bg-slate-50 font-black text-xs uppercase italic text-center text-center">Cancelar</button>
-                        </div>
-                    </div>
-                </div>`;
-        }
-
-        // --- LISTENERS OTIMIZADOS ---
-
-        onAuthStateChanged(auth, u => {
-            window.state.user = u;
-            if (u && u.email === 'thon@lojista.com.br') {
-                // Snapshot Estoque
-                onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'estoque'), s => {
-                    const data = s.docs.map(d => ({ id: d.id, ...d.data() }));
-                    const hash = JSON.stringify(data);
-                    if (hash !== lastStockHash) {
-                        lastStockHash = hash;
-                        window.state.produtos = data.sort((a,b)=>(a.nome||"").localeCompare(b.nome||""));
-                        window.state.loading = false; window.render();
-                    }
-                });
-
-                // Snapshot Pedidos
-                onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'vendas_logs'), s => {
-                    const data = s.docs.map(d => ({ id: d.id, ...d.data() }));
-                    const hash = JSON.stringify(data);
-                    if (hash !== lastLogsHash) {
-                        if (data.length > window.state.lastOrderCount && window.state.lastOrderCount !== 0) {
-                            window.state.hasNewOrder = true; window.showToast("NOVO PEDIDO RECEBIDO!");
-                        }
-                        window.state.lastOrderCount = data.length;
-                        window.state.logs = data.sort((a,b)=>(b.timestamp?.seconds||0)-(a.timestamp?.seconds||0));
-                        lastLogsHash = hash; window.render();
-                    }
-                });
-
-                // Snapshot PIX
-                onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'pix_config'), snap => {
-                    if (snap.exists()) { 
-                        const data = snap.data();
-                        const hash = JSON.stringify(data);
-                        if (hash !== lastPixHash) {
-                            lastPixHash = hash;
-                            window.state.pixConfig = data; window.render(); 
-                        }
-                    } else { window.state.loading = false; window.render(); }
-                });
-            } else { window.state.loading = false; window.render(); }
-        });
-    </script>
 </body>
 </html>
