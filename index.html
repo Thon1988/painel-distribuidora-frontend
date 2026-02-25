@@ -1,12 +1,803 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>App Ovos Aline</title>
+    <title>Admin — App Ovos Aline</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
+        
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background: #f8fafc; 
+            color: #1e293b; 
+            overflow-x: hidden; 
+        }
+        
+        /* Navegação Estilo Premium (Red/Slate) */
+        .nav-link { 
+            font-size: 12px; font-weight: 800; text-transform: uppercase; color: #64748b; 
+            padding: 14px 24px; border-radius: 16px; cursor: pointer; transition: all 0.3s ease; 
+            white-space: nowrap; border: 2px solid transparent; display: flex; align-items: center; justify-content: center;
+        }
+        .nav-link:hover { background: #fff; color: #e11d48; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .nav-link.active { color: #e11d48; background: #fff; border-color: #ffe4e6; box-shadow: 0 4px 12px rgba(225, 29, 72, 0.08); }
+        
+        .logo-text { font-weight: 900; color: #e11d48; font-size: 1.6rem; letter-spacing: -1px; }
+        .card { background: #ffffff; border-radius: 32px; box-shadow: 0 10px 30px rgba(0,0,0,0.02); border: 1px solid rgba(226, 232, 240, 0.8); transition: all 0.3s ease; }
+        
+        /* Inputs Premium */
+        .input-egg { 
+            width: 100%; padding: 16px 20px; background: #f1f5f9; border-radius: 16px; 
+            border: 2px solid transparent; font-weight: 700; font-size: 14px; outline: none; transition: 0.2s; color: #0f172a;
+        }
+        .input-egg:focus { border-color: #e11d48; background: #fff; box-shadow: 0 0 0 4px rgba(225, 29, 72, 0.1); }
+
+        .modal-blur { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(8px); }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        
+        .toast-egg {
+            position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); padding: 16px 32px; 
+            background: #0f172a; color: white; border-radius: 50px; font-weight: 800;
+            font-size: 13px; text-transform: uppercase; z-index: 1000; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .fade-in { animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Estilos dos Badges do Formulário */
+        .badge-opt { 
+            padding: 8px 16px; border-radius: 50px; font-size: 11px; font-weight: 800; 
+            cursor: pointer; border: 2px solid transparent; transition: all 0.2s; text-transform: uppercase;
+        }
+        .badge-opt:hover { transform: scale(1.05); }
+        .bo-none  { background: #e2e8f0; color: #475569; }
+        .bo-red   { background: #e11d48; color: #fff; }
+        .bo-amber { background: #f59e0b; color: #fff; }
+        .bo-green { background: #10b981; color: #fff; }
+    </style>
 </head>
-<body>
-    <h1>Welcome to App Ovos Aline</h1>
-    <p>This is the updated structure of the application.</p>
+<body class="no-scrollbar text-left">
+    <div id="app-root"></div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getFirestore, collection, onSnapshot, doc, setDoc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInWithEmailAndPassword, signInWithCustomToken, signInAnonymously, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+
+        // --- CONFIGURAÇÃO FIREBASE ---
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
+            apiKey: "AIzaSyD3Otz9-zdZH-E5Feg9IOGWPzVycoe8gro",
+            authDomain: "distribuidora-de-ovos-aline.firebaseapp.com",
+            projectId: "distribuidora-de-ovos-aline",
+            storageBucket: "distribuidora-de-ovos-aline.firebasestorage.app",
+            messagingSenderId: "92187548716",
+            appId: "1:92187548716:web:d61d18a29aa76aead7c589"
+        };
+
+        const appFB = initializeApp(firebaseConfig);
+        const db = getFirestore(appFB);
+        const auth = getAuth(appFB);
+        
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'app-egg-pro-transacional';
+
+        const STATUS_OPTIONS = ["CRIADO", "AGUARDANDO PIX", "EM SEPARAÇÃO", "SAIU PARA ENTREGA", "PRONTO PARA RETIRADA", "FINALIZADO", "CANCELADO"];
+        const PIX_TYPES = ["CPF", "CNPJ", "E-mail", "Celular", "Chave Aleatória"];
+
+        let lastPixHash = "";
+        let lastStockHash = "";
+        let lastLogsHash = "";
+        let lastStoreConfigHash = "";
+
+        // --- ESTADO GLOBAL ---
+        window.state = {
+            user: null, 
+            view: 'dashboard', 
+            produtos: [], 
+            logs: [], 
+            editando: null, 
+            loading: true, 
+            saving: false, 
+            confirmExcluir: null, 
+            toast: { show: false, msg: '' },
+            pixConfig: { type: 'Celular', key: '', copiaCola: '' },
+            storeConfig: { nome: 'App Ovos Aline', emoji: '🥚', slogan: 'Qualidade Premium', heroTitle: 'Ovos Fresquinhos', heroDesc: '', corPrimaria: '#e11d48', corSecundaria: '#be123c' },
+            lastOrderCount: 0,
+            hasNewOrder: false
+        };
+
+        // --- AUTENTICAÇÃO BASE ---
+        async function initAuth() {
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (e) {
+                console.error("Erro na autenticação base:", e);
+            }
+        }
+        initAuth();
+
+        // --- UTILIDADES ---
+        window.setView = (v) => { 
+            window.state.view = v; 
+            window.state.editando = null; 
+            if(v === 'pedidos') window.state.hasNewOrder = false;
+            window.render(); 
+        };
+
+        window.showToast = (msg) => { 
+            window.state.toast = { show: true, msg }; 
+            window.render(); 
+            setTimeout(() => { window.state.toast.show = false; window.render(); }, 3000); 
+        };
+
+        window.selBadge = (el, badgeName, badgeClass) => {
+            document.getElementById('mp-badge').value = badgeName;
+            document.getElementById('mp-badgeClass').value = badgeClass;
+            document.querySelectorAll('.badge-opt').forEach(b => b.classList.remove('ring-4', 'ring-slate-900', 'scale-105'));
+            el.classList.add('ring-4', 'ring-slate-900', 'scale-105');
+        };
+
+        // --- LÓGICA DE PRODUTOS (IGUAL AO CÓDIGO ANTIGO) ---
+        window.handleSaveProduct = async (e) => {
+            e.preventDefault();
+            if (window.state.saving) return;
+            window.state.saving = true; window.render();
+            
+            const form = document.getElementById('formEstoque');
+            const data = new FormData(form);
+            const docId = window.state.editando ? window.state.editando.id : crypto.randomUUID();
+            
+            // Verifica se está editando e já tinha um status de "ativo". Se for novo, default é true.
+            const isAtivo = window.state.editando && window.state.editando.hasOwnProperty('ativo') ? window.state.editando.ativo : true;
+
+            const payload = {
+                nome: data.get('nome').trim(),
+                emoji: data.get('emoji').trim() || '🥚',
+                tipo: data.get('tipo').trim(),
+                preco: Number(data.get('preco')),
+                desc: data.get('desc').trim(),
+                badge: data.get('badge'),
+                badgeClass: data.get('badgeClass'),
+                ativo: isAtivo,
+                updatedAt: serverTimestamp()
+            };
+
+            if (!payload.nome || isNaN(payload.preco)) {
+                window.showToast("⚠️ Preencha os campos obrigatórios!");
+                window.state.saving = false; window.render();
+                return;
+            }
+
+            try {
+                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'estoque', docId), payload, { merge: true });
+                window.state.editando = null;
+                window.showToast("✅ Produto salvo!");
+            } catch (err) { alert("Erro ao salvar produto."); }
+            window.state.saving = false; window.render();
+        };
+
+        window.handleEdit = (id) => {
+            const p = window.state.produtos.find(x => x.id === id);
+            window.state.editando = { ...p };
+            window.render();
+            window.scrollTo({top: 0, behavior: 'smooth'});
+        };
+
+        window.toggleProdStatus = async (id, currentStatus) => {
+            try {
+                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'estoque', id), {
+                    ativo: !currentStatus,
+                    updatedAt: serverTimestamp()
+                });
+                window.showToast(!currentStatus ? "🟢 Produto ativado!" : "⚫ Produto inativo!");
+            } catch (err) { console.error(err); }
+        };
+
+        window.pedirConfirmExcluir = (id) => { window.state.confirmExcluir = id; window.render(); };
+
+        window.handleExcluirReal = async () => {
+            if (!window.state.confirmExcluir) return;
+            try {
+                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'estoque', window.state.confirmExcluir));
+                window.state.confirmExcluir = null; window.showToast("🗑 Produto excluído!");
+                window.render();
+            } catch (e) { alert("Erro ao excluir."); }
+        };
+
+        // --- LÓGICA DE PEDIDOS E PIX ---
+        window.handleStatusUpdate = async (id, status) => {
+            const ref = doc(db, 'artifacts', appId, 'public', 'data', 'vendas_logs', id);
+            const updates = { status };
+            if (status === 'FINALIZADO') updates.finalizadoEm = serverTimestamp();
+            await updateDoc(ref, updates);
+            window.showToast(`✅ Status Atualizado`);
+        };
+
+        window.handleSavePixConfig = async (e) => {
+            e.preventDefault();
+            const type = document.getElementById('pixType').value;
+            const rawKey = document.getElementById('pixKey').value.trim();
+            const cleanKey = rawKey.replace(/\D/g, "");
+            
+            let chaveFinal = rawKey; let chaveVisual = rawKey;
+
+            if (type === "CPF") {
+                if (cleanKey.length !== 11) return window.showToast("CPF INVÁLIDO");
+                chaveFinal = cleanKey; chaveVisual = cleanKey.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+            } else if (type === "CNPJ") {
+                if (cleanKey.length !== 14) return window.showToast("CNPJ INVÁLIDO");
+                chaveFinal = cleanKey; chaveVisual = cleanKey.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
+            } else if (type === "Celular") {
+                if (cleanKey.length < 10) return window.showToast("NÚMERO INVÁLIDO");
+                chaveFinal = cleanKey; chaveVisual = cleanKey.replace(/(\d{2})(\d{5}|\d{4})(\d{4})/, "($1) $2-$3");
+            } else if (type === "E-mail") {
+                if (!rawKey.includes("@")) return window.showToast("E-MAIL INVÁLIDO");
+                chaveFinal = rawKey.toLowerCase(); chaveVisual = chaveFinal;
+            } else if (type === "Chave Aleatória") {
+                chaveFinal = rawKey; chaveVisual = rawKey;
+            }
+
+            // Gera o código PIX com o nome da loja
+            const nomeLoja = document.getElementById('pixNome').value.trim() || 'App Ovos Aline';
+            const cidadeLoja = document.getElementById('pixCidade').value.trim() || 'SAO PAULO';
+            
+            const format = (id, value) => id + value.length.toString().padStart(2, '0') + value;
+            const payload = format("00", "01") + format("26", format("00", "BR.GOV.BCB.PIX") + format("01", chaveFinal)) + format("52", "0000") + format("53", "986") + format("58", "BR") + format("59", nomeLoja.substring(0, 25).toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,"")) + format("60", cidadeLoja.substring(0, 15).toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,"")) + "6304";
+            
+            const crc16 = (str) => {
+                let crc = 0xFFFF;
+                for (let c of str) {
+                    crc ^= c.charCodeAt(0) << 8;
+                    for (let i = 0; i < 8; i++) crc = crc & 0x8000 ? (crc << 1) ^ 0x1021 : crc << 1;
+                }
+                return (crc & 0xFFFF).toString(16).toUpperCase().padStart(4, '0');
+            };
+            const copiaCola = payload + crc16(payload);
+
+            try {
+                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'pix_config'), {
+                    type, key: chaveVisual, nomeRecebedor: nomeLoja, cidade: cidadeLoja, copiaCola, updatedAt: serverTimestamp()
+                }, { merge: true });
+                window.showToast("✅ PIX Salvo com Sucesso!");
+            } catch (err) { alert("Erro ao salvar PIX."); }
+        };
+
+        window.handleSaveStoreConfig = async (e) => {
+            e.preventDefault();
+            const form = new FormData(e.target);
+            try {
+                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'store_config'), {
+                    nome: form.get('nome'),
+                    emoji: form.get('emoji'),
+                    slogan: form.get('slogan'),
+                    heroTitle: form.get('heroTitle'),
+                    heroDesc: form.get('heroDesc'),
+                    corPrimaria: form.get('corPrimaria'),
+                    corSecundaria: form.get('corSecundaria'),
+                    updatedAt: serverTimestamp()
+                }, { merge: true });
+                window.showToast("✅ Aparência Salva!");
+            } catch (err) { alert("Erro ao salvar Loja."); }
+        };
+
+        // --- SISTEMA DE LOGIN ---
+        window.handleLogin = async (e) => {
+            e.preventDefault();
+            const em = document.getElementById('loginEmail').value.trim();
+            const ps = document.getElementById('loginPass').value;
+            
+            if (em === 'thon@lojista.com.br' && ps === 'admin123') {
+                localStorage.setItem('admin_bypass', 'true');
+                window.state.user = { email: em };
+                window.showToast("✅ Acesso Autorizado");
+                initAdminListeners();
+                window.state.loading = false;
+                window.render();
+                return;
+            }
+            try { 
+                await signInWithEmailAndPassword(auth, em, ps); 
+            } catch (err) { 
+                alert("Acesso negado. Dica: Use a senha padrão 'admin123'.");
+            }
+        };
+
+        window.handleSignOut = () => {
+            localStorage.removeItem('admin_bypass');
+            window.state.user = null;
+            signOut(auth);
+            window.render();
+        };
+
+        // --- COMPONENTES DE RENDERIZAÇÃO ---
+        window.render = () => {
+            const root = document.getElementById('app-root');
+            if (window.state.loading) {
+                root.innerHTML = `<div class="h-screen flex items-center justify-center font-black text-rose-600 animate-pulse uppercase italic text-xl">A carregar Painel...</div>`;
+                return;
+            }
+
+            if (!window.state.user) { root.innerHTML = renderLogin(); return; }
+
+            root.innerHTML = `
+                <nav class="bg-white/90 backdrop-blur-md border-b border-slate-200 sticky top-0 z-50 h-24 px-8 flex justify-between items-center shadow-sm">
+                    <div class="logo-text cursor-pointer uppercase italic tracking-tighter flex items-center gap-2" onclick="window.setView('dashboard')">
+                        <span class="text-3xl">${window.state.storeConfig.emoji || '🥚'}</span> ${window.state.storeConfig.nome || 'App Ovos Aline'}
+                    </div>
+                    <div class="flex gap-2 overflow-x-auto no-scrollbar">
+                        <button onclick="window.setView('dashboard')" class="nav-link ${window.state.view==='dashboard'?'active':''}">Dashboard</button>
+                        <button onclick="window.setView('estoque')" class="nav-link ${window.state.view==='estoque'?'active':''}">Catálogo de Produtos</button>
+                        <button onclick="window.setView('pedidos')" class="nav-link relative ${window.state.view==='pedidos'?'active':''}">
+                            Pedidos
+                            ${window.state.hasNewOrder ? `<span class="absolute -top-1 -right-1 w-3 h-3 bg-rose-500 rounded-full animate-ping"></span>` : ''}
+                        </button>
+                        <button onclick="window.setView('financeiro')" class="nav-link ${window.state.view==='financeiro'?'active':''}">Caixa & PIX</button>
+                        <button onclick="window.setView('loja')" class="nav-link ${window.state.view==='loja'?'active':''}">Aparência da Loja</button>
+                        <button onclick="window.handleSignOut()" class="nav-link text-rose-600 font-black ml-4">Sair</button>
+                    </div>
+                </nav>
+                <main class="p-8 max-w-6xl mx-auto fade-in text-left">
+                    ${renderActiveView()}
+                </main>
+                ${window.state.confirmExcluir ? renderModalExcluir() : ''}
+                ${window.state.toast.show ? `<div class="toast-egg border-2 border-white">${window.state.toast.msg}</div>` : ''}
+            `;
+        };
+
+        function renderActiveView() {
+            switch(window.state.view) {
+                case 'dashboard': return renderDashboard();
+                case 'estoque': return renderEstoque();
+                case 'pedidos': return renderPedidos();
+                case 'financeiro': return renderFinanceiro();
+                case 'loja': return renderLoja();
+                default: return renderDashboard();
+            }
+        }
+
+        function renderLogin() {
+            return `
+                <div class="min-h-screen bg-slate-900 flex items-center justify-center p-6 text-center">
+                    <div class="bg-white p-12 rounded-[48px] shadow-2xl w-full max-w-md border-4 border-slate-200">
+                        <div class="text-4xl font-[950] text-rose-600 mb-2 italic uppercase tracking-tighter text-center">App Ovos Aline</div>
+                        <p class="text-slate-400 font-bold text-[10px] uppercase mb-10 italic tracking-[0.3em] text-center">Gestão Admin Central</p>
+                        <form onsubmit="window.handleLogin(event)" class="space-y-4">
+                            <input id="loginEmail" type="email" value="thon@lojista.com.br" class="input-egg text-center font-bold" required>
+                            <input id="loginPass" type="password" placeholder="Digite a Senha" class="input-egg text-center font-bold" required>
+                            <button class="w-full bg-rose-600 hover:bg-rose-700 text-white py-5 rounded-[24px] font-black uppercase shadow-xl mt-6 active:scale-95 transition-all text-center">Entrar no Painel</button>
+                        </form>
+                    </div>
+                </div>`;
+        }
+
+        function renderDashboard() {
+            const active = window.state.logs.filter(l => !["FINALIZADO", "CANCELADO"].includes(l.status));
+            const pendingTotal = active.reduce((acc,l)=>acc+(Number(l.valorTotal)||0), 0);
+            const produtosAtivos = window.state.produtos.filter(p => p.ativo).length;
+
+            return `
+                <div class="space-y-10 fade-in">
+                    <h2 class="text-4xl font-[950] text-slate-900 tracking-tighter uppercase italic">Visão Geral</h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="bg-gradient-to-br from-rose-700 to-rose-500 p-8 rounded-[32px] text-white shadow-xl">
+                            <p class="text-xs font-black uppercase opacity-80 mb-2">Pedidos em Andamento</p>
+                            <h3 class="text-5xl font-[950] italic">${active.length}</h3>
+                        </div>
+                        <div class="bg-white border border-slate-200 p-8 rounded-[32px] shadow-sm text-slate-800">
+                            <p class="text-xs font-black uppercase text-slate-400 mb-2">Valores a Receber</p>
+                            <h3 class="text-4xl font-[950] italic text-slate-700">R$ ${pendingTotal.toFixed(2)}</h3>
+                        </div>
+                        <div class="bg-slate-900 p-8 rounded-[32px] text-white shadow-2xl">
+                            <p class="text-xs font-black uppercase opacity-60 mb-2">Produtos na Vitrine</p>
+                            <h3 class="text-5xl font-[950] italic">${produtosAtivos} / ${window.state.produtos.length}</h3>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-[40px] p-10 border border-slate-200 shadow-sm">
+                        <h4 class="font-black uppercase text-sm text-slate-400 border-b border-slate-100 pb-4 mb-6 italic">Últimas Atividades</h4>
+                        <div class="space-y-3">
+                            ${active.slice(0, 5).map(l => {
+                                const cliente = l.dadosCliente?.nome || 'Cliente Anônimo';
+                                const isEntrega = l.tipoEntrega === 'entrega';
+                                const entregaTag = isEntrega ? '<span class="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-[10px] font-black italic">🚚 ENTREGA</span>' : '<span class="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded text-[10px] font-black italic">🏪 RETIRADA</span>';
+                                
+                                return `
+                                <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex justify-between items-center">
+                                    <div>
+                                        <p class="font-bold text-slate-800 uppercase text-xs mb-1">${cliente}</p>
+                                        <div class="flex items-center gap-2">
+                                            ${entregaTag}
+                                            <span class="text-[10px] font-bold text-slate-500 uppercase">R$ ${Number(l.valorTotal).toFixed(2)}</span>
+                                        </div>
+                                    </div>
+                                    <span class="px-3 py-1 bg-white border border-slate-200 text-slate-700 rounded-full font-bold text-[10px] uppercase shadow-sm">${l.status}</span>
+                                </div>
+                                `
+                            }).join('') || '<p class="text-center font-bold text-slate-400 py-6">Sem pedidos no momento.</p>'}
+                        </div>
+                    </div>
+                </div>`;
+        }
+
+        function renderEstoque() {
+            const p = window.state.editando || { nome: '', tipo: '', emoji: '🥚', badge: '', badgeClass: '', desc: '', preco: '' };
+            return `
+                <div class="space-y-10 fade-in">
+                    <div class="flex justify-between items-center flex-wrap gap-4">
+                        <div>
+                            <h2 class="text-4xl font-[950] text-slate-900 tracking-tighter uppercase italic">Gerenciar Produtos</h2>
+                            <p class="text-slate-500 font-bold text-sm">Adicione ou edite os produtos do seu catálogo.</p>
+                        </div>
+                        <button onclick="window.state.editando=null;window.render();" class="bg-rose-600 text-white px-8 py-4 rounded-[20px] font-black uppercase text-xs shadow-md active:scale-95 transition-all">
+                            + Adicionar Produto
+                        </button>
+                    </div>
+                    
+                    <div class="bg-white rounded-[40px] p-10 border border-slate-200 shadow-sm">
+                        <h3 class="font-black text-slate-800 uppercase text-lg mb-6 border-b border-slate-100 pb-3">
+                            ${window.state.editando ? '✏️ Editando Produto' : '✨ Novo Produto'}
+                        </h3>
+                        <form id="formEstoque" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            
+                            <div class="space-y-2">
+                                <label class="text-[11px] font-black uppercase text-slate-500 ml-2">Nome do Produto</label>
+                                <input name="nome" type="text" value="${p.nome}" class="input-egg text-slate-900" placeholder="Ex: Ovos Brancos Grandes" required>
+                            </div>
+
+                            <div class="space-y-2">
+                                <label class="text-[11px] font-black uppercase text-slate-500 ml-2">Emoji do Produto</label>
+                                <input name="emoji" type="text" value="${p.emoji}" class="input-egg text-2xl text-center" maxlength="4" placeholder="🥚" required>
+                            </div>
+
+                            <div class="space-y-2">
+                                <label class="text-[11px] font-black uppercase text-slate-500 ml-2">Subtítulo / Tipo</label>
+                                <input name="tipo" type="text" value="${p.tipo}" class="input-egg" placeholder="Ex: Tamanho G - Dúzia" required>
+                            </div>
+
+                            <div class="space-y-2">
+                                <label class="text-[11px] font-black uppercase text-rose-600 ml-2">Preço (R$)</label>
+                                <input name="preco" type="number" step="0.01" value="${p.preco}" class="input-egg font-black text-rose-600 border-rose-200 bg-rose-50" placeholder="0.00" required>
+                            </div>
+
+                            <div class="md:col-span-2 space-y-2">
+                                <label class="text-[11px] font-black uppercase text-slate-500 ml-2">Descrição Longa</label>
+                                <textarea name="desc" class="input-egg" rows="2" placeholder="Descreva o produto...">${p.desc || ''}</textarea>
+                            </div>
+
+                            <div class="md:col-span-2 space-y-3">
+                                <label class="text-[11px] font-black uppercase text-slate-500 ml-2">Etiqueta (Badge)</label>
+                                <div class="flex flex-wrap gap-2">
+                                    <button type="button" class="badge-opt bo-none ${p.badge===''?'ring-4 ring-slate-900 scale-105':''}" onclick="window.selBadge(this, '', '')">Nenhuma</button>
+                                    <button type="button" class="badge-opt bo-red ${p.badge==='Popular'?'ring-4 ring-slate-900 scale-105':''}" onclick="window.selBadge(this, 'Popular', 'rose')">Popular</button>
+                                    <button type="button" class="badge-opt bo-red ${p.badge==='Top Venda'?'ring-4 ring-slate-900 scale-105':''}" onclick="window.selBadge(this, 'Top Venda', 'rose')">Top Venda</button>
+                                    <button type="button" class="badge-opt bo-amber ${p.badge==='Especial'?'ring-4 ring-slate-900 scale-105':''}" onclick="window.selBadge(this, 'Especial', 'amber')">Especial</button>
+                                    <button type="button" class="badge-opt bo-green ${p.badge==='Premium'?'ring-4 ring-slate-900 scale-105':''}" onclick="window.selBadge(this, 'Premium', 'green')">Premium</button>
+                                    <button type="button" class="badge-opt bo-red ${p.badge==='Novo'?'ring-4 ring-slate-900 scale-105':''}" onclick="window.selBadge(this, 'Novo', 'rose')">Novo</button>
+                                    <button type="button" class="badge-opt bo-amber ${p.badge==='Promoção'?'ring-4 ring-slate-900 scale-105':''}" onclick="window.selBadge(this, 'Promoção', 'amber')">Promoção</button>
+                                </div>
+                                <input type="hidden" name="badge" id="mp-badge" value="${p.badge || ''}">
+                                <input type="hidden" name="badgeClass" id="mp-badgeClass" value="${p.badgeClass || ''}">
+                            </div>
+                            
+                            <div class="md:col-span-2 mt-4">
+                                <button type="submit" class="w-full bg-slate-900 hover:bg-black text-white py-5 rounded-[20px] font-black uppercase text-sm shadow-xl active:scale-95 transition-all" onclick="window.handleSaveProduct(event)">
+                                    ${window.state.saving ? 'A SALVAR...' : '💾 Guardar Produto'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="flex flex-col gap-4">
+                        ${window.state.produtos.map(p => {
+                            const badgeHtml = p.badge ? `<span class="px-3 py-1 text-[9px] font-black uppercase rounded-full text-white ml-2 ${p.badgeClass==='green'?'bg-emerald-500':p.badgeClass==='amber'?'bg-amber-500':'bg-rose-500'}">${p.badge}</span>` : '';
+                            return `
+                            <div class="bg-white border border-slate-200 rounded-[24px] p-5 flex items-center justify-between shadow-sm transition-all hover:shadow-md ${p.ativo ? '' : 'opacity-60'}">
+                                <div class="flex items-center gap-5 flex-1">
+                                    <div class="text-4xl bg-slate-50 w-16 h-16 rounded-2xl flex items-center justify-center">${p.emoji}</div>
+                                    <div>
+                                        <h4 class="font-black text-slate-800 text-sm flex items-center">${p.nome} ${badgeHtml}</h4>
+                                        <p class="text-xs text-slate-500 font-medium mt-1">${p.tipo}</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-6">
+                                    <div class="text-right hidden md:block">
+                                        <p class="font-[950] text-rose-600 text-lg">R$ ${Number(p.preco).toFixed(2)}</p>
+                                    </div>
+                                    <div class="flex gap-2">
+                                        <button title="Ativar/Desativar" onclick="window.toggleProdStatus('${p.id}', ${p.ativo})" class="w-10 h-10 rounded-xl flex items-center justify-center text-lg bg-slate-50 hover:bg-slate-200 transition-colors">
+                                            ${p.ativo ? '🟢' : '⚫'}
+                                        </button>
+                                        <button title="Editar" onclick="window.handleEdit('${p.id}')" class="w-10 h-10 rounded-xl flex items-center justify-center text-slate-500 bg-slate-50 hover:bg-slate-800 hover:text-white transition-colors">✎</button>
+                                        <button title="Excluir" onclick="window.pedirConfirmExcluir('${p.id}')" class="w-10 h-10 rounded-xl flex items-center justify-center text-rose-500 bg-rose-50 hover:bg-rose-600 hover:text-white transition-colors">✕</button>
+                                    </div>
+                                </div>
+                            </div>
+                            `
+                        }).join('')}
+                    </div>
+                </div>`;
+        }
+
+        function renderPedidos() {
+            const pending = window.state.logs.filter(l => !['FINALIZADO','CANCELADO'].includes(l.status));
+            
+            return `
+                <div class="space-y-10 fade-in">
+                    <div>
+                        <h2 class="text-4xl font-[950] text-slate-900 tracking-tighter uppercase italic">Pedidos Recebidos</h2>
+                        <p class="text-slate-500 font-bold text-sm">Organize as entregas e as retiradas na loja.</p>
+                    </div>
+
+                    <div class="grid gap-6">
+                        ${pending.map(l => {
+                            const cliente = l.dadosCliente?.nome || 'Cliente Não Identificado';
+                            const telefone = l.dadosCliente?.tel || 'Sem telefone';
+                            const isEntrega = l.tipoEntrega === 'entrega';
+                            const entregaStr = isEntrega ? '🚚 ENTREGA' : '🏪 RETIRAR NA LOJA';
+                            const endereco = isEntrega 
+                                ? `${l.dadosCliente?.rua || ''}, ${l.dadosCliente?.num || ''} - ${l.dadosCliente?.bairro || ''} <br><span class="text-[10px] uppercase font-bold text-slate-400 mt-1 block">Comp: ${l.dadosCliente?.comp || 'N/A'}</span>`
+                                : 'Cliente vai até o endereço físico da loja para retirar.';
+                            
+                            const itensStr = (l.itens || []).map(i => `<span class="bg-rose-50 text-rose-700 px-2 py-0.5 rounded font-black text-xs mr-1">${i.qtd || i.quantidade}x</span> <span class="font-semibold text-slate-700">${i.nome || i.produto}</span>`).join('<br>');
+                            const pagStr = (l.formaPagamento || 'Não Informado').replace('_', ' ').toUpperCase();
+
+                            let borderStatus = 'border-slate-300';
+                            if (l.status === 'CRIADO') borderStatus = 'border-amber-400';
+                            else if (l.status === 'EM SEPARAÇÃO') borderStatus = 'border-rose-500';
+                            else if (l.status === 'SAIU PARA ENTREGA' || l.status === 'PRONTO PARA RETIRADA') borderStatus = 'border-emerald-500';
+
+                            return `
+                            <div class="bg-white p-8 rounded-[32px] border-l-[12px] ${borderStatus} shadow-sm border-y border-r border-slate-200">
+                                <div class="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-slate-100 pb-5 mb-5 gap-4">
+                                    <div>
+                                        <span class="text-[10px] font-black uppercase text-slate-400 tracking-widest block mb-1">Pedido ${l.pedidoID || '#---'} • ${l.criadoEm ? new Date(l.criadoEm.seconds * 1000).toLocaleString('pt-BR') : 'Hoje'}</span>
+                                        <h3 class="text-xl font-black text-slate-900 uppercase">${cliente}</h3>
+                                        <p class="text-xs font-bold text-slate-500 mt-1">📞 ${telefone}</p>
+                                    </div>
+                                    <div class="text-left md:text-right">
+                                        <span class="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase ${isEntrega ? 'bg-blue-50 text-blue-700 border border-blue-100' : 'bg-emerald-50 text-emerald-700 border border-emerald-100'} inline-block mb-2">${entregaStr}</span>
+                                        <p class="text-2xl font-[950] text-rose-600">R$ ${Number(l.valorTotal).toFixed(2)}</p>
+                                    </div>
+                                </div>
+                                
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                    <div>
+                                        <p class="text-[10px] font-black uppercase text-slate-400 mb-2 border-b border-slate-50 pb-2">Itens</p>
+                                        <p class="text-sm leading-loose">${itensStr}</p>
+                                    </div>
+                                    <div>
+                                        <p class="text-[10px] font-black uppercase text-slate-400 mb-2 border-b border-slate-50 pb-2">Pagamento</p>
+                                        <p class="text-[11px] font-black text-slate-700 inline-block px-3 py-1.5 bg-slate-100 rounded uppercase">${pagStr}</p>
+                                    </div>
+                                    <div>
+                                        <p class="text-[10px] font-black uppercase text-slate-400 mb-2 border-b border-slate-50 pb-2">Endereço</p>
+                                        <p class="text-sm font-medium text-slate-600 leading-relaxed">${endereco}</p>
+                                    </div>
+                                </div>
+
+                                <div class="mt-6 pt-5 border-t border-slate-100 flex items-center gap-4">
+                                    <span class="text-[10px] font-black text-slate-400 uppercase">Atualizar Status:</span>
+                                    <select onchange="window.handleStatusUpdate('${l.id}', this.value)" class="p-3 bg-slate-800 text-white rounded-xl font-bold text-[11px] uppercase outline-none cursor-pointer flex-1 md:flex-none md:w-64 text-center">
+                                        ${STATUS_OPTIONS.map(opt => `<option value="${opt}" ${l.status===opt?'selected':''}>${opt}</option>`).join('')}
+                                    </select>
+                                </div>
+                            </div>
+                            `;
+                        }).join('') || '<div class="text-center py-16 bg-white rounded-[32px] border border-slate-200"><p class="font-black text-slate-300 uppercase italic text-lg">Nenhum pedido pendente</p></div>'}
+                    </div>
+                </div>`;
+        }
+
+        function renderFinanceiro() {
+            const finished = window.state.logs.filter(l => l.status === 'FINALIZADO');
+            const total = finished.reduce((acc,l)=>acc+Number(l.valorTotal),0);
+            const p = window.state.pixConfig;
+            
+            return `
+                <div class="space-y-10 fade-in">
+                    <div>
+                        <h2 class="text-4xl font-[950] text-slate-900 tracking-tighter uppercase italic">Caixa Central & PIX</h2>
+                        <p class="text-slate-500 font-bold text-sm">Resumo de vendas concluídas e chave PIX da loja.</p>
+                    </div>
+
+                    <div class="bg-white rounded-[40px] p-12 border border-slate-200 shadow-sm text-center max-w-md">
+                        <p class="text-[11px] font-black uppercase text-slate-400 mb-2">Faturamento Bruto (Concluídos)</p>
+                        <h3 class="text-5xl font-[950] text-emerald-500">R$ ${total.toFixed(2)}</h3>
+                    </div>
+                    
+                    <div class="bg-white rounded-[40px] p-10 border border-slate-200 shadow-sm">
+                        <div class="flex flex-col lg:flex-row justify-between items-center gap-10">
+                            <div class="flex-1 w-full">
+                                <h3 class="text-2xl font-black uppercase text-slate-800 tracking-tighter mb-2">Chave PIX da Loja</h3>
+                                <p class="text-xs font-bold text-slate-500 mb-8">Estes dados aparecem no momento do Checkout do cliente.</p>
+                                <form onsubmit="window.handleSavePixConfig(event)" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div>
+                                        <label class="text-[10px] font-black uppercase text-slate-400 ml-2">Tipo de Chave</label>
+                                        <select id="pixType" class="input-egg text-xs uppercase font-bold">${PIX_TYPES.map(t => `<option value="${t}" ${p.type===t?'selected':''}>${t}</option>`).join('')}</select>
+                                    </div>
+                                    <div>
+                                        <label class="text-[10px] font-black uppercase text-slate-400 ml-2">Chave de Registro</label>
+                                        <input id="pixKey" value="${p.key || ''}" class="input-egg font-black text-slate-900" placeholder="Insira a chave" required>
+                                    </div>
+                                    <div>
+                                        <label class="text-[10px] font-black uppercase text-slate-400 ml-2">Nome do Recebedor (PIX)</label>
+                                        <input id="pixNome" value="${p.nomeRecebedor || 'App Ovos Aline'}" class="input-egg font-bold text-slate-700" maxlength="25" required>
+                                    </div>
+                                    <div>
+                                        <label class="text-[10px] font-black uppercase text-slate-400 ml-2">Cidade (PIX)</label>
+                                        <input id="pixCidade" value="${p.cidade || 'SAO PAULO'}" class="input-egg font-bold text-slate-700" maxlength="15" required>
+                                    </div>
+                                    <div class="md:col-span-2 pt-2">
+                                        <button type="submit" class="w-full bg-slate-900 hover:bg-black text-white py-5 rounded-[20px] font-black uppercase text-sm shadow-xl transition-all">Salvar Configuração PIX</button>
+                                    </div>
+                                </form>
+                            </div>
+                            <div class="w-full lg:w-72 bg-slate-50 p-8 rounded-[32px] text-center border border-slate-200">
+                                <p class="text-[10px] font-black text-slate-400 uppercase mb-4 tracking-widest">Teste do QR Code</p>
+                                <div id="qrPreview" class="bg-white p-4 rounded-2xl shadow-sm mx-auto flex justify-center items-center h-48 w-48 border border-slate-200">
+                                    ${p.copiaCola ? `<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(p.copiaCola)}" alt="QR Code" class="rounded-xl">` : `<div class="text-slate-300 uppercase font-black text-[9px] text-center">QR Code aparecerá aqui</div>`}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+        }
+
+        function renderLoja() {
+            const s = window.state.storeConfig;
+            return `
+                <div class="space-y-10 fade-in">
+                    <div>
+                        <h2 class="text-4xl font-[950] text-slate-900 tracking-tighter uppercase italic">Aparência da Loja</h2>
+                        <p class="text-slate-500 font-bold text-sm">Personalize os textos e o visual do app dos clientes.</p>
+                    </div>
+
+                    <div class="bg-white rounded-[40px] p-10 border border-slate-200 shadow-sm">
+                        <form onsubmit="window.handleSaveStoreConfig(event)" class="space-y-8">
+                            
+                            <div>
+                                <h3 class="text-lg font-black text-slate-800 uppercase mb-4 border-b border-slate-100 pb-2">Identidade e Textos</h3>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div>
+                                        <label class="text-[11px] font-black uppercase text-slate-500 ml-2">Nome da Loja</label>
+                                        <input name="nome" type="text" value="${s.nome || ''}" class="input-egg text-slate-900 font-black" required>
+                                    </div>
+                                    <div class="flex gap-4">
+                                        <div class="w-1/3">
+                                            <label class="text-[11px] font-black uppercase text-slate-500 ml-2">Ícone</label>
+                                            <input name="emoji" type="text" value="${s.emoji || '🥚'}" class="input-egg text-center text-xl" maxlength="4">
+                                        </div>
+                                        <div class="flex-1">
+                                            <label class="text-[11px] font-black uppercase text-slate-500 ml-2">Slogan</label>
+                                            <input name="slogan" type="text" value="${s.slogan || ''}" class="input-egg" placeholder="Ex: Direto da Granja">
+                                        </div>
+                                    </div>
+                                    <div class="md:col-span-2">
+                                        <label class="text-[11px] font-black uppercase text-slate-500 ml-2">Título Principal (Banner Destaque)</label>
+                                        <input name="heroTitle" type="text" value="${s.heroTitle || ''}" class="input-egg font-bold" placeholder="Ex: Ovos Fresquinhos 🥚">
+                                    </div>
+                                    <div class="md:col-span-2">
+                                        <label class="text-[11px] font-black uppercase text-slate-500 ml-2">Subtítulo (Banner Destaque)</label>
+                                        <textarea name="heroDesc" rows="2" class="input-egg py-3" placeholder="Mensagem para seus clientes...">${s.heroDesc || ''}</textarea>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <h3 class="text-lg font-black text-slate-800 uppercase mb-4 border-b border-slate-100 pb-2">Cores do Tema</h3>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div class="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                        <input type="color" name="corPrimaria" value="${s.corPrimaria || '#e11d48'}" class="w-12 h-12 rounded-lg cursor-pointer border-0 p-0 bg-transparent">
+                                        <div>
+                                            <p class="font-black text-xs uppercase text-slate-700">Cor Principal (Botões e Destaques)</p>
+                                            <p class="text-[10px] text-slate-400 font-bold uppercase">Ex: #e11d48 (Rose)</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                        <input type="color" name="corSecundaria" value="${s.corSecundaria || '#be123c'}" class="w-12 h-12 rounded-lg cursor-pointer border-0 p-0 bg-transparent">
+                                        <div>
+                                            <p class="font-black text-xs uppercase text-slate-700">Cor Secundária (Degradê do Topo)</p>
+                                            <p class="text-[10px] text-slate-400 font-bold uppercase">Ex: #be123c (Rose Escuro)</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button type="submit" class="w-full bg-rose-600 hover:bg-rose-700 text-white py-5 rounded-[20px] font-black uppercase text-sm shadow-xl active:scale-95 transition-all">
+                                💾 Salvar Aparência da Loja
+                            </button>
+                        </form>
+                    </div>
+                </div>`;
+        }
+
+        function renderModalExcluir() {
+            return `
+                <div class="fixed inset-0 modal-blur z-[1000] flex items-center justify-center p-4">
+                    <div class="bg-white rounded-[40px] p-10 max-w-sm w-full shadow-2xl text-center border border-slate-100">
+                        <div class="w-20 h-20 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center mx-auto mb-6 text-4xl font-black">!</div>
+                        <h3 class="text-2xl font-black text-slate-900 mb-2 uppercase italic tracking-tighter">Remover do Catálogo?</h3>
+                        <p class="text-slate-500 text-sm font-bold mb-10">O item desaparecerá instantaneamente da vitrine da loja.</p>
+                        <div class="flex flex-col gap-4">
+                            <button onclick="window.handleExcluirReal()" class="w-full py-5 rounded-[24px] bg-rose-600 hover:bg-rose-700 text-white font-black text-xs uppercase italic shadow-lg active:scale-95 transition-all">Apagar Definitivamente</button>
+                            <button onclick="window.state.confirmExcluir=null;window.render()" class="w-full py-5 rounded-[24px] text-slate-500 bg-slate-100 font-black text-xs uppercase italic active:scale-95 transition-all">Cancelar</button>
+                        </div>
+                    </div>
+                </div>`;
+        }
+
+        // --- LISTENERS (Sincronização com o Banco de Dados) ---
+        function initAdminListeners() {
+            if (window.adminListenersInitialized) return;
+            window.adminListenersInitialized = true;
+
+            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'estoque'), s => {
+                const data = s.docs.map(d => ({ id: d.id, ...d.data() }));
+                const hash = JSON.stringify(data);
+                if (hash !== lastStockHash) {
+                    lastStockHash = hash;
+                    window.state.produtos = data.sort((a,b)=>(a.nome||"").localeCompare(b.nome||""));
+                    window.state.loading = false; window.render();
+                }
+            });
+
+            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'vendas_logs'), s => {
+                const data = s.docs.map(d => ({ id: d.id, ...d.data() }));
+                const hash = JSON.stringify(data);
+                if (hash !== lastLogsHash) {
+                    if (data.length > window.state.lastOrderCount && window.state.lastOrderCount !== 0) {
+                        window.state.hasNewOrder = true; window.showToast("🔔 NOVO PEDIDO!");
+                    }
+                    window.state.lastOrderCount = data.length;
+                    window.state.logs = data.sort((a,b)=>(b.criadoEm?.seconds||0)-(a.criadoEm?.seconds||0));
+                    lastLogsHash = hash; window.render();
+                }
+            });
+
+            onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'pix_config'), snap => {
+                if (snap.exists()) { 
+                    const data = snap.data();
+                    const hash = JSON.stringify(data);
+                    if (hash !== lastPixHash) {
+                        lastPixHash = hash;
+                        window.state.pixConfig = data; window.render(); 
+                    }
+                }
+            });
+
+            onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'store_config'), snap => {
+                if (snap.exists()) { 
+                    const data = snap.data();
+                    const hash = JSON.stringify(data);
+                    if (hash !== lastStoreConfigHash) {
+                        lastStoreConfigHash = hash;
+                        window.state.storeConfig = { ...window.state.storeConfig, ...data };
+                        window.render(); 
+                    }
+                }
+            });
+        }
+
+        onAuthStateChanged(auth, u => {
+            const hasBypass = localStorage.getItem('admin_bypass') === 'true';
+            
+            if (hasBypass || (u && u.email === 'thon@lojista.com.br')) {
+                window.state.user = { email: 'thon@lojista.com.br', uid: u?.uid };
+                initAdminListeners();
+                window.state.loading = false;
+                window.render();
+            } else {
+                window.state.user = null;
+                window.state.loading = false;
+                window.render();
+            }
+        });
+    </script>
 </body>
 </html>
