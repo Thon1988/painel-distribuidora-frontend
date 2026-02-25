@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title id="page-title">Ovos Alive</title>
+  <title id="page-title">Ovos Aline</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
@@ -189,7 +189,7 @@
   <div class="logo-wrap">
     <div class="logo-icon" id="h-emoji">🥚</div>
     <div class="logo-text">
-      <strong id="h-name">Ovos Alive</strong>
+      <strong id="h-name">Ovos Aline</strong>
       <span id="h-slogan">Qualidade Premium</span>
     </div>
   </div>
@@ -197,7 +197,7 @@
 </header>
 
 <div class="hero">
-  <h1 id="hero-title">Ovos <em>Alive</em> 🥚</h1>
+  <h1 id="hero-title">Ovos <em>Aline</em> 🥚</h1>
   <p id="hero-desc">Qualidade de granja direto para a sua mesa. Ovos frescos selecionados com rigor e carinho.</p>
   <div class="hero-badges">
     <span class="hbadge">✅ Padrão Ouro</span>
@@ -211,7 +211,7 @@
   <div class="grid" id="product-grid"></div>
 </main>
 
-<footer id="footer-text">© 2025 Ovos Alive · Todos os direitos reservados</footer>
+<footer id="footer-text">© 2025 Ovos Aline · Todos os direitos reservados</footer>
 
 <div class="overlay" id="overlay" onclick="window.closeAll()"></div>
 
@@ -293,7 +293,7 @@
     <div class="modal-body">
       <div id="qrcode-wrap"><div id="qrcode"></div></div>
       <div class="pix-rows">
-        <div class="pr"><label>Recebedor</label><span id="pix-nome">Ovos Alive</span></div>
+        <div class="pr"><label>Recebedor</label><span id="pix-nome">Ovos Aline</span></div>
         <div class="pr"><label>Chave PIX</label><span id="pix-chave">—</span></div>
         <div class="pr"><label>Valor Total</label><span id="pix-val">R$ 0,00</span></div>
       </div>
@@ -308,7 +308,7 @@
 <div class="success" id="success">
   <div class="icon">🎉</div>
   <h2>Pedido Registado!</h2>
-  <p class="sub-msg">Recebemos o seu pedido na Ovos Alive! Seus ovos fresquinhos já estão sendo separados com todo o cuidado. 🚚</p>
+  <p class="sub-msg">Recebemos o seu pedido na Ovos Aline! Seus ovos fresquinhos já estão sendo separados com todo o cuidado. 🚚</p>
   <div class="order-box" id="order-num">#000000</div>
   <p class="order-lbl">Guarde este número para acompanhar seu pedido</p>
   <button class="new-btn" onclick="window.resetTudo()">🛒 Fazer Novo Pedido</button>
@@ -351,11 +351,11 @@ async function initAuth() {
 initAuth();
 
 const DEFAULT_CONFIG = {
-  nome:'Ovos Alive', slogan:'Qualidade Premium', emoji:'🥚',
-  heroTitle:'Ovos <em>Alive</em> 🥚',
+  nome:'Ovos Aline', slogan:'Qualidade Premium', emoji:'🥚',
+  heroTitle:'Ovos <em>Aline</em> 🥚',
   heroDesc:'Qualidade de granja direto para a sua mesa. Ovos frescos selecionados com rigor e carinho.',
   pixChave:'11999999999', pixTipo:'Telefone',
-  pixNome:'Ovos Alive Oficial', pixCidade:'SAO PAULO',
+  pixNome:'Ovos Aline Oficial', pixCidade:'SAO PAULO',
   corPrimaria:'#e11d48', corSecundaria:'#be123c'
 };
 
@@ -584,7 +584,7 @@ window.processCheckout = async () => {
 
 window.openPix = () => {
   const total   = totalCarrinho();
-  const txid    = 'OALIVE' + Date.now().toString().slice(-7);
+  const txid    = 'OALINE' + Date.now().toString().slice(-7);
   const payload = pixPayload(config.pixChave, total, config.pixNome, config.pixCidade, txid);
 
   document.getElementById('pix-nome').textContent  = config.pixNome;
@@ -664,9 +664,9 @@ function removeAccents(s) { return (s||'').normalize('NFD').replace(/[\u0300-\u0
 function pixPayload(key, amount, name, city, txid) {
   const tlv = (id, v) => id + String(v.length).padStart(2,'0') + v;
   const ma = tlv('00','BR.GOV.BCB.PIX') + tlv('01', key);
-  const txidClean = removeAccents(txid).replace(/[^A-Za-z0-9]/g,'').slice(0,25) || 'OVOSALIVE';
+  const txidClean = removeAccents(txid).replace(/[^A-Za-z0-9]/g,'').slice(0,25) || 'OVOSALINE';
   const adf = tlv('05', txidClean);
-  const safeName = removeAccents(name).slice(0,25) || 'OVOSALIVE';
+  const safeName = removeAccents(name).slice(0,25) || 'OVOSALINE';
   const safeCity = removeAccents(city).slice(0,15) || 'BRASIL';
   let p = tlv('00','01') + tlv('26', ma) + tlv('52','0000') + tlv('53','986');
   if (amount > 0) p += tlv('54', amount.toFixed(2));
