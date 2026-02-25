@@ -1,1 +1,705 @@
-<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <title>App Ovos Aline</title>\n</head>\n<body>\n    <h1>Welcome to App Ovos Aline</h1>\n    <p>This is the main page for App Ovos Aline.</p>\n</body>\n</html>\n
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title id="page-title">Ovos Alive</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
+    
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      /* Identidade (Rose & Slate) */
+      --primary: #e11d48; /* Rose 600 */
+      --dark:    #be123c; /* Rose 700 */
+      --cream:   #f8fafc; /* Slate 50 */
+      --brown:   #0f172a; /* Slate 900 */
+      --muted:   #64748b; /* Slate 500 */
+      --white:   #ffffff;
+      --green:   #10b981; /* Emerald 500 */
+      --shadow:  0 10px 30px rgba(15, 23, 42, 0.08);
+    }
+    body { font-family:'Inter', system-ui, sans-serif; background:var(--cream); color:var(--brown); min-height:100vh; }
+
+    /* HEADER */
+    header {
+      background: var(--white);
+      color: var(--brown); padding:0 20px; height:76px;
+      display:flex; align-items:center; justify-content:space-between;
+      position:sticky; top:0; z-index:100;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.04);
+    }
+    .logo-wrap { display:flex; align-items:center; gap:12px; }
+    .logo-icon { background: var(--cream); color: var(--primary); border-radius:50%; width:48px; height:48px; display:flex; align-items:center; justify-content:center; font-size:1.6rem; border: 2px solid #f1f5f9; }
+    .logo-text strong { font-size:1.4rem; font-weight:900; color: var(--primary); display:block; letter-spacing: -0.5px; }
+    .logo-text span   { font-size:.75rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
+    .cart-btn {
+      background: var(--brown); color:#fff; border: none;
+      border-radius:50px; padding:8px 20px; cursor:pointer;
+      font-size:.95rem; font-weight:700; display:flex; align-items:center; gap:8px; transition:transform .2s, box-shadow .2s;
+      box-shadow: 0 4px 12px rgba(15,23,42,0.15);
+    }
+    .cart-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(15,23,42,0.25); }
+    .badge { background:var(--primary); color:#fff; border-radius:50%; width:24px; height:24px; font-size:.75rem; font-weight:800; display:flex; align-items:center; justify-content:center; }
+
+    /* HERO */
+    .hero {
+      background: linear-gradient(150deg, var(--dark) 0%, var(--primary) 60%, #fda4af 100%);
+      text-align:center; padding:54px 20px 62px; position:relative; overflow:hidden;
+    }
+    .hero::before { content:'🥚'; position:absolute; font-size:12rem; opacity:.05; top:-30px; left:-30px; transform:rotate(-20deg); }
+    .hero::after  { content:'🥚'; position:absolute; font-size:12rem; opacity:.05; bottom:-30px; right:-30px; transform:rotate(20deg); }
+    .hero h1 { font-size:clamp(2rem, 5vw, 3.2rem); font-weight:900; color:#fff; line-height:1.15; letter-spacing: -1px; }
+    .hero h1 em { color:#ffe4e6; font-style:normal; }
+    .hero p  { margin-top:14px; font-size:1.05rem; color:#ffe4e6; max-width:480px; margin-inline:auto; font-weight: 500; }
+    .hero-badges { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:24px; }
+    .hbadge { background:rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.3); border-radius:50px; padding:6px 16px; font-size:.85rem; font-weight:700; color:#fff; backdrop-filter: blur(4px); }
+
+    /* CATALOG */
+    main { padding:46px 20px 80px; max-width:1120px; margin:0 auto; }
+    .section-title { font-size:1.4rem; font-weight:800; margin-bottom:28px; display:flex; align-items:center; gap:10px; color: var(--brown); }
+    .section-title::after { content:''; flex:1; height:3px; background:linear-gradient(to right,var(--primary),transparent); border-radius:3px; opacity: 0.5; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:24px; }
+
+    .card { background:var(--white); border-radius:24px; box-shadow:var(--shadow); overflow:hidden; display:flex; flex-direction:column; transition:transform .3s,box-shadow .3s; border:1px solid #e2e8f0; }
+    .card:hover { transform:translateY(-8px); box-shadow:0 20px 40px rgba(15,23,42,.12); border-color: #cbd5e1; }
+    .card-img { background:linear-gradient(135deg,#f1f5f9,#e2e8f0); display:flex; align-items:center; justify-content:center; height:140px; font-size:4.8rem; position:relative; }
+    .pill { position:absolute; top:12px; right:12px; background:var(--dark); color:#fff; font-size:.7rem; font-weight:800; border-radius:50px; padding:4px 12px; text-transform:uppercase; letter-spacing: 0.5px; }
+    .pill.green { background:var(--green); }
+    .pill.rose { background:var(--primary); }
+    .card-body { padding:22px; flex:1; display:flex; flex-direction:column; gap:6px; }
+    .card-body h3   { font-size:1.1rem; font-weight:800; color: var(--brown); }
+    .card-body .sub { font-size:.75rem; color:var(--primary); font-weight:800; text-transform: uppercase; letter-spacing: 0.5px; }
+    .card-body p    { font-size:.88rem; color:var(--muted); flex:1; margin-top:4px; line-height: 1.4; }
+    .card-price { font-size:1.4rem; font-weight:900; color:var(--dark); margin-top:10px; letter-spacing: -0.5px; }
+    .card-price small { font-size:.75rem; color:var(--muted); font-weight:600; letter-spacing: 0; }
+    .qty-row { display:flex; align-items:center; gap:10px; margin-top:16px; }
+    .qty-btn { width:36px; height:36px; border-radius:12px; border:2px solid #e2e8f0; background:transparent; color:var(--brown); font-size:1.1rem; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .2s; }
+    .qty-btn:hover { border-color:var(--primary); color:var(--primary); background: #fff1f2; }
+    .qty-val { font-size:1rem; font-weight:800; min-width:24px; text-align:center; }
+    .add-btn { flex:1; background:linear-gradient(135deg,var(--primary),var(--dark)); color:#fff; border:none; border-radius:12px; padding:10px 0; font-size:.9rem; font-weight:800; cursor:pointer; transition:opacity .2s,transform .15s; box-shadow: 0 4px 12px rgba(225,29,72,0.25); text-transform: uppercase; }
+    .add-btn:hover { opacity:.9; transform:scale(1.02); }
+
+    /* SIDEBAR */
+    .overlay { position:fixed; inset:0; background:rgba(15,23,42,.6); backdrop-filter: blur(2px); z-index:200; opacity:0; pointer-events:none; transition:opacity .3s; }
+    .overlay.open { opacity:1; pointer-events:all; }
+    .sidebar { position:fixed; top:0; right:-450px; bottom:0; width:min(450px,100vw); background:var(--cream); z-index:201; display:flex; flex-direction:column; transition:right .35s cubic-bezier(.4,0,.2,1); box-shadow:-8px 0 40px rgba(0,0,0,.15); }
+    .sidebar.open { right:0; }
+    .sb-header { padding:22px 24px; background:var(--white); color:var(--brown); display:flex; align-items:center; justify-content:space-between; border-bottom: 1px solid #e2e8f0; }
+    .sb-header h3 { font-size:1.2rem; font-weight:900; }
+    .close-x { background:#f1f5f9; border:none; color:var(--brown); width:36px; height:36px; border-radius:50%; font-size:1.1rem; font-weight: bold; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background .2s; }
+    .close-x:hover { background:#e2e8f0; }
+    .cart-items { flex:1; overflow-y:auto; padding:18px; display:flex; flex-direction:column; gap:12px; }
+    .empty { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--muted); gap:12px; font-size:1rem; font-weight: 600; }
+    .empty span { font-size:4rem; opacity: 0.5; }
+    .ci { background:var(--white); border-radius:16px; padding:14px; display:flex; gap:12px; align-items:center; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid #f1f5f9; }
+    .ci-emoji { font-size:2.2rem; background: #f8fafc; padding: 8px; border-radius: 12px; }
+    .ci-info { flex:1; }
+    .ci-info h4 { font-size:.95rem; font-weight:800; color: var(--brown); }
+    .ci-info p  { font-size:.8rem; color:var(--muted); font-weight: 600; margin-top: 2px; }
+    .ci-price { font-size:1rem; font-weight:900; color:var(--dark); }
+    .ci-rm { background:none; border:none; color:#cbd5e1; font-size:1.2rem; cursor:pointer; padding:6px; transition:color .2s; }
+    .ci-rm:hover { color:var(--primary); }
+    .sb-footer { padding:22px 24px; background: var(--white); border-top:1px solid #e2e8f0; box-shadow: 0 -4px 20px rgba(0,0,0,0.03); }
+    .total-row { display:flex; justify-content:space-between; font-size:1.2rem; font-weight:900; margin-bottom:18px; color: var(--brown); }
+    
+    .checkout-btn { width:100%; background:linear-gradient(135deg,var(--primary),var(--dark)); color:#fff; border:none; border-radius:16px; padding:18px; font-size:1.05rem; font-weight:800; cursor:pointer; transition:transform .2s, box-shadow .2s; display:flex; align-items:center; justify-content:center; gap:10px; box-shadow: 0 8px 20px rgba(225,29,72,0.25); text-transform: uppercase; letter-spacing: 0.5px; }
+    .checkout-btn:hover { transform:translateY(-2px); box-shadow: 0 10px 24px rgba(225,29,72,0.35); }
+    .checkout-btn:disabled { opacity:.4; pointer-events:none; box-shadow: none; background: var(--muted); }
+
+    /* MODAIS COMUNS */
+    .mbk { position:fixed; inset:0; background:rgba(15,23,42,.7); backdrop-filter: blur(4px); z-index:300; display:flex; align-items:center; justify-content:center; padding:20px; opacity:0; pointer-events:none; transition:opacity .3s; }
+    .mbk.open { opacity:1; pointer-events:all; }
+    .modal { background:var(--white); border-radius:32px; width:min(480px,100%); max-height:92vh; overflow-y:auto; box-shadow:0 24px 64px rgba(0,0,0,.32); transform:scale(.95) translateY(20px); transition:all .3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+    .mbk.open .modal { transform:scale(1) translateY(0); }
+    
+    /* MODAL CHECKOUT */
+    .checkout-top { background:linear-gradient(135deg,var(--primary) 0%,var(--dark) 100%); padding:28px; border-radius:32px 32px 0 0; color:#fff; text-align:center; position: relative; }
+    .checkout-top h3 { font-size:1.4rem; font-weight:900; margin-top:10px; }
+    .checkout-top p  { font-size:.95rem; opacity:.9; margin-top:4px; font-weight: 500; }
+    .modal-body { padding:28px; display:flex; flex-direction:column; align-items:center; gap:20px; }
+    
+    /* Formulário e Abas */
+    .delivery-toggle { display: flex; background: #f1f5f9; border-radius: 16px; padding: 6px; width: 100%; gap: 6px; }
+    .dt-btn { flex: 1; padding: 14px; border: none; background: transparent; border-radius: 12px; font-size: .95rem; font-weight: 800; color: var(--muted); cursor: pointer; transition: all .2s; }
+    .dt-btn.active { background: var(--white); color: var(--primary); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+    
+    .checkout-section { width: 100%; }
+    .info-box { background: #fff1f2; border: 2px dashed #fda4af; padding: 20px; border-radius: 16px; color: var(--dark); font-size: .95rem; line-height: 1.6; text-align: left; }
+    
+    .form-input { width: 100%; padding: 14px 16px; border: 2px solid #e2e8f0; border-radius: 12px; font-size: .95rem; color: var(--brown); font-family: inherit; transition: all .2s; background: #f8fafc; margin-bottom: 12px; }
+    .form-input:focus { outline: none; border-color: var(--primary); background: #fff; box-shadow: 0 0 0 4px rgba(225,29,72,0.1); }
+    .form-input.error { border-color: #ef4444; background: #fef2f2; }
+    .form-row { display: flex; gap: 12px; }
+    .w-1\/3 { width: 33.333%; }
+    .w-2\/3 { width: 66.666%; }
+    .form-label { display: block; text-align: left; font-size: .85rem; font-weight: 800; color: var(--brown); margin-bottom: 8px; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+    
+    .confirm-btn { width:100%; background:var(--green); color:#fff; border:none; border-radius:16px; padding:18px; font-size:1.05rem; font-weight:800; cursor:pointer; transition:transform .2s; text-transform: uppercase; box-shadow: 0 8px 20px rgba(16,185,129,0.25); }
+    .confirm-btn:hover { transform:scale(1.02); }
+
+    /* MODAL PIX */
+    .modal-top.pix-top { background:linear-gradient(135deg,var(--green) 0%,#059669 100%); padding:28px; border-radius:32px 32px 0 0; color:#fff; text-align:center; }
+    #qrcode-wrap { background:#fff; padding:16px; border-radius:24px; border:3px solid #f1f5f9; box-shadow: 0 8px 24px rgba(0,0,0,0.06); }
+    .pix-rows { width:100%; background: var(--cream); border-radius: 16px; padding: 12px 20px; }
+    .pr { display:flex; justify-content:space-between; padding:12px 0; border-bottom:1px solid #e2e8f0; font-size:.9rem; }
+    .pr:last-child { border:none; }
+    .pr label { color:var(--muted); font-weight: 600; }
+    .pr span  { font-weight:800; color: var(--brown); text-align: right; }
+    .copy-lbl { font-size:.8rem; color:var(--muted); align-self:flex-start; margin-bottom:-12px; font-weight: 700; }
+    .copy-box { width:100%; background:#f1f5f9; border:2px dashed #cbd5e1; border-radius:16px; padding:14px; font-size:.8rem; font-family:monospace; color:var(--brown); font-weight: bold; word-break:break-all; cursor:pointer; transition:all .2s; user-select:all; text-align: center; }
+    .copy-box:hover { background:#e2e8f0; border-color: var(--primary); color: var(--primary); }
+
+    /* SUCCESS */
+    .success { position:fixed; inset:0; background:var(--white); z-index:400; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:32px; opacity:0; pointer-events:none; transition:opacity .4s; }
+    .success.open { opacity:1; pointer-events:all; }
+    .success .icon { font-size:6rem; animation:pop 1.2s cubic-bezier(0.34, 1.56, 0.64, 1) infinite; }
+    @keyframes pop { 0%,100%{transform:scale(1)} 50%{transform:scale(1.15)} }
+    .success h2 { font-size:2.4rem; font-weight:900; margin-top:16px; color: var(--brown); letter-spacing: -1px; }
+    .success .sub-msg { color:var(--muted); margin-top:10px; max-width:380px; font-size:1.05rem; font-weight: 500; line-height: 1.5; }
+    .order-box { margin-top:28px; background:linear-gradient(135deg,var(--primary),var(--dark)); color:#fff; border-radius:20px; padding:16px 40px; font-size:1.8rem; font-weight:900; letter-spacing:4px; box-shadow: 0 10px 25px rgba(225,29,72,0.3); }
+    .order-lbl { font-size:.85rem; color:var(--muted); margin-top:12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+    .new-btn { margin-top:32px; background:var(--brown); color:#fff; border:none; border-radius:50px; padding:16px 36px; font-size:1rem; font-weight:800; cursor:pointer; transition:transform .2s; }
+    .new-btn:hover { transform: translateY(-2px); }
+
+    /* CONFETTI */
+    .cf { position:fixed; width:10px; height:14px; border-radius:4px; top:-20px; animation:cffall linear forwards; z-index:500; pointer-events:none; }
+    @keyframes cffall { to { transform:translateY(110vh) rotate(720deg); opacity:0; } }
+
+    /* TOAST */
+    .toast { position:fixed; bottom:30px; left:50%; transform:translateX(-50%) translateY(100px); background:var(--brown); color:#fff; padding:12px 28px; border-radius:50px; font-size:.95rem; font-weight:700; z-index:600; white-space:nowrap; transition:transform .4s cubic-bezier(0.34, 1.56, 0.64, 1); box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+    .toast.show { transform:translateX(-50%) translateY(0); }
+
+    .no-products { text-align:center; padding:80px 20px; color:var(--muted); font-weight: 600; }
+    .no-products span { font-size:5rem; display:block; margin-bottom:16px; opacity: 0.5; }
+
+    footer { text-align:center; padding:24px; font-size:.85rem; font-weight: 600; color:var(--muted); border-top:1px solid #e2e8f0; margin-top: 20px; }
+
+    @media (max-width:480px) { 
+      header { padding:0 16px; } 
+      main { padding:30px 16px 80px; } 
+      .hero h1 { font-size: 2.2rem; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo-wrap">
+    <div class="logo-icon" id="h-emoji">🥚</div>
+    <div class="logo-text">
+      <strong id="h-name">Ovos Alive</strong>
+      <span id="h-slogan">Qualidade Premium</span>
+    </div>
+  </div>
+  <button class="cart-btn" onclick="window.toggleCart()">🛒 Carrinho <span class="badge" id="cart-count">0</span></button>
+</header>
+
+<div class="hero">
+  <h1 id="hero-title">Ovos <em>Alive</em> 🥚</h1>
+  <p id="hero-desc">Qualidade de granja direto para a sua mesa. Ovos frescos selecionados com rigor e carinho.</p>
+  <div class="hero-badges">
+    <span class="hbadge">✅ Padrão Ouro</span>
+    <span class="hbadge">🚚 Entrega Expressa</span>
+    <span class="hbadge">💚 Pague via PIX</span>
+  </div>
+</div>
+
+<main>
+  <h2 class="section-title">🛒 Nosso Catálogo Especial</h2>
+  <div class="grid" id="product-grid"></div>
+</main>
+
+<footer id="footer-text">© 2025 Ovos Alive · Todos os direitos reservados</footer>
+
+<div class="overlay" id="overlay" onclick="window.closeAll()"></div>
+
+<div class="sidebar" id="sidebar">
+  <div class="sb-header">
+    <h3>🛒 Seu Carrinho</h3>
+    <button class="close-x" onclick="window.closeAll()">✕</button>
+  </div>
+  <div class="cart-items" id="cart-items">
+    <div class="empty"><span>🥚</span>Seu carrinho está vazio</div>
+  </div>
+  <div class="sb-footer">
+    <div class="total-row"><span>Total</span><span id="cart-total">R$ 0,00</span></div>
+    <button class="checkout-btn" id="checkout-btn" onclick="window.openCheckout()" disabled>🛍️ Avançar para Checkout</button>
+  </div>
+</div>
+
+<!-- MODAL CHECKOUT -->
+<div class="mbk" id="checkout-modal">
+  <div class="modal">
+    <div class="checkout-top">
+      <div style="font-size:2.8rem; line-height:1; margin-bottom: 8px;">🛍️</div>
+      <h3>Finalizar Pedido</h3>
+      <p>Escolha como deseja receber a sua encomenda</p>
+    </div>
+    <div class="modal-body">
+      
+      <!-- Toggle Entrega/Retirada -->
+      <div class="delivery-toggle">
+        <button class="dt-btn active" id="btn-retirada" onclick="window.setDelivery('retirada')">🏪 Retirar na Loja</button>
+        <button class="dt-btn" id="btn-entrega" onclick="window.setDelivery('entrega')">🚚 Entrega em Casa</button>
+      </div>
+
+      <!-- Sessão Retirada -->
+      <div id="info-retirada" class="checkout-section">
+        <div class="info-box">
+          <p>A <strong>Distribuidora de Ovos Aline</strong> está localizada na:</p>
+          <p style="margin-top:8px;"><strong>Rua António Freire da Silva, n° 87</strong><br>Jardim das Camelias<br>Zona Leste de São Paulo - SP</p>
+          <p style="margin-top:12px; font-size:0.85rem;">Eles oferecem ovos frescos direto da granja e podem ser contatados pelo telefone/WhatsApp <strong>(11) 98570-6243</strong>.</p>
+        </div>
+      </div>
+
+      <!-- Sessão Entrega -->
+      <div id="info-entrega" class="checkout-section" style="display:none;">
+        <input type="text" id="cli-nome" placeholder="Seu Nome Completo" class="form-input" required>
+        <input type="tel" id="cli-tel" placeholder="Telefone / WhatsApp" class="form-input" required>
+        <div class="form-row">
+          <input type="text" id="cli-cep" placeholder="CEP" class="form-input w-1/3">
+          <input type="text" id="cli-rua" placeholder="Rua / Avenida" class="form-input w-2/3" required>
+        </div>
+        <div class="form-row">
+          <input type="text" id="cli-num" placeholder="Número" class="form-input w-1/3" required>
+          <input type="text" id="cli-bairro" placeholder="Bairro" class="form-input w-2/3" required>
+        </div>
+        <input type="text" id="cli-comp" placeholder="Complemento / Referência" class="form-input">
+      </div>
+
+      <!-- Pagamento -->
+      <div class="checkout-section" style="margin-top: -10px;">
+        <label class="form-label">Forma de Pagamento:</label>
+        <select id="pagamento-select" class="form-input" style="font-weight: 700;">
+          <!-- Opções geradas dinamicamente via JS -->
+        </select>
+      </div>
+
+      <button class="confirm-btn" onclick="window.processCheckout()">✅ Confirmar Pedido (<span id="checkout-total-btn">R$ 0,00</span>)</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL PIX -->
+<div class="mbk" id="pix-modal">
+  <div class="modal">
+    <div class="modal-top pix-top">
+      <div style="font-size:2.8rem; line-height:1; margin-bottom: 8px;">💚</div>
+      <h3>Pagamento via PIX</h3>
+      <p>Escaneie o QR Code ou copie o código</p>
+    </div>
+    <div class="modal-body">
+      <div id="qrcode-wrap"><div id="qrcode"></div></div>
+      <div class="pix-rows">
+        <div class="pr"><label>Recebedor</label><span id="pix-nome">Ovos Alive</span></div>
+        <div class="pr"><label>Chave PIX</label><span id="pix-chave">—</span></div>
+        <div class="pr"><label>Valor Total</label><span id="pix-val">R$ 0,00</span></div>
+      </div>
+      <p class="copy-lbl">Código Copia e Cola (clique para copiar):</p>
+      <div class="copy-box" id="pix-code" onclick="window.doCopy()"></div>
+      <button class="confirm-btn" style="background:var(--brown);" onclick="window.saveOrderToFirebase()">✅ Já Paguei — Confirmar Pedido</button>
+    </div>
+  </div>
+</div>
+
+<!-- SUCCESS -->
+<div class="success" id="success">
+  <div class="icon">🎉</div>
+  <h2>Pedido Registado!</h2>
+  <p class="sub-msg">Recebemos o seu pedido na Ovos Alive! Seus ovos fresquinhos já estão sendo separados com todo o cuidado. 🚚</p>
+  <div class="order-box" id="order-num">#000000</div>
+  <p class="order-lbl">Guarde este número para acompanhar seu pedido</p>
+  <button class="new-btn" onclick="window.resetTudo()">🛒 Fazer Novo Pedido</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- LÓGICA PRINCIPAL ÚNICA (FIREBASE + CARRINHO + CHECKOUT) -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { getFirestore, collection, addDoc, serverTimestamp, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+
+// Configuração Firebase e Ambiente
+const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
+    apiKey: "AIzaSyD3Otz9-zdZH-E5Feg9IOGWPzVycoe8gro",
+    authDomain: "distribuidora-de-ovos-aline.firebaseapp.com",
+    projectId: "distribuidora-de-ovos-aline",
+    storageBucket: "distribuidora-de-ovos-aline.firebasestorage.app",
+    messagingSenderId: "92187548716",
+    appId: "1:92187548716:web:d61d18a29aa76aead7c589"
+};
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'app-egg-pro-transacional';
+
+const appFB = initializeApp(firebaseConfig);
+const auth = getAuth(appFB);
+const db = getFirestore(appFB);
+
+async function initAuth() {
+    try {
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+            await signInWithCustomToken(auth, __initial_auth_token);
+        } else {
+            await signInAnonymously(auth);
+        }
+    } catch (e) {
+        console.error("Erro na autenticação:", e);
+    }
+}
+initAuth();
+
+const DEFAULT_CONFIG = {
+  nome:'Ovos Alive', slogan:'Qualidade Premium', emoji:'🥚',
+  heroTitle:'Ovos <em>Alive</em> 🥚',
+  heroDesc:'Qualidade de granja direto para a sua mesa. Ovos frescos selecionados com rigor e carinho.',
+  pixChave:'11999999999', pixTipo:'Telefone',
+  pixNome:'Ovos Alive Oficial', pixCidade:'SAO PAULO',
+  corPrimaria:'#e11d48', corSecundaria:'#be123c'
+};
+
+const DEFAULT_PRODUTOS = [
+  { id:1, emoji:'🥚', nome:'Ovos Brancos Pequenos',  tipo:'Tamanho P — Dúzia', badge:'',         badgeClass:'',     desc:'Ovos brancos selecionados. Perfeitos para o pequeno-almoço e receitas rápidas.', preco:8.90,  ativo:true },
+  { id:2, emoji:'🥚', nome:'Ovos Brancos Médios',     tipo:'Tamanho M — Dúzia', badge:'',         badgeClass:'',     desc:'O favorito do dia a dia! Tamanho ideal para qualquer receita, da omeleta ao bolo.',            preco:10.90, ativo:true },
+  { id:3, emoji:'🥚', nome:'Ovos Brancos Grandes',    tipo:'Tamanho G — Dúzia', badge:'Popular',  badgeClass:'',     desc:'Ovos maiores com gema mais volumosa. Ótimos para massas, tartes e confeitaria.',               preco:12.90, ativo:true },
+  { id:4, emoji:'🥚', nome:'Ovos Extra Grandes',      tipo:'Tamanho XG — Dúzia',badge:'Top Venda',badgeClass:'',     desc:'Os maiores! Gema rica e intensa. Escolha dos chefs para bolos especiais.',                     preco:14.90, ativo:true },
+  { id:5, emoji:'🐓', nome:'Ovos Caipira',            tipo:'Caipira — Dúzia',   badge:'Especial', badgeClass:'rose', desc:'Criação livre no campo. Gema laranjinha e sabor incomparável. Direto da quinta!',              preco:18.90, ativo:true },
+  { id:6, emoji:'🌿', nome:'Ovos Orgânicos',          tipo:'Orgânico — Dúzia',  badge:'Premium',  badgeClass:'green',desc:'100% orgânicos, sem antibióticos. Saudável e sustentável. Certificado.',                       preco:24.90, ativo:true },
+];
+
+let config = DEFAULT_CONFIG;
+window.produtos = DEFAULT_PRODUTOS;
+window.carrinho = {};
+window.currentOrderContext = {}; 
+
+onAuthStateChanged(auth, (user) => {
+    if (user) {
+        onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'estoque'), snap => {
+            if (!snap.empty) {
+                window.produtos = snap.docs.map(d => ({id: d.id, ...d.data(), ativo: true})).sort((a,b)=>(a.nome||'').localeCompare(b.nome||''));
+            } else {
+                window.produtos = DEFAULT_PRODUTOS;
+            }
+            renderProdutos();
+        });
+    }
+});
+
+function applyConfig() {
+  document.title = config.nome;
+  document.getElementById('page-title').textContent  = config.nome;
+  document.getElementById('h-name').textContent      = config.nome;
+  document.getElementById('h-slogan').textContent    = config.slogan;
+  document.getElementById('h-emoji').textContent     = config.emoji;
+  document.getElementById('hero-title').innerHTML    = config.heroTitle;
+  document.getElementById('hero-desc').textContent   = config.heroDesc;
+  document.getElementById('footer-text').textContent = `© 2025 ${config.nome} · Todos os direitos reservados · PIX: ${config.pixChave}`;
+}
+
+function renderProdutos() {
+  const grid = document.getElementById('product-grid');
+  const ativos = window.produtos.filter(p => p.ativo);
+  if (!ativos.length) { grid.innerHTML = '<div class="no-products"><span>🥚</span>Catálogo a ser atualizado...</div>'; return; }
+  
+  grid.innerHTML = ativos.map(p => `
+    <div class="card">
+      <div class="card-img">
+        <span>${p.emoji || '🥚'}</span>
+        ${p.badge ? `<div class="pill ${p.badgeClass}">${p.badge}</div>` : ''}
+      </div>
+      <div class="card-body">
+        <h3>${p.nome}</h3>
+        <div class="sub">${p.tipo || p.embalagem || 'Dúzia'}</div>
+        <p>${p.desc || 'Ovos frescos de alta qualidade.'}</p>
+        <div class="card-price">R$ ${fmt(p.preco)} <small>/ dúzia</small></div>
+        <div class="qty-row">
+          <button class="qty-btn" onclick="window.chQty('${p.id}',-1)">−</button>
+          <span class="qty-val" id="qty-${p.id}">0</span>
+          <button class="qty-btn" onclick="window.chQty('${p.id}',+1)">+</button>
+          <button class="add-btn" onclick="window.addCart('${p.id}')">Adicionar</button>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+window.chQty = (id, d) => {
+  const el = document.getElementById('qty-' + id);
+  if (el) el.textContent = Math.max(0, parseInt(el.textContent) + d);
+};
+
+window.addCart = (id) => {
+  const qty = parseInt(document.getElementById('qty-' + id)?.textContent || '0');
+  if (!qty) { toast('Atenção: Selecione a quantidade primeiro!'); return; }
+  window.carrinho[id] = (window.carrinho[id] || 0) + qty;
+  document.getElementById('qty-' + id).textContent = 0;
+  syncCarrinho();
+  toast('✅ Produto adicionado ao carrinho!');
+};
+
+function syncCarrinho() {
+  const total = Object.values(window.carrinho).reduce((s,v)=>s+v, 0);
+  document.getElementById('cart-count').textContent = total;
+  document.getElementById('checkout-btn').disabled = total === 0;
+  renderCarrinho();
+}
+
+function renderCarrinho() {
+  const keys = Object.keys(window.carrinho).filter(k => window.carrinho[k] > 0);
+  const el = document.getElementById('cart-items');
+  if (!keys.length) {
+    el.innerHTML = '<div class="empty"><span>🥚</span>Seu carrinho está vazio</div>';
+    document.getElementById('cart-total').textContent = 'R$ 0,00';
+    return;
+  }
+  let total = 0;
+  el.innerHTML = keys.map(k => {
+    const p = window.produtos.find(x => String(x.id) === String(k));
+    if (!p) return '';
+    const sub = p.preco * window.carrinho[k];
+    total += sub;
+    return `<div class="ci">
+      <div class="ci-emoji">${p.emoji || '🥚'}</div>
+      <div class="ci-info">
+        <h4>${p.nome}</h4>
+        <p>${window.carrinho[k]} unid. × R$ ${fmt(p.preco)}</p>
+      </div>
+      <div class="ci-price">R$ ${fmt(sub)}</div>
+      <button class="ci-rm" onclick="window.remCart('${k}')">🗑</button>
+    </div>`;
+  }).join('');
+  document.getElementById('cart-total').textContent = 'R$ ' + fmt(total);
+}
+
+window.remCart = (id) => { delete window.carrinho[id]; syncCarrinho(); };
+
+function totalCarrinho() {
+  return Object.keys(window.carrinho).reduce((s,k) => {
+    const p = window.produtos.find(x => String(x.id) === String(k));
+    return s + (p ? p.preco * window.carrinho[k] : 0);
+  }, 0);
+}
+
+window.toggleCart = () => {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('overlay').classList.toggle('open');
+};
+
+window.closeAll = () => {
+  ['sidebar','overlay','pix-modal','checkout-modal'].forEach(id => document.getElementById(id).classList.remove('open'));
+};
+
+// --- LÓGICA DO CHECKOUT ---
+let currentDeliveryType = 'retirada';
+
+window.setDelivery = (type) => {
+  currentDeliveryType = type;
+  document.getElementById('btn-retirada').classList.toggle('active', type === 'retirada');
+  document.getElementById('btn-entrega').classList.toggle('active', type === 'entrega');
+  document.getElementById('info-retirada').style.display = type === 'retirada' ? 'block' : 'none';
+  document.getElementById('info-entrega').style.display = type === 'entrega' ? 'block' : 'none';
+  
+  // Limpar formatações de erro ao trocar de aba
+  document.querySelectorAll('.form-input').forEach(el => el.classList.remove('error'));
+  
+  updatePaymentOptions();
+};
+
+function updatePaymentOptions() {
+  const select = document.getElementById('pagamento-select');
+  select.innerHTML = '';
+  
+  select.add(new Option('PIX Online (Pagar Agora)', 'pix_online'));
+
+  if (currentDeliveryType === 'retirada') {
+    select.add(new Option('PIX na Retirada', 'pix_retirada'));
+    select.add(new Option('Cartão na Retirada', 'cartao_retirada'));
+    select.add(new Option('Dinheiro na Retirada', 'dinheiro_retirada'));
+  } else {
+    select.add(new Option('PIX na Entrega', 'pix_entrega'));
+    select.add(new Option('Cartão na Entrega', 'cartao_entrega'));
+    select.add(new Option('Dinheiro na Entrega', 'dinheiro_entrega'));
+  }
+}
+
+window.openCheckout = () => {
+  const tot = 'R$ ' + fmt(totalCarrinho());
+  document.getElementById('checkout-total-btn').textContent = tot;
+  window.setDelivery('retirada'); 
+  document.getElementById('checkout-modal').classList.add('open');
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('overlay').classList.add('open'); 
+};
+
+window.processCheckout = async () => {
+  let clienteData = {};
+  let temErro = false;
+  
+  // Limpa erros anteriores
+  document.querySelectorAll('.form-input').forEach(el => el.classList.remove('error'));
+  
+  if (currentDeliveryType === 'entrega') {
+    const camposObrigatorios = ['cli-nome', 'cli-tel', 'cli-rua', 'cli-num', 'cli-bairro'];
+    
+    camposObrigatorios.forEach(id => {
+      const el = document.getElementById(id);
+      if (!el.value.trim()) {
+        el.classList.add('error');
+        temErro = true;
+      }
+    });
+
+    if (temErro) {
+      toast('Por favor, preencha todos os campos destacados em vermelho!');
+      return;
+    }
+    
+    clienteData = {
+      nome: document.getElementById('cli-nome').value.trim(),
+      tel: document.getElementById('cli-tel').value.trim(),
+      rua: document.getElementById('cli-rua').value.trim(),
+      num: document.getElementById('cli-num').value.trim(),
+      bairro: document.getElementById('cli-bairro').value.trim(),
+      cep: document.getElementById('cli-cep').value.trim(),
+      comp: document.getElementById('cli-comp').value.trim()
+    };
+  }
+
+  const paymentMethod = document.getElementById('pagamento-select').value;
+  
+  window.currentOrderContext = {
+    tipoEntrega: currentDeliveryType,
+    clienteData,
+    paymentMethod
+  };
+
+  document.getElementById('checkout-modal').classList.remove('open');
+
+  if (paymentMethod === 'pix_online') {
+    window.openPix();
+  } else {
+    await window.saveOrderToFirebase();
+  }
+};
+
+window.openPix = () => {
+  const total   = totalCarrinho();
+  const txid    = 'OALIVE' + Date.now().toString().slice(-7);
+  const payload = pixPayload(config.pixChave, total, config.pixNome, config.pixCidade, txid);
+
+  document.getElementById('pix-nome').textContent  = config.pixNome;
+  document.getElementById('pix-chave').textContent = config.pixChave;
+  document.getElementById('pix-val').textContent   = 'R$ ' + fmt(total);
+  document.getElementById('pix-code').textContent  = payload;
+
+  const qrDiv = document.getElementById('qrcode');
+  qrDiv.innerHTML = '';
+  new QRCode(qrDiv, { text:payload, width:200, height:200, colorDark:'#0f172a', colorLight:'#FFFFFF', correctLevel:QRCode.CorrectLevel.M });
+
+  document.getElementById('pix-modal').classList.add('open');
+};
+
+window.doCopy = () => {
+  navigator.clipboard.writeText(document.getElementById('pix-code').textContent)
+    .then(() => toast('📋 Código PIX copiado com sucesso!'))
+    .catch(() => toast('Selecione o código e copie manualmente'));
+};
+
+window.saveOrderToFirebase = async () => {
+  document.getElementById('pix-modal').classList.remove('open');
+  
+  const orderNum = Math.floor(100000 + Math.random() * 900000);
+  document.getElementById('order-num').textContent = '#' + orderNum;
+  document.getElementById('success').classList.add('open');
+  document.getElementById('overlay').classList.remove('open');
+  confetti();
+
+  if (auth.currentUser) {
+    try {
+      const itens = Object.keys(window.carrinho).map(k => {
+          const p = window.produtos.find(x => String(x.id) === String(k));
+          return { id: p.id, nome: p.nome, qtd: window.carrinho[k], preco: p.preco };
+      });
+      
+      const isPixOnline = window.currentOrderContext.paymentMethod === 'pix_online';
+      
+      await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'vendas_logs'), {
+          clienteId: auth.currentUser.uid,
+          pedidoID: '#' + orderNum,
+          valorTotal: totalCarrinho(),
+          itens: itens,
+          tipoEntrega: window.currentOrderContext.tipoEntrega,
+          dadosCliente: window.currentOrderContext.clienteData || {},
+          formaPagamento: window.currentOrderContext.paymentMethod,
+          status: isPixOnline ? 'AGUARDANDO PIX' : 'CRIADO',
+          criadoEm: serverTimestamp()
+      });
+      console.log("Pedido salvo no Firebase com sucesso!");
+    } catch (error) {
+      console.error("Erro ao salvar pedido no Firebase:", error);
+    }
+  }
+};
+
+window.resetTudo = () => {
+  // Limpa estado interno
+  Object.keys(window.carrinho).forEach(k => delete window.carrinho[k]);
+  window.currentOrderContext = {};
+  syncCarrinho();
+  
+  // Limpa UI
+  document.getElementById('success').classList.remove('open');
+  document.querySelectorAll('.form-input').forEach(el => {
+    if(el.tagName === 'INPUT') el.value = '';
+    el.classList.remove('error');
+  });
+  
+  // Retorna à tab inicial (Retirada)
+  window.setDelivery('retirada');
+  renderProdutos();
+};
+
+// ── PIX PAYLOAD BR CODE ───────────────────────────────────────
+function removeAccents(s) { return (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^\x00-\x7F]/g,'').toUpperCase(); }
+function pixPayload(key, amount, name, city, txid) {
+  const tlv = (id, v) => id + String(v.length).padStart(2,'0') + v;
+  const ma = tlv('00','BR.GOV.BCB.PIX') + tlv('01', key);
+  const txidClean = removeAccents(txid).replace(/[^A-Za-z0-9]/g,'').slice(0,25) || 'OVOSALIVE';
+  const adf = tlv('05', txidClean);
+  const safeName = removeAccents(name).slice(0,25) || 'OVOSALIVE';
+  const safeCity = removeAccents(city).slice(0,15) || 'BRASIL';
+  let p = tlv('00','01') + tlv('26', ma) + tlv('52','0000') + tlv('53','986');
+  if (amount > 0) p += tlv('54', amount.toFixed(2));
+  p += tlv('58','BR') + tlv('59', safeName) + tlv('60', safeCity) + tlv('62', adf);
+  return p + tlv('63', crc16(p + '6304'));
+}
+function crc16(s) {
+  let c = 0xFFFF;
+  for (let i = 0; i < s.length; i++) {
+    c ^= (s.charCodeAt(i) & 0xFF) << 8;
+    for (let j = 0; j < 8; j++) c = (c & 0x8000) ? ((c << 1) ^ 0x1021) & 0xFFFF : (c << 1) & 0xFFFF;
+  }
+  return (c & 0xFFFF).toString(16).toUpperCase().padStart(4,'0');
+}
+
+// Cores do confete baseadas na paleta original
+const COLS = ['#e11d48','#be123c','#10b981','#0f172a','#f59e0b','#3b82f6'];
+function confetti() {
+  for(let i=0;i<100;i++) setTimeout(() => {
+    const e = document.createElement('div'); e.className = 'cf';
+    e.style.cssText = `left:${Math.random()*100}vw;background:${COLS[Math.random()*COLS.length|0]};animation-duration:${1.4+Math.random()*2}s;animation-delay:${Math.random()*.6}s;width:${6+Math.random()*8}px;height:${10+Math.random()*8}px;transform:rotate(${Math.random()*360}deg);`;
+    document.body.appendChild(e); setTimeout(() => e.remove(), 4500);
+  }, i*20);
+}
+
+function toast(msg) {
+  const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+const fmt = n => Number(n).toFixed(2).replace('.',',');
+
+applyConfig();
+renderProdutos();
+</script>
+</body>
+</html>
