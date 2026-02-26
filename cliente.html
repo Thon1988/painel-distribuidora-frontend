@@ -70,7 +70,7 @@
     .pill.amber { background:#f59e0b; }
     .pill.rose { background:var(--primary); }
     .card-body { padding:22px; flex:1; display:flex; flex-direction:column; gap:6px; }
-    .card-body h3   { font-size:1.1rem; font-weight:800; color: var(--brown); margin:0; }
+    .card-body h3   { font-size:1.1rem; font-weight:800; color: var(--brown); }
     .card-body .sub { font-size:.75rem; color:var(--primary); font-weight:800; text-transform: uppercase; letter-spacing: 0.5px; }
     .card-body p    { font-size:.88rem; color:var(--muted); flex:1; margin-top:4px; line-height: 1.4; }
     .card-price { font-size:1.4rem; font-weight:900; color:var(--dark); margin-top:10px; letter-spacing: -0.5px; }
@@ -82,30 +82,30 @@
     .add-btn { flex:1; background:linear-gradient(135deg,var(--primary),var(--dark)); color:#fff; border:none; border-radius:12px; padding:10px 0; font-size:.9rem; font-weight:800; cursor:pointer; transition:opacity .2s,transform .15s; box-shadow: 0 4px 12px rgba(225,29,72,0.25); text-transform: uppercase; }
     .add-btn:hover { opacity:.9; transform:scale(1.02); }
 
-    /* SIDEBAR / CARRINHO */
+    /* SIDEBAR */
     .overlay { position:fixed; inset:0; background:rgba(15,23,42,.6); backdrop-filter: blur(2px); z-index:200; opacity:0; pointer-events:none; transition:opacity .3s; }
     .overlay.open { opacity:1; pointer-events:all; }
     .sidebar { position:fixed; top:0; right:-450px; bottom:0; width:min(450px,100vw); background:var(--cream); z-index:201; display:flex; flex-direction:column; transition:right .35s cubic-bezier(.4,0,.2,1); box-shadow:-8px 0 40px rgba(0,0,0,.15); }
     .sidebar.open { right:0; }
     .sb-header { padding:22px 24px; background:var(--white); color:var(--brown); display:flex; align-items:center; justify-content:space-between; border-bottom: 1px solid #e2e8f0; }
-    .sb-header h3 { font-size:1.2rem; font-weight:900; margin:0;}
+    .sb-header h3 { font-size:1.2rem; font-weight:900; }
     .close-x { background:#f1f5f9; border:none; color:var(--brown); width:36px; height:36px; border-radius:50%; font-size:1.1rem; font-weight: bold; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background .2s; }
     .close-x:hover { background:#e2e8f0; }
     .cart-items { flex:1; overflow-y:auto; padding:18px; display:flex; flex-direction:column; gap:12px; }
     .empty { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--muted); gap:12px; font-size:1rem; font-weight: 600; }
     .empty span { font-size:4rem; opacity: 0.5; }
-    .ci { background:var(--white); border-radius:16px; padding:16px; display:flex; gap:16px; align-items:center; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid #f1f5f9; }
-    .ci-emoji { font-size:2.4rem; width:64px; height:64px; background: #f8fafc; border-radius: 12px; display:flex; align-items:center; justify-content:center; overflow:hidden;}
-    .ci-info { flex:1; display:flex; flex-direction:column; gap:4px; }
-    .ci-info h4 { font-size:1rem; font-weight:900; color: var(--brown); margin:0; }
-    .ci-price { font-size:1.1rem; font-weight:900; color:var(--dark); }
+    .ci { background:var(--white); border-radius:16px; padding:14px; display:flex; gap:12px; align-items:center; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid #f1f5f9; }
+    .ci-emoji { font-size:2.2rem; width:64px; height:64px; background: #f8fafc; border-radius: 12px; display:flex; align-items:center; justify-content:center; overflow:hidden;}
+    .ci-info { flex:1; display:flex; flex-direction:column; gap:4px;}
+    .ci-info h4 { font-size:.95rem; font-weight:800; color: var(--brown); margin:0;}
+    .ci-info p  { font-size:.8rem; color:var(--muted); font-weight: 600; margin-top: 2px; margin-bottom: 0;}
+    .ci-price { font-size:1rem; font-weight:900; color:var(--dark); }
     .ci-rm { background:none; border:none; color:#ef4444; font-size:.75rem; font-weight:800; cursor:pointer; padding:6px 0; transition:color .2s; display:flex; align-items:center; justify-content:flex-end; gap:4px; text-transform:uppercase; letter-spacing:0.5px;}
     .ci-rm:hover { color:var(--dark); }
     .qty-controls { display:flex; align-items:center; gap:10px; margin-top:6px; }
     .qty-controls button { width:28px; height:28px; border-radius:8px; border:2px solid #e2e8f0; background:transparent; color:var(--brown); font-size:1.1rem; font-weight:900; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .2s; }
     .qty-controls button:hover { background:#fff1f2; border-color:var(--primary); color:var(--primary); }
     .qty-controls span { font-size:.95rem; font-weight:800; min-width:20px; text-align:center; }
-
     .sb-footer { padding:22px 24px; background: var(--white); border-top:1px solid #e2e8f0; box-shadow: 0 -4px 20px rgba(0,0,0,0.03); }
     .total-row { display:flex; justify-content:space-between; font-size:1.2rem; font-weight:900; margin-bottom:18px; color: var(--brown); }
     
@@ -125,6 +125,7 @@
     .checkout-top p  { font-size:.95rem; opacity:.9; margin-top:4px; font-weight: 500; }
     .modal-body { padding:28px; display:flex; flex-direction:column; align-items:center; gap:20px; }
     
+    /* Formulário e Abas */
     .delivery-toggle { display: flex; background: #f1f5f9; border-radius: 16px; padding: 6px; width: 100%; gap: 6px; }
     .dt-btn { flex: 1; padding: 14px; border: none; background: transparent; border-radius: 12px; font-size: .95rem; font-weight: 800; color: var(--muted); cursor: pointer; transition: all .2s; }
     .dt-btn.active { background: var(--white); color: var(--primary); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
@@ -200,7 +201,7 @@
     <div class="logo-icon" id="h-emoji">🥚</div>
     <div class="logo-text">
       <strong id="h-name">App Ovos Aline</strong>
-      <span id="h-slogan">A carregar...</span>
+      <span id="h-slogan">A sincronizar...</span>
     </div>
   </div>
   <button class="cart-btn" onclick="window.toggleCart()">🛒 Carrinho <span class="badge" id="cart-count">0</span></button>
@@ -211,7 +212,7 @@
   <p id="hero-desc">Qualidade de granja direto para a sua mesa.</p>
   <div class="hero-badges">
     <span class="hbadge">✅ Padrão Ouro</span>
-    <span class="hbadge">🚚 Entrega Rápida</span>
+    <span class="hbadge">🚚 Entrega Expressa</span>
     <span class="hbadge">💚 Pague via PIX</span>
   </div>
 </div>
@@ -241,7 +242,7 @@
   </div>
 </div>
 
-<!-- MODAL CHECKOUT -->
+<!-- MODAL CHECKOUT OTIMIZADO -->
 <div class="mbk" id="checkout-modal">
   <div class="modal">
     <div class="checkout-top">
@@ -251,17 +252,20 @@
     </div>
     <div class="modal-body">
       
+      <!-- Toggle Entrega/Retirada -->
       <div class="delivery-toggle">
         <button class="dt-btn active" id="btn-retirada" onclick="window.setDelivery('retirada')">🏪 Retirar na Loja</button>
         <button class="dt-btn" id="btn-entrega" onclick="window.setDelivery('entrega')">🚚 Entrega em Casa</button>
       </div>
 
+      <!-- Sessão Identificação do Cliente -->
       <div class="checkout-section" style="margin-top: 15px;">
         <label class="form-label" style="text-transform: none; margin-bottom: 4px;">Informações de Contato</label>
         <input type="text" id="cli-nome" placeholder="Seu Nome Completo" class="form-input" required>
         <input type="tel" id="cli-tel" placeholder="Telefone / WhatsApp" class="form-input" required>
       </div>
 
+      <!-- Sessão Retirada -->
       <div id="info-retirada" class="checkout-section">
         <div class="info-box">
           <p>A <strong>Distribuidora de Ovos Aline</strong> está localizada na:</p>
@@ -269,6 +273,7 @@
         </div>
       </div>
 
+      <!-- Sessão Entrega -->
       <div id="info-entrega" class="checkout-section" style="display:none;">
         <label class="form-label" style="text-transform: none; margin-bottom: 4px;">Endereço de Entrega</label>
         <div class="form-row">
@@ -282,19 +287,23 @@
         <input type="text" id="cli-comp" placeholder="Complemento / Referência" class="form-input">
       </div>
 
+      <!-- Pagamento e Resumo -->
       <div class="checkout-section" style="margin-top: -10px;">
         <label class="form-label">Forma de Pagamento:</label>
-        <select id="pagamento-select" class="form-input" style="font-weight: 700;"></select>
+        <select id="pagamento-select" class="form-input" style="font-weight: 700;">
+          <!-- Opções geradas dinamicamente via JS -->
+        </select>
       </div>
 
+      <!-- Sumário de Custos Simples -->
       <div id="checkout-summary" style="width:100%; background:#f8fafc; padding:16px; border-radius:12px; margin-bottom:4px; font-size:1rem; color:var(--brown); font-weight:800; display:flex; flex-direction:column; gap:8px; border: 1px solid #e2e8f0;">
           <div style="display:flex; justify-content:space-between;"><span>Total do Pedido:</span><span id="chk-sub">R$ 0,00</span></div>
       </div>
 
-      <div style="display: flex; flex-direction: column; gap: 8px; width: 100%; margin-top: 8px;">
+      <!-- Opções Finais (Confirmar / Voltar) -->
+      <div style="display: flex; flex-direction: column; gap: 12px; width: 100%; margin-top: 8px;">
           <button class="confirm-btn" onclick="window.processCheckout()">✅ Confirmar Pedido (<span id="checkout-total-btn">R$ 0,00</span>)</button>
-          <button class="btn-ghost" style="width: 100%; justify-content: center; padding: 10px; font-size: 0.95rem;" onclick="window.backToCart()">⬅️ Voltar para o Carrinho</button>
-          <button class="btn-ghost" style="width: 100%; justify-content: center; padding: 10px; font-size: 0.95rem;" onclick="window.closeAll()">🏠 Voltar para a Loja</button>
+          <button class="btn-ghost" style="width: 100%; justify-content: center; padding: 12px; font-size: 0.95rem; text-decoration: none;" onclick="window.backToCart()">⬅️ Voltar para o Carrinho</button>
       </div>
     </div>
   </div>
@@ -311,16 +320,16 @@
     <div class="modal-body" style="padding:28px; display:flex; flex-direction:column; align-items:center; gap:20px;">
       <div id="qrcode-wrap" style="background:#fff; padding:16px; border-radius:24px; border:3px solid #f1f5f9; box-shadow: 0 8px 24px rgba(0,0,0,0.06);"><div id="qrcode"></div></div>
       <div class="pix-rows" style="width:100%; background: var(--cream); border-radius: 16px; padding: 12px 20px;">
-        <div class="pr" style="display:flex; justify-content:space-between; padding:12px 0; border-bottom:1px solid #e2e8f0; font-size:.9rem;"><label style="color:var(--muted); font-weight: 600;">Recebedor</label><span id="pix-nome" style="font-weight:800; color: var(--brown); text-align: right;">Loja</span></div>
+        <div class="pr" style="display:flex; justify-content:space-between; padding:12px 0; border-bottom:1px solid #e2e8f0; font-size:.9rem;"><label style="color:var(--muted); font-weight: 600;">Recebedor</label><span id="pix-nome" style="font-weight:800; color: var(--brown); text-align: right;">App Ovos Aline</span></div>
         <div class="pr" style="display:flex; justify-content:space-between; padding:12px 0; font-size:.9rem;"><label style="color:var(--muted); font-weight: 600;">Valor Total</label><span id="pix-val" style="font-weight:800; color: var(--brown); text-align: right;">R$ 0,00</span></div>
       </div>
       <p class="copy-lbl" style="font-size:.8rem; color:var(--muted); align-self:flex-start; margin-bottom:-12px; font-weight: 700;">Código Copia e Cola (clique para copiar):</p>
       <div class="copy-box" id="pix-code" onclick="window.doCopy()" style="width:100%; background:#f1f5f9; border:2px dashed #cbd5e1; border-radius:16px; padding:14px; font-size:.8rem; font-family:monospace; color:var(--brown); font-weight: bold; word-break:break-all; cursor:pointer; transition:all .2s; user-select:all; text-align: center;"></div>
       
-      <div style="display: flex; flex-direction: column; gap: 8px; width: 100%; margin-top: 10px;">
-          <button class="confirm-btn" style="background:var(--brown); width:100%; color:#fff; border:none; border-radius:16px; padding:18px; font-size:1.05rem; font-weight:800; cursor:pointer; transition:transform .2s; text-transform: uppercase; box-shadow: 0 8px 20px rgba(15,23,42,0.25);" onclick="window.saveOrderToFirebase()">✅ Já Paguei — Concluir</button>
-          <button class="btn-ghost" style="width: 100%; justify-content: center; padding: 10px; font-size: 0.95rem;" onclick="window.backToCheckout()">⬅️ Alterar Método de Pagamento</button>
-          <button class="btn-ghost" style="width: 100%; justify-content: center; padding: 10px; font-size: 0.95rem;" onclick="window.closeAll()">🏠 Voltar para a Loja</button>
+      <!-- Opções Finais PIX (Pagar / Voltar) -->
+      <div style="display: flex; flex-direction: column; gap: 12px; width: 100%; margin-top: 10px;">
+          <button class="confirm-btn" style="background:var(--brown); width:100%; color:#fff; border:none; border-radius:16px; padding:18px; font-size:1.05rem; font-weight:800; cursor:pointer; transition:transform .2s; text-transform: uppercase; box-shadow: 0 8px 20px rgba(15,23,42,0.25);" onclick="window.saveOrderToFirebase()">✅ Já Paguei — Confirmar Pedido</button>
+          <button class="btn-ghost" style="width: 100%; justify-content: center; padding: 12px; font-size: 0.95rem; text-decoration: none;" onclick="window.backToCheckout()">⬅️ Alterar Método de Pagamento</button>
       </div>
     </div>
   </div>
@@ -403,7 +412,7 @@ window.configuracoes_loja = {
   whatsapp: ''
 };
 
-window.pix_config = { rawKey: '', nomeRecebedor: 'Loja', cidade: 'SAO PAULO' };
+window.pix_config = { rawKey: '11999999999', nomeRecebedor: 'Loja', cidade: 'SAO PAULO' };
 
 window.produtos = [];
 window.carrinho = {};
@@ -454,9 +463,15 @@ onAuthStateChanged(auth, (user) => {
         // Escuta PIX da Base de Dados CORRETA
         onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'pix_config'), snap => {
             if (snap.exists()) {
-                window.pix_config = snap.data();
+                const d = snap.data();
+                window.pix_config = {
+                    rawKey: d.rawKey || d.key || '11999999999',
+                    nomeRecebedor: d.nomeRecebedor || 'App Ovos Aline',
+                    cidade: d.cidade || 'SAO PAULO',
+                    copiaCola: d.copiaCola || ''
+                };
             }
-        }, err => console.warn(err));
+        }, err => console.warn("Aviso PIX:", err));
     }
 });
 
@@ -758,16 +773,12 @@ window.openPix = () => {
   let cfg = window.pix_config || {};
   let scfg = window.configuracoes_loja || {};
   
-  let chavePix = (cfg.rawKey || cfg.key || scfg.pixChave || scfg.rawKey || '').trim();
-  let recebedor = (cfg.nomeRecebedor || scfg.pixNome || scfg.nome || 'Loja Ovos Aline').trim();
-  let cidade = (cfg.cidade || scfg.pixCidade || 'SAO PAULO').trim();
+  let chavePix = (cfg.rawKey || scfg.pixChave || '11999999999').trim();
+  let recebedor = (cfg.nomeRecebedor || scfg.nome || 'App Ovos Aline').trim();
+  let cidade = (cfg.cidade || 'SAO PAULO').trim();
 
-  if (chavePix) {
-      const txid = ('OVOS' + Date.now().toString().slice(-7)).substring(0,25);
-      payloadCopiaCola = window.pixPayload(chavePix, total, recebedor, cidade, txid);
-  } else {
-      payloadCopiaCola = "Chave PIX não configurada pelo Administrador.";
-  }
+  const txid = ('OVOS' + Date.now().toString().slice(-7)).substring(0,25);
+  payloadCopiaCola = window.pixPayload(chavePix, total, recebedor, cidade, txid);
 
   const pn = document.getElementById('pix-nome'); if(pn) pn.textContent  = recebedor;
   const pv = document.getElementById('pix-val'); if(pv) pv.textContent   = 'R$ ' + window.fmt(total);
@@ -777,11 +788,7 @@ window.openPix = () => {
   if(qrDiv) {
       qrDiv.innerHTML = '';
       setTimeout(()=>{
-          if (chavePix) {
-             try { new QRCode(qrDiv, { text:payloadCopiaCola, width:200, height:200, colorDark: scfg.corSecundaria || '#be123c', colorLight:'#FFFFFF', correctLevel:QRCode.CorrectLevel.M }); } catch(e){}
-          } else {
-             qrDiv.innerHTML = '<span style="color:var(--muted);font-size:0.8rem;display:flex;height:200px;align-items:center;justify-content:center;text-align:center;">PIX Indisponível<br>Verifique o Painel Admin</span>';
-          }
+         try { new QRCode(qrDiv, { text:payloadCopiaCola, width:200, height:200, colorDark: scfg.corSecundaria || '#be123c', colorLight:'#FFFFFF', correctLevel:QRCode.CorrectLevel.M }); } catch(e){}
       }, 50);
   }
 
