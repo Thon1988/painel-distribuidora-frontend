@@ -10,13 +10,14 @@
     
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-      --primary: #e11d48;
-      --dark:    #be123c;
-      --cream:   #f8fafc;
-      --brown:   #0f172a;
-      --muted:   #64748b;
+      /* Identidade App Ovos Aline (Rose & Slate) */
+      --primary: #e11d48; /* Rose 600 */
+      --dark:    #be123c; /* Rose 700 */
+      --cream:   #f8fafc; /* Slate 50 */
+      --brown:   #0f172a; /* Slate 900 */
+      --muted:   #64748b; /* Slate 500 */
       --white:   #ffffff;
-      --green:   #10b981;
+      --green:   #10b981; /* Emerald 500 */
       --shadow:  0 10px 30px rgba(15, 23, 42, 0.08);
     }
     body { font-family:'Inter', system-ui, sans-serif; background:var(--cream); color:var(--brown); min-height:100vh; }
@@ -69,7 +70,7 @@
     .pill.amber { background:#f59e0b; }
     .pill.rose { background:var(--primary); }
     .card-body { padding:22px; flex:1; display:flex; flex-direction:column; gap:6px; }
-    .card-body h3   { font-size:1.1rem; font-weight:800; color: var(--brown); }
+    .card-body h3   { font-size:1.1rem; font-weight:800; color: var(--brown); margin:0; }
     .card-body .sub { font-size:.75rem; color:var(--primary); font-weight:800; text-transform: uppercase; letter-spacing: 0.5px; }
     .card-body p    { font-size:.88rem; color:var(--muted); flex:1; margin-top:4px; line-height: 1.4; }
     .card-price { font-size:1.4rem; font-weight:900; color:var(--dark); margin-top:10px; letter-spacing: -0.5px; }
@@ -87,7 +88,7 @@
     .sidebar { position:fixed; top:0; right:-450px; bottom:0; width:min(450px,100vw); background:var(--cream); z-index:201; display:flex; flex-direction:column; transition:right .35s cubic-bezier(.4,0,.2,1); box-shadow:-8px 0 40px rgba(0,0,0,.15); }
     .sidebar.open { right:0; }
     .sb-header { padding:22px 24px; background:var(--white); color:var(--brown); display:flex; align-items:center; justify-content:space-between; border-bottom: 1px solid #e2e8f0; }
-    .sb-header h3 { font-size:1.2rem; font-weight:900; }
+    .sb-header h3 { font-size:1.2rem; font-weight:900; margin:0;}
     .close-x { background:#f1f5f9; border:none; color:var(--brown); width:36px; height:36px; border-radius:50%; font-size:1.1rem; font-weight: bold; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background .2s; }
     .close-x:hover { background:#e2e8f0; }
     .cart-items { flex:1; overflow-y:auto; padding:18px; display:flex; flex-direction:column; gap:12px; }
@@ -109,7 +110,7 @@
     .total-row { display:flex; justify-content:space-between; font-size:1.2rem; font-weight:900; margin-bottom:18px; color: var(--brown); }
     
     .checkout-btn { width:100%; background:linear-gradient(135deg,var(--primary),var(--dark)); color:#fff; border:none; border-radius:16px; padding:18px; font-size:1.05rem; font-weight:800; cursor:pointer; transition:transform .2s, box-shadow .2s; display:flex; align-items:center; justify-content:center; gap:10px; box-shadow: 0 8px 20px rgba(225,29,72,0.25); text-transform: uppercase; letter-spacing: 0.5px; }
-    .checkout-btn:hover { transform:translateY(-2px); box-shadow: 0 10px 24px rgba(225,29,72,0.35); }
+    .checkout-btn:hover:not(:disabled) { transform:translateY(-2px); box-shadow: 0 10px 24px rgba(225,29,72,0.35); }
     .checkout-btn:disabled { opacity:.4; pointer-events:none; box-shadow: none; background: var(--muted); }
 
     /* MODAIS COMUNS */
@@ -290,9 +291,10 @@
           <div style="display:flex; justify-content:space-between;"><span>Total do Pedido:</span><span id="chk-sub">R$ 0,00</span></div>
       </div>
 
-      <div style="display: flex; flex-direction: column; gap: 12px; width: 100%; margin-top: 8px;">
+      <div style="display: flex; flex-direction: column; gap: 8px; width: 100%; margin-top: 8px;">
           <button class="confirm-btn" onclick="window.processCheckout()">✅ Confirmar Pedido (<span id="checkout-total-btn">R$ 0,00</span>)</button>
-          <button class="btn-ghost" style="width: 100%; justify-content: center; padding: 12px; font-size: 0.95rem;" onclick="window.backToCart()">⬅️ Voltar para o Carrinho</button>
+          <button class="btn-ghost" style="width: 100%; justify-content: center; padding: 10px; font-size: 0.95rem;" onclick="window.backToCart()">⬅️ Voltar para o Carrinho</button>
+          <button class="btn-ghost" style="width: 100%; justify-content: center; padding: 10px; font-size: 0.95rem;" onclick="window.closeAll()">🏠 Voltar para a Loja</button>
       </div>
     </div>
   </div>
@@ -315,9 +317,10 @@
       <p class="copy-lbl" style="font-size:.8rem; color:var(--muted); align-self:flex-start; margin-bottom:-12px; font-weight: 700;">Código Copia e Cola (clique para copiar):</p>
       <div class="copy-box" id="pix-code" onclick="window.doCopy()" style="width:100%; background:#f1f5f9; border:2px dashed #cbd5e1; border-radius:16px; padding:14px; font-size:.8rem; font-family:monospace; color:var(--brown); font-weight: bold; word-break:break-all; cursor:pointer; transition:all .2s; user-select:all; text-align: center;"></div>
       
-      <div style="display: flex; flex-direction: column; gap: 12px; width: 100%; margin-top: 10px;">
+      <div style="display: flex; flex-direction: column; gap: 8px; width: 100%; margin-top: 10px;">
           <button class="confirm-btn" style="background:var(--brown); width:100%; color:#fff; border:none; border-radius:16px; padding:18px; font-size:1.05rem; font-weight:800; cursor:pointer; transition:transform .2s; text-transform: uppercase; box-shadow: 0 8px 20px rgba(15,23,42,0.25);" onclick="window.saveOrderToFirebase()">✅ Já Paguei — Concluir</button>
-          <button class="btn-ghost" style="width: 100%; justify-content: center; padding: 12px; font-size: 0.95rem;" onclick="window.backToCheckout()">⬅️ Alterar Método de Pagamento</button>
+          <button class="btn-ghost" style="width: 100%; justify-content: center; padding: 10px; font-size: 0.95rem;" onclick="window.backToCheckout()">⬅️ Alterar Método de Pagamento</button>
+          <button class="btn-ghost" style="width: 100%; justify-content: center; padding: 10px; font-size: 0.95rem;" onclick="window.closeAll()">🏠 Voltar para a Loja</button>
       </div>
     </div>
   </div>
@@ -336,14 +339,14 @@
 
 <div class="toast" id="toast"></div>
 
-<!-- LÓGICA JAVASCRIPT & FIREBASE -->
+<!-- LÓGICA JAVASCRIPT & FIREBASE BLINDADA -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getFirestore, collection, addDoc, serverTimestamp, onSnapshot, doc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
-// Configuração Firebase
-const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
+// Configuração Firebase Segura e Blindada
+let firebaseConfig = {
     apiKey: "AIzaSyD3Otz9-zdZH-E5Feg9IOGWPzVycoe8gro",
     authDomain: "distribuidora-de-ovos-aline.firebaseapp.com",
     projectId: "distribuidora-de-ovos-aline",
@@ -351,6 +354,15 @@ const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__f
     messagingSenderId: "92187548716",
     appId: "1:92187548716:web:d61d18a29aa76aead7c589"
 };
+
+try {
+    if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+        firebaseConfig = JSON.parse(__firebase_config);
+    }
+} catch(e) {
+    console.warn("Utilizando configurações internas de base de dados.");
+}
+
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'app-egg-pro-transacional';
 
 const appFB = initializeApp(firebaseConfig);
@@ -370,7 +382,16 @@ async function initAuth() {
 }
 initAuth();
 
-// Variáveis Globais Corrigidas
+// Catálogo de Emergência
+const DEFAULT_PRODUTOS = [
+    { id: 'def-1', nome: 'Ovos Brancos Pequenos', emoji: '🥚', tipo: 'Tamanho P', embalagem: 'Dúzia (12)', preco: 8.90, desc: 'Ovos brancos selecionados, tamanho pequeno.', badge: '', badgeClass: '', foto_url: '', ativo: true },
+    { id: 'def-2', nome: 'Ovos Brancos Médios', emoji: '🥚', tipo: 'Tamanho M', embalagem: 'Cartela (30)', preco: 21.90, desc: 'O favorito do dia a dia! Tamanho ideal para qualquer receita.', badge: '', badgeClass: '', foto_url: '', ativo: true },
+    { id: 'def-3', nome: 'Ovos Brancos Grandes', emoji: '🥚', tipo: 'Tamanho G', embalagem: 'Dúzia (12)', preco: 12.90, desc: 'Ovos maiores com gema mais volumosa.', badge: 'Popular', badgeClass: 'rose', foto_url: '', ativo: true },
+    { id: 'def-4', nome: 'Ovos Extra Grandes', emoji: '🥚', tipo: 'Tamanho XG', embalagem: 'Dúzia (12)', preco: 14.90, desc: 'Os maiores! Gema rica e intensa.', badge: 'Top Venda', badgeClass: 'rose', foto_url: '', ativo: true },
+    { id: 'def-5', nome: 'Ovos Caipira', emoji: '🐓', tipo: 'Caipira', embalagem: 'Meia Dúzia (6)', preco: 9.90, desc: 'Criação livre no campo. Gema laranjinha e sabor incomparável.', badge: 'Especial', badgeClass: 'amber', foto_url: '', ativo: true },
+    { id: 'def-6', nome: 'Ovos Orgânicos', emoji: '🌿', tipo: 'Orgânico', embalagem: 'Caixa com 120 ovos', preco: 95.90, desc: '100% orgânicos, sem antibióticos. Certificado. Ideal para revenda.', badge: 'Premium', badgeClass: 'green', foto_url: '', ativo: true }
+];
+
 window.configuracoes_loja = {
   nome: 'App Ovos Aline',
   emoji: '🥚',
@@ -382,30 +403,20 @@ window.configuracoes_loja = {
   whatsapp: ''
 };
 
-window.pix_config = { copiaCola: '', nomeRecebedor: 'App Ovos Aline', rawKey: '', cidade: 'SAO PAULO' };
-
-// Catálogo de Emergência
-const DEFAULT_PRODUTOS = [
-    { id: 'def-1', nome: 'Ovos Brancos Pequenos', emoji: '🥚', tipo: 'Tamanho P', embalagem: 'Dúzia (12)', preco: 8.90, desc: 'Ovos brancos selecionados, tamanho pequeno.', badge: '', badgeClass: '', foto_url: '', ativo: true },
-    { id: 'def-2', nome: 'Ovos Brancos Médios', emoji: '🥚', tipo: 'Tamanho M', embalagem: 'Cartela (30)', preco: 21.90, desc: 'O favorito do dia a dia! Tamanho ideal para qualquer receita.', badge: '', badgeClass: '', foto_url: '', ativo: true },
-    { id: 'def-3', nome: 'Ovos Brancos Grandes', emoji: '🥚', tipo: 'Tamanho G', embalagem: 'Dúzia (12)', preco: 12.90, desc: 'Ovos maiores com gema mais volumosa.', badge: 'Popular', badgeClass: 'rose', foto_url: '', ativo: true },
-    { id: 'def-4', nome: 'Ovos Extra Grandes', emoji: '🥚', tipo: 'Tamanho XG', embalagem: 'Dúzia (12)', preco: 14.90, desc: 'Os maiores! Gema rica e intensa.', badge: 'Top Venda', badgeClass: 'rose', foto_url: '', ativo: true },
-    { id: 'def-5', nome: 'Ovos Caipira', emoji: '🐓', tipo: 'Caipira', embalagem: 'Meia Dúzia (6)', preco: 9.90, desc: 'Criação livre no campo. Gema laranjinha e sabor incomparável.', badge: 'Especial', badgeClass: 'amber', foto_url: '', ativo: true },
-    { id: 'def-6', nome: 'Ovos Orgânicos', emoji: '🌿', tipo: 'Orgânico', embalagem: 'Caixa com 120 ovos', preco: 95.90, desc: '100% orgânicos, sem antibióticos. Certificado. Ideal para revenda.', badge: 'Premium', badgeClass: 'green', foto_url: '', ativo: true }
-];
+window.pix_config = { rawKey: '', nomeRecebedor: 'Loja', cidade: 'SAO PAULO' };
 
 window.produtos = [];
 window.carrinho = {};
 window.currentOrderContext = {}; 
 window.catalogoCarregado = false; 
 
-// Timeout de segurança
+// Timeout de segurança ultra-rápido (1.5s)
 setTimeout(() => {
     if (!window.catalogoCarregado) {
         window.catalogoCarregado = true;
         window.renderProdutos();
     }
-}, 2500);
+}, 1500);
 
 window.generateUUID = () => {
     if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
@@ -427,7 +438,7 @@ onAuthStateChanged(auth, (user) => {
             window.renderProdutos();
             window.syncCarrinho(); 
         }, error => {
-            console.error("Erro ao ler catálogo:", error);
+            console.warn("Aviso na leitura do catálogo (Permissões ou Rede). A iniciar plano de contingência.");
             window.catalogoCarregado = true;
             window.renderProdutos();
         });
@@ -438,89 +449,106 @@ onAuthStateChanged(auth, (user) => {
                 window.configuracoes_loja = { ...window.configuracoes_loja, ...snap.data() };
             }
             window.applyConfig(); 
-        });
+        }, err => console.warn(err));
 
-        // Escuta PIX
+        // Escuta PIX da Base de Dados CORRETA
         onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'pix_config'), snap => {
             if (snap.exists()) {
-                window.pix_config = { ...window.pix_config, ...snap.data() };
+                window.pix_config = snap.data();
             }
-        });
+        }, err => console.warn(err));
     }
 });
 
 window.applyConfig = () => {
-  const c = window.configuracoes_loja;
-  document.title = c.nome;
-  document.getElementById('page-title').textContent  = c.nome;
-  document.getElementById('h-name').textContent      = c.nome;
-  document.getElementById('h-slogan').textContent    = c.slogan;
-  document.getElementById('h-emoji').textContent     = c.emoji;
-  if(c.heroTitle) document.getElementById('hero-title').innerHTML    = c.heroTitle;
-  if(c.heroDesc) document.getElementById('hero-desc').textContent   = c.heroDesc;
-  
-  document.documentElement.style.setProperty('--primary', c.corPrimaria);
-  document.documentElement.style.setProperty('--dark', c.corSecundaria);
+  try {
+      const c = window.configuracoes_loja || {};
+      document.title = c.nome || 'App Ovos Aline';
+      
+      const elPT = document.getElementById('page-title'); if(elPT) elPT.textContent = c.nome;
+      const elHN = document.getElementById('h-name'); if(elHN) elHN.textContent = c.nome;
+      const elHS = document.getElementById('h-slogan'); if(elHS) elHS.textContent = c.slogan;
+      const elHE = document.getElementById('h-emoji'); if(elHE) elHE.textContent = c.emoji;
+      const elHT = document.getElementById('hero-title'); if(elHT && c.heroTitle) elHT.innerHTML = c.heroTitle;
+      const elHD = document.getElementById('hero-desc'); if(elHD && c.heroDesc) elHD.textContent = c.heroDesc;
+      
+      const elFT = document.getElementById('footer-text'); 
+      if(elFT) elFT.textContent = `© ${new Date().getFullYear()} ${c.nome || 'Loja'} · Todos os direitos reservados`;
+
+      if(c.corPrimaria) document.documentElement.style.setProperty('--primary', c.corPrimaria);
+      if(c.corSecundaria) document.documentElement.style.setProperty('--dark', c.corSecundaria);
+  } catch(e) { console.error(e); }
 };
 
+window.applyConfig();
+
 window.toast = (msg) => {
-    const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show');
+    const t = document.getElementById('toast'); 
+    if(!t) return;
+    t.textContent = msg; 
+    t.classList.add('show');
     setTimeout(() => t.classList.remove('show'), 2500);
 };
 
-window.fmt = n => Number(n).toFixed(2).replace('.',',');
+window.fmt = n => Number(n || 0).toFixed(2).replace('.',',');
 
 window.renderProdutos = () => {
-  const grid = document.getElementById('product-grid');
-  
-  if (!window.catalogoCarregado) {
-      grid.innerHTML = '<div class="no-products"><span class="animate-pulse">⏳</span>A ligar aos servidores da granja...</div>'; 
-      return; 
-  }
-  
-  let ativos = window.produtos.filter(p => p.ativo !== false); 
-  
-  if (!ativos.length) { 
-      ativos = DEFAULT_PRODUTOS;
-      window.produtos = DEFAULT_PRODUTOS; 
-  }
-  
-  grid.innerHTML = ativos.map(p => {
-    const imageElement = (p.foto_url && p.foto_url.length > 5) 
-            ? `<img src="${p.foto_url}" style="width:100%;height:100%;object-fit:cover;">` 
-            : `<span>${p.emoji || '🥚'}</span>`;
+  try {
+      const grid = document.getElementById('product-grid');
+      if(!grid) return;
+      
+      if (!window.catalogoCarregado) {
+          grid.innerHTML = '<div class="no-products"><span class="animate-pulse">⏳</span>A ligar aos servidores da granja...</div>'; 
+          return; 
+      }
+      
+      let ativos = (window.produtos || []).filter(p => p.ativo !== false); 
+      
+      if (!ativos.length) { 
+          ativos = DEFAULT_PRODUTOS;
+          window.produtos = DEFAULT_PRODUTOS; 
+      }
+      
+      grid.innerHTML = ativos.map(p => {
+        const imageElement = (p.foto_url && p.foto_url.length > 5) 
+                ? `<img src="${p.foto_url}" style="width:100%;height:100%;object-fit:cover;">` 
+                : `<span>${p.emoji || '🥚'}</span>`;
 
-    return `
-    <div class="card">
-      <div class="card-img" style="font-size: ${p.foto_url ? '1rem' : '4.8rem'};">
-        ${imageElement}
-        ${p.badge ? `<div class="pill" style="background-color: var(--primary);">${p.badge}</div>` : ''}
-      </div>
-      <div class="card-body">
-        <h3>${p.nome}</h3>
-        <div class="sub">${p.tipo || ''}</div>
-        <p>${p.desc || 'Ovos frescos de alta qualidade.'}</p>
-        <div class="card-price">R$ ${window.fmt(p.preco)} <small>/ ${p.embalagem || 'Unidade'}</small></div>
-        <div class="qty-row">
-          <button class="qty-btn" onclick="window.chQty('${p.id}',-1)">−</button>
-          <span class="qty-val" id="qty-${p.id}">0</span>
-          <button class="qty-btn" onclick="window.chQty('${p.id}',+1)">+</button>
-          <button class="add-btn" onclick="window.addCart('${p.id}')">Adicionar</button>
-        </div>
-      </div>
-    </div>`}).join('');
+        return `
+        <div class="card">
+          <div class="card-img" style="font-size: ${p.foto_url ? '1rem' : '4.8rem'};">
+            ${imageElement}
+            ${p.badge ? `<div class="pill" style="background-color: var(--primary);">${p.badge}</div>` : ''}
+          </div>
+          <div class="card-body">
+            <h3>${p.nome || ''}</h3>
+            <div class="sub">${p.tipo || ''}</div>
+            <p>${p.desc || 'Ovos frescos de alta qualidade.'}</p>
+            <div class="card-price">R$ ${window.fmt(p.preco)} <small>/ ${p.embalagem || 'Unidade'}</small></div>
+            <div class="qty-row">
+              <button class="qty-btn" onclick="window.chQty('${p.id}',-1)">−</button>
+              <span class="qty-val" id="qty-${p.id}">0</span>
+              <button class="qty-btn" onclick="window.chQty('${p.id}',+1)">+</button>
+              <button class="add-btn" onclick="window.addCart('${p.id}')">Adicionar</button>
+            </div>
+          </div>
+        </div>`
+      }).join('');
+  } catch(e) { console.error("Falha ao renderizar produtos", e); }
 };
 
 window.chQty = (id, d) => {
   const el = document.getElementById('qty-' + id);
-  if (el) el.textContent = Math.max(0, parseInt(el.textContent) + d);
+  if (el) el.textContent = Math.max(0, parseInt(el.textContent || '0') + d);
 };
 
 window.addCart = (id) => {
-  const qty = parseInt(document.getElementById('qty-' + id)?.textContent || '0');
+  const el = document.getElementById('qty-' + id);
+  if(!el) return;
+  const qty = parseInt(el.textContent || '0');
   if (!qty) { window.toast('Atenção: Aumente a quantidade primeiro!'); return; }
   window.carrinho[id] = (window.carrinho[id] || 0) + qty;
-  document.getElementById('qty-' + id).textContent = 0;
+  el.textContent = 0;
   window.syncCarrinho();
   window.toast('✅ Produto adicionado ao carrinho!');
 };
@@ -536,31 +564,33 @@ window.changeCartQty = (id, delta) => {
 
 window.syncCarrinho = () => {
   const total = Object.values(window.carrinho).reduce((s,v)=>s+v, 0);
-  document.getElementById('cart-count').textContent = total;
-  document.getElementById('checkout-btn').disabled = total === 0;
+  const cc = document.getElementById('cart-count'); if(cc) cc.textContent = total;
+  const cb = document.getElementById('checkout-btn'); if(cb) cb.disabled = total === 0;
   window.renderCarrinho();
 };
 
 window.renderCarrinho = () => {
   const keys = Object.keys(window.carrinho).filter(k => window.carrinho[k] > 0);
   const el = document.getElementById('cart-items');
+  if(!el) return;
+
   if (!keys.length) {
     el.innerHTML = '<div class="empty"><span>🥚</span>Seu carrinho está vazio</div>';
-    document.getElementById('cart-total').textContent = 'R$ 0,00';
+    const ct = document.getElementById('cart-total'); if(ct) ct.textContent = 'R$ 0,00';
     return;
   }
   let total = 0;
   el.innerHTML = keys.map(k => {
-    const p = window.produtos.find(x => String(x.id) === String(k));
+    const p = (window.produtos||[]).find(x => String(x.id) === String(k));
     if (!p) return '';
-    const sub = p.preco * window.carrinho[k];
+    const sub = (p.preco||0) * window.carrinho[k];
     total += sub;
     const imgHtml = (p.foto_url && p.foto_url.length > 5) ? `<img src="${p.foto_url}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;">` : (p.emoji || '🥚');
     
     return `<div class="ci">
       <div class="ci-emoji" style="padding:${p.foto_url ? '0':'8px'}; border:${p.foto_url ? 'none':''};">${imgHtml}</div>
       <div class="ci-info">
-        <h4>${p.nome}</h4>
+        <h4>${p.nome || ''}</h4>
         <p style="font-size:0.75rem; color:var(--muted);">${p.embalagem || 'Unidade'} · R$ ${window.fmt(p.preco)}</p>
         <div class="qty-controls">
             <button onclick="window.changeCartQty('${k}', -1)">-</button>
@@ -574,49 +604,52 @@ window.renderCarrinho = () => {
       </div>
     </div>`;
   }).join('');
-  document.getElementById('cart-total').textContent = 'R$ ' + window.fmt(total);
+  const ct = document.getElementById('cart-total'); if(ct) ct.textContent = 'R$ ' + window.fmt(total);
 };
 
 window.remCart = (id) => { delete window.carrinho[id]; window.syncCarrinho(); };
 
 window.totalCarrinho = () => {
   return Object.keys(window.carrinho).reduce((s,k) => {
-    const p = window.produtos.find(x => String(x.id) === String(k));
-    return s + (p ? p.preco * window.carrinho[k] : 0);
+    const p = (window.produtos||[]).find(x => String(x.id) === String(k));
+    return s + (p ? (p.preco||0) * window.carrinho[k] : 0);
   }, 0);
 };
 
 window.toggleCart = () => {
-  document.getElementById('sidebar').classList.toggle('open');
-  document.getElementById('overlay').classList.toggle('open');
+  const sb = document.getElementById('sidebar'); if(sb) sb.classList.toggle('open');
+  const ov = document.getElementById('overlay'); if(ov) ov.classList.toggle('open');
 };
 
 window.closeAll = () => {
-  ['sidebar','overlay','pix-modal','checkout-modal'].forEach(id => document.getElementById(id).classList.remove('open'));
+  ['sidebar','overlay','pix-modal','checkout-modal'].forEach(id => {
+      const el = document.getElementById(id); if(el) el.classList.remove('open');
+  });
 };
 
 window.backToCart = () => {
-  document.getElementById('checkout-modal').classList.remove('open');
-  document.getElementById('sidebar').classList.add('open');
+  const cm = document.getElementById('checkout-modal'); if(cm) cm.classList.remove('open');
+  const sb = document.getElementById('sidebar'); if(sb) sb.classList.add('open');
 };
 
 window.backToCheckout = () => {
-  document.getElementById('pix-modal').classList.remove('open');
-  document.getElementById('checkout-modal').classList.add('open');
+  const pm = document.getElementById('pix-modal'); if(pm) pm.classList.remove('open');
+  const cm = document.getElementById('checkout-modal'); if(cm) cm.classList.add('open');
 };
 
 window.currentDeliveryType = 'retirada';
 
 window.setDelivery = (type) => {
   window.currentDeliveryType = type;
-  document.getElementById('btn-retirada').classList.toggle('active', type === 'retirada');
-  document.getElementById('btn-entrega').classList.toggle('active', type === 'entrega');
-  document.getElementById('info-retirada').style.display = type === 'retirada' ? 'block' : 'none';
-  document.getElementById('info-entrega').style.display = type === 'entrega' ? 'block' : 'none';
+  
+  const br = document.getElementById('btn-retirada'); if(br) br.classList.toggle('active', type === 'retirada');
+  const be = document.getElementById('btn-entrega'); if(be) be.classList.toggle('active', type === 'entrega');
+  const ir = document.getElementById('info-retirada'); if(ir) ir.style.display = type === 'retirada' ? 'block' : 'none';
+  const ie = document.getElementById('info-entrega'); if(ie) ie.style.display = type === 'entrega' ? 'block' : 'none';
   
   const tot = window.totalCarrinho();
-  document.getElementById('checkout-total-btn').textContent = 'R$ ' + window.fmt(tot);
-  document.getElementById('chk-sub').textContent = 'R$ ' + window.fmt(tot);
+  const ctb = document.getElementById('checkout-total-btn'); if(ctb) ctb.textContent = 'R$ ' + window.fmt(tot);
+  const cs = document.getElementById('chk-sub'); if(cs) cs.textContent = 'R$ ' + window.fmt(tot);
 
   document.querySelectorAll('.form-input').forEach(el => el.classList.remove('error'));
   window.updatePaymentOptions();
@@ -624,6 +657,7 @@ window.setDelivery = (type) => {
 
 window.updatePaymentOptions = () => {
   const select = document.getElementById('pagamento-select');
+  if(!select) return;
   select.innerHTML = '';
   
   select.add(new Option('PIX Online (Pagar Agora)', 'pix_online'));
@@ -641,9 +675,9 @@ window.updatePaymentOptions = () => {
 
 window.openCheckout = () => {
   window.setDelivery('retirada'); 
-  document.getElementById('checkout-modal').classList.add('open');
-  document.getElementById('sidebar').classList.remove('open');
-  document.getElementById('overlay').classList.add('open'); 
+  const cm = document.getElementById('checkout-modal'); if(cm) cm.classList.add('open');
+  const sb = document.getElementById('sidebar'); if(sb) sb.classList.remove('open');
+  const ov = document.getElementById('overlay'); if(ov) ov.classList.add('open'); 
 };
 
 window.processCheckout = async () => {
@@ -655,14 +689,14 @@ window.processCheckout = async () => {
   const nomeEl = document.getElementById('cli-nome');
   const telEl = document.getElementById('cli-tel');
 
-  if (!nomeEl.value.trim()) { nomeEl.classList.add('error'); temErro = true; }
-  if (!telEl.value.trim()) { telEl.classList.add('error'); temErro = true; }
+  if (!nomeEl || !nomeEl.value.trim()) { if(nomeEl) nomeEl.classList.add('error'); temErro = true; }
+  if (!telEl || !telEl.value.trim()) { if(telEl) telEl.classList.add('error'); temErro = true; }
 
   if (window.currentDeliveryType === 'entrega') {
     const camposEntrega = ['cli-rua', 'cli-num', 'cli-bairro'];
     camposEntrega.forEach(id => {
       const el = document.getElementById(id);
-      if (!el.value.trim()) { el.classList.add('error'); temErro = true; }
+      if (!el || !el.value.trim()) { if(el) el.classList.add('error'); temErro = true; }
     });
   }
 
@@ -681,7 +715,8 @@ window.processCheckout = async () => {
     comp: document.getElementById('cli-comp') ? document.getElementById('cli-comp').value.trim() : ''
   };
 
-  const paymentMethod = document.getElementById('pagamento-select').value;
+  const sel = document.getElementById('pagamento-select');
+  const paymentMethod = sel ? sel.value : 'dinheiro';
   
   window.currentOrderContext = {
     tipoEntrega: window.currentDeliveryType,
@@ -689,7 +724,7 @@ window.processCheckout = async () => {
     paymentMethod
   };
 
-  document.getElementById('checkout-modal').classList.remove('open');
+  const cm = document.getElementById('checkout-modal'); if(cm) cm.classList.remove('open');
 
   if (paymentMethod === 'pix_online') {
     window.openPix();
@@ -699,12 +734,14 @@ window.processCheckout = async () => {
 };
 
 window.removeAccents = (s) => (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^\x00-\x7F]/g,'').toUpperCase();
+
 window.pixPayload = (key, amount, name, city, txid) => {
     const tlv = (id, v) => id + String(v.length).padStart(2,'0') + v;
     const ma = tlv('00','BR.GOV.BCB.PIX') + tlv('01', key);
-    let p = tlv('00','01') + tlv('26', ma) + tlv('52','0000') + tlv('53','986') + tlv('54', amount.toFixed(2)) + tlv('58','BR') + tlv('59', window.removeAccents(name).slice(0,25)||'LOJA') + tlv('60', window.removeAccents(city).slice(0,15)||'BR') + tlv('62', tlv('05', window.removeAccents(txid).slice(0,25)||'TESTE'));
+    let p = tlv('00','01') + tlv('26', ma) + tlv('52','0000') + tlv('53','986') + tlv('54', Number(amount).toFixed(2)) + tlv('58','BR') + tlv('59', window.removeAccents(name).slice(0,25)||'LOJA') + tlv('60', window.removeAccents(city).slice(0,15)||'BR') + tlv('62', tlv('05', window.removeAccents(txid).slice(0,25)||'TESTE'));
     return p + tlv('63', window.crc16(p + '6304'));
 };
+
 window.crc16 = (s) => {
     let c = 0xFFFF;
     for (let i = 0; i < s.length; i++) {
@@ -716,54 +753,67 @@ window.crc16 = (s) => {
 
 window.openPix = () => {
   const total = window.totalCarrinho(); 
-  
   let payloadCopiaCola = "";
-  let chavePix = window.pix_config.rawKey || window.pix_config.key || '';
   
+  let cfg = window.pix_config || {};
+  let scfg = window.configuracoes_loja || {};
+  
+  let chavePix = (cfg.rawKey || cfg.key || scfg.pixChave || scfg.rawKey || '').trim();
+  let recebedor = (cfg.nomeRecebedor || scfg.pixNome || scfg.nome || 'Loja Ovos Aline').trim();
+  let cidade = (cfg.cidade || scfg.pixCidade || 'SAO PAULO').trim();
+
   if (chavePix) {
       const txid = ('OVOS' + Date.now().toString().slice(-7)).substring(0,25);
-      payloadCopiaCola = window.pixPayload(chavePix, total, window.pix_config.nomeRecebedor, window.pix_config.cidade, txid);
+      payloadCopiaCola = window.pixPayload(chavePix, total, recebedor, cidade, txid);
   } else {
-      payloadCopiaCola = window.pix_config.copiaCola || "Chave PIX não configurada pelo Administrador.";
+      payloadCopiaCola = "Chave PIX não configurada pelo Administrador.";
   }
 
-  document.getElementById('pix-nome').textContent  = window.pix_config.nomeRecebedor || window.configuracoes_loja.nome;
-  document.getElementById('pix-val').textContent   = 'R$ ' + window.fmt(total);
-  document.getElementById('pix-code').textContent  = payloadCopiaCola;
+  const pn = document.getElementById('pix-nome'); if(pn) pn.textContent  = recebedor;
+  const pv = document.getElementById('pix-val'); if(pv) pv.textContent   = 'R$ ' + window.fmt(total);
+  const pc = document.getElementById('pix-code'); if(pc) pc.textContent  = payloadCopiaCola;
 
   const qrDiv = document.getElementById('qrcode');
-  qrDiv.innerHTML = '';
-  setTimeout(()=>{
-      try { new QRCode(qrDiv, { text:payloadCopiaCola, width:200, height:200, colorDark: window.configuracoes_loja.corSecundaria || '#be123c', colorLight:'#FFFFFF', correctLevel:QRCode.CorrectLevel.M }); } catch(e){}
-  }, 50);
+  if(qrDiv) {
+      qrDiv.innerHTML = '';
+      setTimeout(()=>{
+          if (chavePix) {
+             try { new QRCode(qrDiv, { text:payloadCopiaCola, width:200, height:200, colorDark: scfg.corSecundaria || '#be123c', colorLight:'#FFFFFF', correctLevel:QRCode.CorrectLevel.M }); } catch(e){}
+          } else {
+             qrDiv.innerHTML = '<span style="color:var(--muted);font-size:0.8rem;display:flex;height:200px;align-items:center;justify-content:center;text-align:center;">PIX Indisponível<br>Verifique o Painel Admin</span>';
+          }
+      }, 50);
+  }
 
-  document.getElementById('pix-modal').classList.add('open');
+  const pm = document.getElementById('pix-modal'); if(pm) pm.classList.add('open');
 };
 
 window.doCopy = () => {
-  navigator.clipboard.writeText(document.getElementById('pix-code').textContent)
+  const pc = document.getElementById('pix-code');
+  if(!pc) return;
+  navigator.clipboard.writeText(pc.textContent)
     .then(() => window.toast('📋 Código PIX copiado com sucesso!'))
     .catch(() => window.toast('Selecione o código e copie manualmente'));
 };
 
 window.saveOrderToFirebase = async () => {
-  document.getElementById('pix-modal').classList.remove('open');
+  const pm = document.getElementById('pix-modal'); if(pm) pm.classList.remove('open');
   
   const orderNum = Math.floor(100000 + Math.random() * 900000);
   const pedidoHash = '#' + orderNum;
   
-  document.getElementById('order-num').textContent = pedidoHash;
+  const on = document.getElementById('order-num'); if(on) on.textContent = pedidoHash;
   window.currentOrderContext.hash = pedidoHash; 
 
-  document.getElementById('success').classList.add('open');
-  document.getElementById('overlay').classList.remove('open');
+  const suc = document.getElementById('success'); if(suc) suc.classList.add('open');
+  const ov = document.getElementById('overlay'); if(ov) ov.classList.remove('open');
   window.confetti();
 
   const userId = auth.currentUser ? auth.currentUser.uid : window.generateUUID();
 
   try {
     const itens = Object.keys(window.carrinho).map(k => {
-        const p = window.produtos.find(x => String(x.id) === String(k));
+        const p = (window.produtos||[]).find(x => String(x.id) === String(k));
         return { id: p.id, nome: p.nome, qtd: window.carrinho[k], preco: p.preco };
     });
     
@@ -799,7 +849,7 @@ window.sendWhatsApp = () => {
     
     texto += `*ITENS SOLICITADOS:*\n`;
     Object.keys(window.carrinho).forEach(k => {
-        const p = window.produtos.find(x => String(x.id) === String(k));
+        const p = (window.produtos||[]).find(x => String(x.id) === String(k));
         if(p) texto += `• ${window.carrinho[k]}x ${p.nome} (${p.embalagem || 'Unidade'}) : R$ ${window.fmt(p.preco * window.carrinho[k])}\n`;
     });
     
@@ -819,7 +869,7 @@ window.resetTudo = () => {
   window.currentOrderContext = {};
   window.syncCarrinho();
   
-  document.getElementById('success').classList.remove('open');
+  const suc = document.getElementById('success'); if(suc) suc.classList.remove('open');
   document.querySelectorAll('.form-input').forEach(el => {
     if(el.tagName === 'INPUT') el.value = '';
     el.classList.remove('error');
@@ -834,7 +884,7 @@ window.confetti = () => {
   for(let i=0;i<100;i++) setTimeout(() => {
     const e = document.createElement('div'); e.className = 'cf';
     e.style.cssText = `left:${Math.random()*100}vw;background:${COLS[Math.random()*COLS.length|0]};animation-duration:${1.4+Math.random()*2}s;animation-delay:${Math.random()*.6}s;width:${6+Math.random()*8}px;height:${10+Math.random()*8}px;transform:rotate(${Math.random()*360}deg);`;
-    document.body.appendChild(e); setTimeout(() => e.remove(), 4500);
+    document.body.appendChild(e); setTimeout(() => { if(e.parentNode) e.remove(); }, 4500);
   }, i*20);
 };
 </script>
