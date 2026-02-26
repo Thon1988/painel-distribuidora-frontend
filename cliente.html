@@ -370,7 +370,7 @@ async function initAuth() {
 }
 initAuth();
 
-// Variáveis Globais
+// Variáveis Globais Corrigidas
 window.configuracoes_loja = {
   nome: 'App Ovos Aline',
   emoji: '🥚',
@@ -382,13 +382,30 @@ window.configuracoes_loja = {
   whatsapp: ''
 };
 
-// Aqui o PIX lê em tempo real da base de dados e guarda globalmente
 window.pix_config = { copiaCola: '', nomeRecebedor: 'App Ovos Aline', rawKey: '', cidade: 'SAO PAULO' };
+
+// Catálogo de Emergência
+const DEFAULT_PRODUTOS = [
+    { id: 'def-1', nome: 'Ovos Brancos Pequenos', emoji: '🥚', tipo: 'Tamanho P', embalagem: 'Dúzia (12)', preco: 8.90, desc: 'Ovos brancos selecionados, tamanho pequeno.', badge: '', badgeClass: '', foto_url: '', ativo: true },
+    { id: 'def-2', nome: 'Ovos Brancos Médios', emoji: '🥚', tipo: 'Tamanho M', embalagem: 'Cartela (30)', preco: 21.90, desc: 'O favorito do dia a dia! Tamanho ideal para qualquer receita.', badge: '', badgeClass: '', foto_url: '', ativo: true },
+    { id: 'def-3', nome: 'Ovos Brancos Grandes', emoji: '🥚', tipo: 'Tamanho G', embalagem: 'Dúzia (12)', preco: 12.90, desc: 'Ovos maiores com gema mais volumosa.', badge: 'Popular', badgeClass: 'rose', foto_url: '', ativo: true },
+    { id: 'def-4', nome: 'Ovos Extra Grandes', emoji: '🥚', tipo: 'Tamanho XG', embalagem: 'Dúzia (12)', preco: 14.90, desc: 'Os maiores! Gema rica e intensa.', badge: 'Top Venda', badgeClass: 'rose', foto_url: '', ativo: true },
+    { id: 'def-5', nome: 'Ovos Caipira', emoji: '🐓', tipo: 'Caipira', embalagem: 'Meia Dúzia (6)', preco: 9.90, desc: 'Criação livre no campo. Gema laranjinha e sabor incomparável.', badge: 'Especial', badgeClass: 'amber', foto_url: '', ativo: true },
+    { id: 'def-6', nome: 'Ovos Orgânicos', emoji: '🌿', tipo: 'Orgânico', embalagem: 'Caixa com 120 ovos', preco: 95.90, desc: '100% orgânicos, sem antibióticos. Certificado. Ideal para revenda.', badge: 'Premium', badgeClass: 'green', foto_url: '', ativo: true }
+];
 
 window.produtos = [];
 window.carrinho = {};
 window.currentOrderContext = {}; 
 window.catalogoCarregado = false; 
+
+// Timeout de segurança
+setTimeout(() => {
+    if (!window.catalogoCarregado) {
+        window.catalogoCarregado = true;
+        window.renderProdutos();
+    }
+}, 2500);
 
 window.generateUUID = () => {
     if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
@@ -409,6 +426,10 @@ onAuthStateChanged(auth, (user) => {
             window.catalogoCarregado = true;
             window.renderProdutos();
             window.syncCarrinho(); 
+        }, error => {
+            console.error("Erro ao ler catálogo:", error);
+            window.catalogoCarregado = true;
+            window.renderProdutos();
         });
 
         // Escuta Config da Loja
@@ -422,7 +443,7 @@ onAuthStateChanged(auth, (user) => {
         // Escuta PIX
         onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'pix_config'), snap => {
             if (snap.exists()) {
-                window.pix_config = snap.data();
+                window.pix_config = { ...window.pix_config, ...snap.data() };
             }
         });
     }
@@ -460,8 +481,8 @@ window.renderProdutos = () => {
   let ativos = window.produtos.filter(p => p.ativo !== false); 
   
   if (!ativos.length) { 
-      grid.innerHTML = '<div class="no-products"><span>🥚</span>Nenhum produto disponível no momento.</div>';
-      return;
+      ativos = DEFAULT_PRODUTOS;
+      window.produtos = DEFAULT_PRODUTOS; 
   }
   
   grid.innerHTML = ativos.map(p => {
@@ -504,7 +525,6 @@ window.addCart = (id) => {
   window.toast('✅ Produto adicionado ao carrinho!');
 };
 
-// Controlos de Quantidade Diretos no Carrinho
 window.changeCartQty = (id, delta) => {
     if (!window.carrinho[id]) return;
     window.carrinho[id] += delta;
@@ -700,8 +720,6 @@ window.openPix = () => {
   let payloadCopiaCola = "";
   let chavePix = window.pix_config.rawKey || window.pix_config.key || '';
   
-  // A chave é usada EXATAMENTE COMO VEM DO ADMIN (sem forçar o +55).
-  // Apenas lemos a variável chavePix diretamente.
   if (chavePix) {
       const txid = ('OVOS' + Date.now().toString().slice(-7)).substring(0,25);
       payloadCopiaCola = window.pixPayload(chavePix, total, window.pix_config.nomeRecebedor, window.pix_config.cidade, txid);
