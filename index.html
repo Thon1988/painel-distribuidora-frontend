@@ -8,7 +8,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   
   <script>
-    // Stub preventivo para evitar erros de clique antes do carregamento completo do módulo
     window.fazerLogin = function() {
         alert("A ligar ao servidor. Por favor, aguarde um instante...");
     };
@@ -18,16 +17,15 @@
     *, *::before, *::after { box-sizing: border-box; margin:0; padding:0; }
     
     :root {
-      /* Identidade Premium Vermelha (Rose/Slate) perfeitamente integrada no seu layout */
-      --primary: #e11d48; /* Rose 600 */
-      --dark:    #be123c; /* Rose 700 */
-      --brown:   #0f172a; /* Slate 900 */
-      --cream:   #f8fafc; /* Slate 50 */
-      --muted:   #64748b; /* Slate 500 */
+      --primary: #e11d48; 
+      --dark:    #be123c; 
+      --brown:   #0f172a; 
+      --cream:   #f8fafc; 
+      --muted:   #64748b; 
       --white:   #ffffff;
-      --green:   #10b981; /* Emerald 500 */
-      --red:     #e11d48; /* Rose 600 */
-      --border:  #e2e8f0; /* Slate 200 */
+      --green:   #10b981; 
+      --red:     #e11d48; 
+      --border:  #e2e8f0; 
       --shadow:  0 4px 20px rgba(15, 23, 42, .08);
     }
     
@@ -120,6 +118,11 @@
     .preview-bar a { color:#fff; font-weight:800; text-decoration:none; padding:6px 16px; background:rgba(255,255,255,.2); border-radius:50px; transition:background .2s; }
     .preview-bar a:hover { background:rgba(255,255,255,.35); }
     
+    .pix-types { display:flex; flex-wrap:wrap; gap:8px; }
+    .pix-type-btn { padding:8px 16px; border-radius:50px; border:2px solid var(--border); background:var(--white); color:var(--muted); font-size:.82rem; font-weight:800; cursor:pointer; transition:all .2s; }
+    .pix-type-btn:hover { border-color:var(--primary); color:var(--primary); }
+    .pix-type-btn.active { border-color:var(--primary); background:var(--primary); color:#fff; box-shadow:0 4px 10px rgba(225,29,72,.2); }
+
     /* Login Screen Setup */
     #login-view { position:fixed; inset:0; background:var(--brown); z-index:2000; display:flex; flex-direction:column; align-items:center; justify-content:center; }
     #app-view { display:none; flex-direction:column; min-height:100vh; }
@@ -198,7 +201,6 @@
       <input type="hidden" id="mp-id" />
       
       <div class="form-grid">
-        <!-- Secção da Imagem: Link ou Upload -->
         <div class="field" style="grid-column: span 2;">
             <label>Imagem do Produto (Colar URL ou Fazer Upload)</label>
             <div style="display: flex; gap: 12px; align-items: center; margin-top: 4px;">
@@ -217,7 +219,7 @@
         <div class="field"><label>Emoji (Opcional)</label><input id="mp-emoji" placeholder="🥚" maxlength="4" /></div>
         
         <div class="field">
-            <label>Formato / Embalagem (Edite ou Escolha)</label>
+            <label>Formato / Embalagem</label>
             <input type="text" id="mp-embalagem" list="mp-embalagem-list" placeholder="Ex: Cartela (20)" style="cursor: text;">
             <datalist id="mp-embalagem-list">
                 <option value="Unidade"></option>
@@ -255,13 +257,11 @@
 
 <div class="toast" id="toast"></div>
 
-<!-- LÓGICA JAVASCRIPT & FIREBASE -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getFirestore, collection, onSnapshot, doc, setDoc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getAuth, signInWithEmailAndPassword, signInWithCustomToken, signInAnonymously, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
-// --- CONFIGURAÇÃO FIREBASE ---
 const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
     apiKey: "AIzaSyD3Otz9-zdZH-E5Feg9IOGWPzVycoe8gro",
     authDomain: "distribuidora-de-ovos-aline.firebaseapp.com",
@@ -276,19 +276,17 @@ const db = getFirestore(appFB);
 const auth = getAuth(appFB);
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'app-egg-pro-transacional';
 
-// Catálogo Padrão Atualizado com Embalagem
 const DEFAULT_PRODUTOS = [
     { nome: 'Ovos Brancos Pequenos', emoji: '🥚', tipo: 'Tamanho P', embalagem: 'Dúzia (12)', preco: 8.90, desc: 'Ovos brancos selecionados, tamanho pequeno.', badge: '', badgeClass: '', foto_url: '', ativo: true },
     { nome: 'Ovos Brancos Médios', emoji: '🥚', tipo: 'Tamanho M', embalagem: 'Cartela (30)', preco: 21.90, desc: 'O favorito do dia a dia! Tamanho ideal para qualquer receita.', badge: '', badgeClass: '', foto_url: '', ativo: true },
     { nome: 'Ovos Brancos Grandes', emoji: '🥚', tipo: 'Tamanho G', embalagem: 'Dúzia (12)', preco: 12.90, desc: 'Ovos maiores com gema mais volumosa.', badge: 'Popular', badgeClass: 'rose', foto_url: '', ativo: true },
     { nome: 'Ovos Extra Grandes', emoji: '🥚', tipo: 'Tamanho XG', embalagem: 'Dúzia (12)', preco: 14.90, desc: 'Os maiores! Gema rica e intensa.', badge: 'Top Venda', badgeClass: 'rose', foto_url: '', ativo: true },
     { nome: 'Ovos Caipira', emoji: '🐓', tipo: 'Caipira', embalagem: 'Meia Dúzia (6)', preco: 9.90, desc: 'Criação livre no campo. Gema laranjinha e sabor incomparável.', badge: 'Especial', badgeClass: 'amber', foto_url: '', ativo: true },
-    { nome: 'Ovos Orgânicos', emoji: '🌿', tipo: 'Orgânico', embalagem: 'Caixa com 120 ovos', preco: 95.90, desc: '100% orgânicos, sem antibióticos. Certificado. Ideal para revenda.', badge: 'Premium', badgeClass: 'green', foto_url: '', ativo: true }
+    { nome: 'Ovos Orgânicos', emoji: '🌿', tipo: 'Orgânico', embalagem: 'Caixa com 120 ovos', preco: 95.90, desc: '100% orgânicos, sem antibióticos. Certificado.', badge: 'Premium', badgeClass: 'green', foto_url: '', ativo: true }
 ];
 
 window.STATUS_OPTIONS = ["CRIADO", "AGUARDANDO PIX", "EM SEPARAÇÃO", "SAIU PARA ENTREGA", "PRONTO PARA RETIRADA", "FINALIZADO", "CANCELADO"];
 
-// Configuração base de segurança
 window.config = {
     nome:'App Ovos Aline', slogan:'Qualidade Premium', emoji:'🥚',
     heroTitle:'Ovos Fresquinhos 🥚', heroDesc:'Do campo direto pra sua mesa.',
@@ -304,7 +302,6 @@ window.firebaseUnsubs = [];
 window.isListening = false;
 window.state = { view: 'dashboard' };
 
-// Funções Globais (Ligadas ao UI Vanilla e Firebase)
 window.clearAdminListeners = () => {
     window.firebaseUnsubs.forEach(unsub => {
         if (typeof unsub === 'function') unsub();
@@ -777,7 +774,6 @@ window.renderProdList = () => {
     }
     
     list.innerHTML = window.produtos.map(p => {
-        // Se existir uma foto_url definida, mostra a foto, senão mostra o emoji
         const imageElement = (p.foto_url && p.foto_url.length > 5) 
             ? `<img src="${p.foto_url}" style="width:100%; height:100%; object-fit:cover; border-radius:12px;" />` 
             : `${p.emoji || '🥚'}`;
@@ -945,6 +941,21 @@ window.seedDefaultProducts = async () => {
     } catch(e) {
         window.toast("Erro ao carregar catálogo.");
     }
+};
+
+window.seedDefaultPix = async () => {
+    try {
+        const defaultPix = {
+            type: 'Celular',
+            key: '(11) 99999-9999',
+            rawKey: '11999999999',
+            nomeRecebedor: window.config.nome || 'App Ovos Aline Teste',
+            cidade: 'SAO PAULO',
+            copiaCola: window.pixPayload('11999999999', 1.00, window.config.nome || 'App Ovos Aline Teste', 'SAO PAULO', 'TESTE001'),
+            updatedAt: serverTimestamp()
+        };
+        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'pix_config'), defaultPix, { merge: true });
+    } catch(e) { console.error("Erro ao gerar PIX padrão:", e); }
 };
 
 window.loadLojaForm = () => {
@@ -1226,6 +1237,8 @@ window.initListeners = () => {
                 window.loadPixForm();
                 window.renderPixPreview();
             }
+        } else {
+            window.seedDefaultPix();
         }
     });
 
@@ -1248,8 +1261,12 @@ window.boot = async () => {
             document.getElementById('login-view').style.display = 'none';
             document.getElementById('app-view').style.display = 'flex';
             
+            const mainEl = document.getElementById('main-content');
+            if(mainEl && !mainEl.innerHTML.trim()) {
+                window.goTo('dashboard');
+            }
+            
             window.initListeners();
-            window.goTo('dashboard');
         } else {
             window.clearAdminListeners();
             document.getElementById('login-view').style.display = 'flex';
