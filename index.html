@@ -120,11 +120,6 @@
     .preview-bar a { color:#fff; font-weight:800; text-decoration:none; padding:6px 16px; background:rgba(255,255,255,.2); border-radius:50px; transition:background .2s; }
     .preview-bar a:hover { background:rgba(255,255,255,.35); }
     
-    .pix-types { display:flex; flex-wrap:wrap; gap:8px; }
-    .pix-type-btn { padding:8px 16px; border-radius:50px; border:2px solid var(--border); background:var(--white); color:var(--muted); font-size:.82rem; font-weight:800; cursor:pointer; transition:all .2s; }
-    .pix-type-btn:hover { border-color:var(--primary); color:var(--primary); }
-    .pix-type-btn.active { border-color:var(--primary); background:var(--primary); color:#fff; box-shadow:0 4px 10px rgba(225,29,72,.2); }
-
     /* Login Screen Setup */
     #login-view { position:fixed; inset:0; background:var(--brown); z-index:2000; display:flex; flex-direction:column; align-items:center; justify-content:center; }
     #app-view { display:none; flex-direction:column; min-height:100vh; }
@@ -160,7 +155,7 @@
     </div>
 </div>
 
-<!-- ESTRUTURA PRINCIPAL DO APP (ESCONDIDA ATÉ LOGIN) -->
+<!-- ESTRUTURA PRINCIPAL DO APP -->
 <div id="app-view">
     <header>
       <div class="h-logo"><span>🥚</span> App Ovos Aline</div>
@@ -176,7 +171,7 @@
     <div class="layout">
       <nav class="nav">
         <div class="nav-title">Menu de Gestão</div>
-        <div class="nav-item active" onclick="window.goTo('dashboard')"><span class="ni">📊</span> Visão Geral</div>
+        <div class="nav-item active" onclick="window.goTo('dashboard')"><span class="ni">📊</span> Administrativo</div>
         <div class="nav-item" onclick="window.goTo('pedidos')"><span class="ni">📦</span> Encomendas</div>
         <div class="nav-item" onclick="window.goTo('produtos')"><span class="ni">🥚</span> Catálogo</div>
         <div class="nav-item" onclick="window.goTo('loja')"><span class="ni">🏪</span> Dados da Loja</div>
@@ -192,7 +187,7 @@
     </div>
 </div>
 
-<!-- MODAL DE PRODUTO (COM UPLOAD DE FOTO E EMBALAGEM) -->
+<!-- MODAL DE PRODUTO (COM UPLOAD DE FOTO E EMBALAGEM EDITÁVEL) -->
 <div class="modal-bg" id="prod-modal">
   <div class="modal-box">
     <div class="modal-head">
@@ -222,14 +217,15 @@
         <div class="field"><label>Emoji (Opcional)</label><input id="mp-emoji" placeholder="🥚" maxlength="4" /></div>
         
         <div class="field">
-            <label>Formato / Embalagem</label>
-            <select id="mp-embalagem" style="cursor: pointer;">
-                <option value="Unidade">Unidade</option>
-                <option value="Meia Dúzia (6)">Meia Dúzia (6)</option>
-                <option value="Dúzia (12)" selected>Dúzia (12)</option>
-                <option value="Cartela (30)">Cartela (30)</option>
-                <option value="Caixa com 120 ovos">Caixa com 120 ovos</option>
-            </select>
+            <label>Formato / Embalagem (Edite ou Escolha)</label>
+            <input type="text" id="mp-embalagem" list="mp-embalagem-list" placeholder="Ex: Cartela (20)" style="cursor: text;">
+            <datalist id="mp-embalagem-list">
+                <option value="Unidade"></option>
+                <option value="Meia Dúzia (6)"></option>
+                <option value="Dúzia (12)"></option>
+                <option value="Cartela (30)"></option>
+                <option value="Caixa com 120 ovos"></option>
+            </datalist>
         </div>
         
         <div class="field"><label>Preço (R$)</label><input id="mp-preco" type="number" min="0" step="0.01" placeholder="12.90" /></div>
@@ -280,7 +276,7 @@ const db = getFirestore(appFB);
 const auth = getAuth(appFB);
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'app-egg-pro-transacional';
 
-// Catálogo Padrão
+// Catálogo Padrão Atualizado com Embalagem
 const DEFAULT_PRODUTOS = [
     { nome: 'Ovos Brancos Pequenos', emoji: '🥚', tipo: 'Tamanho P', embalagem: 'Dúzia (12)', preco: 8.90, desc: 'Ovos brancos selecionados, tamanho pequeno.', badge: '', badgeClass: '', foto_url: '', ativo: true },
     { nome: 'Ovos Brancos Médios', emoji: '🥚', tipo: 'Tamanho M', embalagem: 'Cartela (30)', preco: 21.90, desc: 'O favorito do dia a dia! Tamanho ideal para qualquer receita.', badge: '', badgeClass: '', foto_url: '', ativo: true },
@@ -296,7 +292,7 @@ window.STATUS_OPTIONS = ["CRIADO", "AGUARDANDO PIX", "EM SEPARAÇÃO", "SAIU PAR
 window.config = {
     nome:'App Ovos Aline', slogan:'Qualidade Premium', emoji:'🥚',
     heroTitle:'Ovos Fresquinhos 🥚', heroDesc:'Do campo direto pra sua mesa.',
-    pixChave:'', pixTipo:'Telefone', pixNome:'App Ovos Aline', pixCidade:'SAO PAULO',
+    pixChave:'', pixTipo:'Celular', pixNome:'App Ovos Aline', pixCidade:'SAO PAULO',
     corPrimaria:'#e11d48', corSecundaria:'#be123c',
     taxaDebito: 0, taxaCredito: 0, whatsapp: ''
 };
@@ -345,7 +341,21 @@ window.fmt = n => Number(n).toFixed(2).replace('.',',');
 
 window.goTo = (sec) => {
     document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-    event.currentTarget.classList.add('active');
+    
+    let actived = false;
+    if (window.event && window.event.currentTarget && window.event.currentTarget.classList && window.event.type === 'click') {
+        window.event.currentTarget.classList.add('active');
+        actived = true;
+    }
+    
+    if (!actived) {
+        document.querySelectorAll('.nav-item').forEach(el => {
+            if(el.getAttribute('onclick') && el.getAttribute('onclick').includes(`'${sec}'`)) {
+                el.classList.add('active');
+            }
+        });
+    }
+    
     window.state.view = sec;
     
     const mainEl = document.getElementById('main-content');
@@ -378,7 +388,7 @@ window.buildActiveViewBase = () => {
         case 'dashboard': 
             return `
             <div class="space-y-10 fade-in">
-                <h2 class="text-4xl font-[950] text-slate-900 tracking-tighter uppercase italic mb-2">Visão Geral</h2>
+                <h2 class="text-4xl font-[950] text-slate-900 tracking-tighter uppercase italic mb-2">Administrativo</h2>
                 <div id="dash-stats-grid" class="grid grid-cols-1 md:grid-cols-3 gap-6"></div>
                 <div id="dash-payment-breakdown"></div>
                 <div class="bg-white rounded-[40px] p-8 border border-slate-200 shadow-sm mt-6">
@@ -417,7 +427,7 @@ window.buildActiveViewBase = () => {
             return `
             <div class="space-y-10 fade-in">
                 <div class="mb-6">
-                    <h2 class="text-4xl font-[950] text-slate-900 tracking-tighter uppercase italic mb-1">Caixa Central & PIX</h2>
+                    <h2 class="text-4xl font-[950] text-slate-900 tracking-tighter uppercase italic mb-1">Configurar PIX</h2>
                     <p class="text-slate-500 font-bold text-sm">Configure os dados de recebimento PIX que vão aparecer no Checkout.</p>
                 </div>
                 
@@ -450,7 +460,7 @@ window.buildActiveViewBase = () => {
                                     <input id="pixCidade" value="${cfg.pixCidade || 'SAO PAULO'}" class="input-egg font-bold text-slate-700" maxlength="15" required>
                                 </div>
                                 <div class="md:col-span-2 pt-2">
-                                    <button type="submit" class="w-full btn btn-primary shadow-xl transition-all" style="padding:16px;">Sincronizar Chave PIX</button>
+                                    <button type="submit" class="w-full btn btn-primary shadow-xl transition-all" style="padding:16px; font-size:1.1rem;">💾 Salvar Configurações do PIX</button>
                                 </div>
                             </form>
                         </div>
@@ -910,7 +920,7 @@ window.saveProd = async () => {
         nome, 
         emoji: document.getElementById('mp-emoji').value || '🥚',
         tipo: document.getElementById('mp-tipo').value, 
-        embalagem: document.getElementById('mp-embalagem').value,
+        embalagem: document.getElementById('mp-embalagem').value.trim() || 'Unidade',
         preco,
         desc: document.getElementById('mp-desc').value,
         badge: document.getElementById('mp-badge').value,
@@ -938,30 +948,31 @@ window.seedDefaultProducts = async () => {
 };
 
 window.loadLojaForm = () => {
-    document.getElementById('cfg-nome').value      = window.config.nome      || '';
-    document.getElementById('cfg-emoji').value     = window.config.emoji     || '🥚';
-    document.getElementById('cfg-slogan').value    = window.config.slogan    || '';
-    document.getElementById('cfg-heroTitle').value = window.config.heroTitle || '';
-    document.getElementById('cfg-heroDesc').value  = window.config.heroDesc  || '';
+    if(document.getElementById('cfg-nome')) document.getElementById('cfg-nome').value      = window.config.nome      || '';
+    if(document.getElementById('cfg-emoji')) document.getElementById('cfg-emoji').value     = window.config.emoji     || '🥚';
+    if(document.getElementById('cfg-slogan')) document.getElementById('cfg-slogan').value    = window.config.slogan    || '';
+    if(document.getElementById('cfg-heroTitle')) document.getElementById('cfg-heroTitle').value = window.config.heroTitle || '';
+    if(document.getElementById('cfg-heroDesc')) document.getElementById('cfg-heroDesc').value  = window.config.heroDesc  || '';
     
     const whatsappEl = document.getElementById('cfg-whatsapp');
     if(whatsappEl) whatsappEl.value = window.config.whatsapp || '';
 };
 
 window.loadPixForm = () => {
-    document.getElementById('cfg-pixChave').value  = window.config.pixChave  || '';
-    document.getElementById('cfg-pixNome').value   = window.config.pixNome   || '';
-    document.getElementById('cfg-pixCidade').value = window.config.pixCidade || '';
-    document.querySelectorAll('.pix-type-btn').forEach(b => {
-        b.classList.toggle('active', b.id === 'pt-' + (window.config.pixTipo||'Telefone'));
-    });
+    if(document.getElementById('pixKey')) document.getElementById('pixKey').value = window.config.pixChave || '';
+    if(document.getElementById('pixNome')) document.getElementById('pixNome').value = window.config.pixNome || '';
+    if(document.getElementById('pixCidade')) document.getElementById('pixCidade').value = window.config.pixCidade || '';
+    if(document.getElementById('pixType')) document.getElementById('pixType').value = window.config.pixTipo || 'Celular';
 };
 
 window.setPixType = (tipo, placeholder) => {
-    window.config.pixTipo = tipo;
-    document.querySelectorAll('.pix-type-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById('pt-' + tipo).classList.add('active');
-    document.getElementById('cfg-pixChave').placeholder = placeholder;
+    const el = document.getElementById('pixType');
+    if(el) {
+        el.value = tipo;
+        window.config.pixTipo = tipo;
+    }
+    const pk = document.getElementById('pixKey');
+    if(pk) pk.placeholder = placeholder;
 };
 
 window.removeAccents = (s) => (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^\x00-\x7F]/g,'').toUpperCase();
@@ -981,9 +992,14 @@ window.crc16 = (s) => {
 };
 
 window.renderPixPreview = () => {
-    const chave  = document.getElementById('cfg-pixChave').value  || window.config.pixChave  || '11999999999';
-    const nome   = document.getElementById('cfg-pixNome').value   || window.config.pixNome   || 'LOJA';
-    const cidade = document.getElementById('cfg-pixCidade').value || window.config.pixCidade || 'BRASIL';
+    const elKey = document.getElementById('pixKey');
+    const elNome = document.getElementById('pixNome');
+    const elCidade = document.getElementById('pixCidade');
+    
+    const chave  = (elKey ? elKey.value : window.config.pixChave) || '11999999999';
+    const nome   = (elNome ? elNome.value : window.config.pixNome) || 'LOJA';
+    const cidade = (elCidade ? elCidade.value : window.config.pixCidade) || 'BRASIL';
+    
     const p      = window.pixPayload(chave, 1.00, nome, cidade, 'TESTE001');
     const div    = document.getElementById('pix-preview-qr');
     if(div) {
@@ -1006,8 +1022,8 @@ window.loadAparenciaForm = () => {
 };
 
 window.updateColorPreview = () => {
-    document.getElementById('cfg-corPrimariaHex').value   = document.getElementById('cfg-corPrimaria').value;
-    document.getElementById('cfg-corSecundariaHex').value = document.getElementById('cfg-corSecundaria').value;
+    if(document.getElementById('cfg-corPrimariaHex') && document.getElementById('cfg-corPrimaria')) document.getElementById('cfg-corPrimariaHex').value   = document.getElementById('cfg-corPrimaria').value;
+    if(document.getElementById('cfg-corSecundariaHex') && document.getElementById('cfg-corSecundaria')) document.getElementById('cfg-corSecundariaHex').value = document.getElementById('cfg-corSecundaria').value;
 };
 
 window.syncColorFromText = (which) => {
@@ -1016,41 +1032,78 @@ window.syncColorFromText = (which) => {
 };
 
 window.setTheme = (primary, secondary) => {
-    document.getElementById('cfg-corPrimaria').value = primary;
-    document.getElementById('cfg-corSecundaria').value = secondary;
+    if(document.getElementById('cfg-corPrimaria')) document.getElementById('cfg-corPrimaria').value = primary;
+    if(document.getElementById('cfg-corSecundaria')) document.getElementById('cfg-corSecundaria').value = secondary;
     window.updateColorPreview();
     window.toast('🎨 Clique em Guardar Aparência para fixar');
 };
 
+window.handleSavePixConfig = async (e) => {
+    e.preventDefault();
+    const typeEl = document.getElementById('pixType');
+    const keyEl = document.getElementById('pixKey');
+    if(!typeEl || !keyEl) return;
+
+    const type = typeEl.value;
+    const rawKey = keyEl.value.trim();
+    const cleanKey = rawKey.replace(/\D/g, "");
+    
+    let chaveFinal = rawKey; let chaveVisual = rawKey;
+
+    if (type === "CPF") {
+        if (cleanKey.length !== 11) return window.toast("⚠️ CPF INVÁLIDO");
+        chaveFinal = cleanKey; chaveVisual = cleanKey.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+    } else if (type === "CNPJ") {
+        if (cleanKey.length !== 14) return window.toast("⚠️ CNPJ INVÁLIDO");
+        chaveFinal = cleanKey; chaveVisual = cleanKey.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
+    } else if (type === "Celular") {
+        if (cleanKey.length < 10) return window.toast("⚠️ NÚMERO INVÁLIDO");
+        chaveFinal = cleanKey; chaveVisual = cleanKey.replace(/(\d{2})(\d{5}|\d{4})(\d{4})/, "($1) $2-$3");
+    } else if (type === "E-mail") {
+        if (!rawKey.includes("@")) return window.toast("⚠️ E-MAIL INVÁLIDO");
+        chaveFinal = rawKey.toLowerCase(); chaveVisual = chaveFinal;
+    } else if (type === "Chave Aleatória") {
+        chaveFinal = rawKey; chaveVisual = rawKey;
+    }
+
+    const nomeLoja = document.getElementById('pixNome') ? document.getElementById('pixNome').value.trim() : 'App Ovos Aline';
+    const cidadeLoja = document.getElementById('pixCidade') ? document.getElementById('pixCidade').value.trim() : 'SAO PAULO';
+    
+    const copiaCola = window.pixPayload(chaveFinal, 1.00, nomeLoja, cidadeLoja, 'TESTE001');
+
+    try {
+        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'pix_config'), {
+            type, key: chaveVisual, rawKey: chaveFinal, nomeRecebedor: nomeLoja, cidade: cidadeLoja, copiaCola, updatedAt: serverTimestamp()
+        }, { merge: true });
+        window.toast("✅ PIX Salvo e Armazenado com Sucesso!");
+    } catch (err) { window.toast("Erro ao guardar PIX."); }
+};
+
+window.handleSaveStoreConfig = async (e) => {
+    e.preventDefault();
+    try {
+        if(document.getElementById('cfg-nome')) window.config.nome = document.getElementById('cfg-nome').value;
+        if(document.getElementById('cfg-slogan')) window.config.slogan = document.getElementById('cfg-slogan').value;
+        if(document.getElementById('cfg-emoji')) window.config.emoji = document.getElementById('cfg-emoji').value;
+        if(document.getElementById('cfg-heroTitle')) window.config.heroTitle = document.getElementById('cfg-heroTitle').value;
+        if(document.getElementById('cfg-heroDesc')) window.config.heroDesc = document.getElementById('cfg-heroDesc').value;
+        
+        const wpp = document.getElementById('cfg-whatsapp');
+        if (wpp) window.config.whatsapp = wpp.value.replace(/\D/g, '');
+
+        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'store_config'), {
+            nome: window.config.nome, slogan: window.config.slogan, emoji: window.config.emoji,
+            heroTitle: window.config.heroTitle, heroDesc: window.config.heroDesc,
+            whatsapp: window.config.whatsapp,
+            updatedAt: serverTimestamp()
+        }, {merge:true});
+        window.toast('✅ Atualizado na Base de Dados!');
+    } catch(e) { window.toast('Erro ao sincronizar loja.'); }
+};
+
 window.saveConfig = async () => {
     try {
-        if (document.getElementById('cfg-nome') && document.getElementById('cfg-nome').value !== "") {
-            window.config.nome      = document.getElementById('cfg-nome').value;
-            window.config.slogan    = document.getElementById('cfg-slogan').value;
-            window.config.emoji     = document.getElementById('cfg-emoji').value;
-            window.config.heroTitle = document.getElementById('cfg-heroTitle').value;
-            window.config.heroDesc  = document.getElementById('cfg-heroDesc').value;
-            
-            const wpp = document.getElementById('cfg-whatsapp');
-            if (wpp) window.config.whatsapp = wpp.value.replace(/\D/g, '');
-
-            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'store_config'), {
-                nome: window.config.nome, slogan: window.config.slogan, emoji: window.config.emoji,
-                heroTitle: window.config.heroTitle, heroDesc: window.config.heroDesc,
-                whatsapp: window.config.whatsapp,
-                updatedAt: serverTimestamp()
-            }, {merge:true});
-            window.toast('✅ Atualizado na Base de Dados!');
-        } else if (document.getElementById('cfg-pixChave') && document.getElementById('cfg-pixChave').value !== "") {
-            window.config.pixChave  = document.getElementById('cfg-pixChave').value;
-            window.config.pixNome   = document.getElementById('cfg-pixNome').value;
-            window.config.pixCidade = document.getElementById('cfg-pixCidade').value;
-            const copiaCola = window.pixPayload(window.config.pixChave, 1.00, window.config.pixNome, window.config.pixCidade, 'TESTE001');
-            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'pix_config'), {
-                type: window.config.pixTipo, rawKey: window.config.pixChave, nomeRecebedor: window.config.pixNome, cidade: window.config.pixCidade, copiaCola, updatedAt: serverTimestamp()
-            }, {merge:true});
-            window.toast('✅ Atualizado na Base de Dados!');
-        } else if (document.getElementById('cfg-corPrimaria') && document.getElementById('cfg-corPrimaria').value !== "") {
+        if (document.getElementById('cfg-corPrimaria') && document.getElementById('cfg-corPrimaria').value !== "") {
             window.config.corPrimaria   = document.getElementById('cfg-corPrimaria').value;
             window.config.corSecundaria = document.getElementById('cfg-corSecundaria').value;
             document.documentElement.style.setProperty('--primary', window.config.corPrimaria);
@@ -1058,7 +1111,7 @@ window.saveConfig = async () => {
             await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'store_config'), {
                 corPrimaria: window.config.corPrimaria, corSecundaria: window.config.corSecundaria, updatedAt: serverTimestamp()
             }, {merge:true});
-            window.toast('✅ Atualizado na Base de Dados!');
+            window.toast('✅ Cores Atualizadas e Guardadas!');
         }
     } catch(e) { window.toast('Erro ao sincronizar config.'); }
 };
@@ -1195,12 +1248,8 @@ window.boot = async () => {
             document.getElementById('login-view').style.display = 'none';
             document.getElementById('app-view').style.display = 'flex';
             
-            const mainEl = document.getElementById('main-content');
-            if(mainEl && !mainEl.innerHTML.trim()) {
-                window.goTo('dashboard');
-            }
-            
             window.initListeners();
+            window.goTo('dashboard');
         } else {
             window.clearAdminListeners();
             document.getElementById('login-view').style.display = 'flex';
