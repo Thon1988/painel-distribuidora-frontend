@@ -10,14 +10,13 @@
     
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-      /* Identidade App Ovos Aline (Rose & Slate) */
-      --primary: #e11d48; /* Rose 600 */
-      --dark:    #be123c; /* Rose 700 */
-      --cream:   #f8fafc; /* Slate 50 */
-      --brown:   #0f172a; /* Slate 900 */
-      --muted:   #64748b; /* Slate 500 */
+      --primary: #e11d48;
+      --dark:    #be123c;
+      --cream:   #f8fafc;
+      --brown:   #0f172a;
+      --muted:   #64748b;
       --white:   #ffffff;
-      --green:   #10b981; /* Emerald 500 */
+      --green:   #10b981;
       --shadow:  0 10px 30px rgba(15, 23, 42, 0.08);
     }
     body { font-family:'Inter', system-ui, sans-serif; background:var(--cream); color:var(--brown); min-height:100vh; }
@@ -82,7 +81,7 @@
     .add-btn { flex:1; background:linear-gradient(135deg,var(--primary),var(--dark)); color:#fff; border:none; border-radius:12px; padding:10px 0; font-size:.9rem; font-weight:800; cursor:pointer; transition:opacity .2s,transform .15s; box-shadow: 0 4px 12px rgba(225,29,72,0.25); text-transform: uppercase; }
     .add-btn:hover { opacity:.9; transform:scale(1.02); }
 
-    /* SIDEBAR */
+    /* SIDEBAR / CARRINHO */
     .overlay { position:fixed; inset:0; background:rgba(15,23,42,.6); backdrop-filter: blur(2px); z-index:200; opacity:0; pointer-events:none; transition:opacity .3s; }
     .overlay.open { opacity:1; pointer-events:all; }
     .sidebar { position:fixed; top:0; right:-450px; bottom:0; width:min(450px,100vw); background:var(--cream); z-index:201; display:flex; flex-direction:column; transition:right .35s cubic-bezier(.4,0,.2,1); box-shadow:-8px 0 40px rgba(0,0,0,.15); }
@@ -94,14 +93,18 @@
     .cart-items { flex:1; overflow-y:auto; padding:18px; display:flex; flex-direction:column; gap:12px; }
     .empty { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--muted); gap:12px; font-size:1rem; font-weight: 600; }
     .empty span { font-size:4rem; opacity: 0.5; }
-    .ci { background:var(--white); border-radius:16px; padding:14px; display:flex; gap:12px; align-items:center; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid #f1f5f9; }
-    .ci-emoji { font-size:2.2rem; width:64px; height:64px; background: #f8fafc; border-radius: 12px; display:flex; align-items:center; justify-content:center; overflow:hidden;}
-    .ci-info { flex:1; }
-    .ci-info h4 { font-size:.95rem; font-weight:800; color: var(--brown); }
-    .ci-info p  { font-size:.8rem; color:var(--muted); font-weight: 600; margin-top: 2px; }
-    .ci-price { font-size:1rem; font-weight:900; color:var(--dark); }
-    .ci-rm { background:none; border:none; color:#cbd5e1; font-size:1.2rem; cursor:pointer; padding:6px; transition:color .2s; }
-    .ci-rm:hover { color:var(--primary); }
+    .ci { background:var(--white); border-radius:16px; padding:16px; display:flex; gap:16px; align-items:center; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid #f1f5f9; }
+    .ci-emoji { font-size:2.4rem; width:64px; height:64px; background: #f8fafc; border-radius: 12px; display:flex; align-items:center; justify-content:center; overflow:hidden;}
+    .ci-info { flex:1; display:flex; flex-direction:column; gap:4px; }
+    .ci-info h4 { font-size:1rem; font-weight:900; color: var(--brown); margin:0; }
+    .ci-price { font-size:1.1rem; font-weight:900; color:var(--dark); }
+    .ci-rm { background:none; border:none; color:#ef4444; font-size:.75rem; font-weight:800; cursor:pointer; padding:6px 0; transition:color .2s; display:flex; align-items:center; justify-content:flex-end; gap:4px; text-transform:uppercase; letter-spacing:0.5px;}
+    .ci-rm:hover { color:var(--dark); }
+    .qty-controls { display:flex; align-items:center; gap:10px; margin-top:6px; }
+    .qty-controls button { width:28px; height:28px; border-radius:8px; border:2px solid #e2e8f0; background:transparent; color:var(--brown); font-size:1.1rem; font-weight:900; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .2s; }
+    .qty-controls button:hover { background:#fff1f2; border-color:var(--primary); color:var(--primary); }
+    .qty-controls span { font-size:.95rem; font-weight:800; min-width:20px; text-align:center; }
+
     .sb-footer { padding:22px 24px; background: var(--white); border-top:1px solid #e2e8f0; box-shadow: 0 -4px 20px rgba(0,0,0,0.03); }
     .total-row { display:flex; justify-content:space-between; font-size:1.2rem; font-weight:900; margin-bottom:18px; color: var(--brown); }
     
@@ -121,7 +124,6 @@
     .checkout-top p  { font-size:.95rem; opacity:.9; margin-top:4px; font-weight: 500; }
     .modal-body { padding:28px; display:flex; flex-direction:column; align-items:center; gap:20px; }
     
-    /* Formulário e Abas */
     .delivery-toggle { display: flex; background: #f1f5f9; border-radius: 16px; padding: 6px; width: 100%; gap: 6px; }
     .dt-btn { flex: 1; padding: 14px; border: none; background: transparent; border-radius: 12px; font-size: .95rem; font-weight: 800; color: var(--muted); cursor: pointer; transition: all .2s; }
     .dt-btn.active { background: var(--white); color: var(--primary); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
@@ -178,7 +180,6 @@
     .no-products { text-align:center; padding:80px 20px; color:var(--muted); font-weight: 600; }
     .no-products span { font-size:4rem; display:block; margin-bottom:16px; opacity: 0.5; }
     
-    /* Animação para o ícone de load */
     @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .5; transform: scale(0.9); } }
     .animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; display: inline-block; }
 
@@ -198,7 +199,7 @@
     <div class="logo-icon" id="h-emoji">🥚</div>
     <div class="logo-text">
       <strong id="h-name">App Ovos Aline</strong>
-      <span id="h-slogan">A sincronizar...</span>
+      <span id="h-slogan">A carregar...</span>
     </div>
   </div>
   <button class="cart-btn" onclick="window.toggleCart()">🛒 Carrinho <span class="badge" id="cart-count">0</span></button>
@@ -209,7 +210,7 @@
   <p id="hero-desc">Qualidade de granja direto para a sua mesa.</p>
   <div class="hero-badges">
     <span class="hbadge">✅ Padrão Ouro</span>
-    <span class="hbadge">🚚 Entrega Expressa</span>
+    <span class="hbadge">🚚 Entrega Rápida</span>
     <span class="hbadge">💚 Pague via PIX</span>
   </div>
 </div>
@@ -239,7 +240,7 @@
   </div>
 </div>
 
-<!-- MODAL CHECKOUT OTIMIZADO -->
+<!-- MODAL CHECKOUT -->
 <div class="mbk" id="checkout-modal">
   <div class="modal">
     <div class="checkout-top">
@@ -249,29 +250,24 @@
     </div>
     <div class="modal-body">
       
-      <!-- Toggle Entrega/Retirada -->
       <div class="delivery-toggle">
         <button class="dt-btn active" id="btn-retirada" onclick="window.setDelivery('retirada')">🏪 Retirar na Loja</button>
         <button class="dt-btn" id="btn-entrega" onclick="window.setDelivery('entrega')">🚚 Entrega em Casa</button>
       </div>
 
-      <!-- Sessão Identificação do Cliente -->
       <div class="checkout-section" style="margin-top: 15px;">
         <label class="form-label" style="text-transform: none; margin-bottom: 4px;">Informações de Contato</label>
         <input type="text" id="cli-nome" placeholder="Seu Nome Completo" class="form-input" required>
         <input type="tel" id="cli-tel" placeholder="Telefone / WhatsApp" class="form-input" required>
       </div>
 
-      <!-- Sessão Retirada -->
       <div id="info-retirada" class="checkout-section">
         <div class="info-box">
           <p>A <strong>Distribuidora de Ovos Aline</strong> está localizada na:</p>
           <p style="margin-top:8px;"><strong>Rua António Freire da Silva, n° 87</strong><br>Jardim das Camelias<br>Zona Leste de São Paulo - SP</p>
-          <p style="margin-top:12px; font-size:0.85rem;">Pode entrar em contato pelo WhatsApp: <strong>(11) 98570-6243</strong>.</p>
         </div>
       </div>
 
-      <!-- Sessão Entrega -->
       <div id="info-entrega" class="checkout-section" style="display:none;">
         <label class="form-label" style="text-transform: none; margin-bottom: 4px;">Endereço de Entrega</label>
         <div class="form-row">
@@ -285,23 +281,18 @@
         <input type="text" id="cli-comp" placeholder="Complemento / Referência" class="form-input">
       </div>
 
-      <!-- Pagamento e Resumo -->
       <div class="checkout-section" style="margin-top: -10px;">
         <label class="form-label">Forma de Pagamento:</label>
-        <select id="pagamento-select" class="form-input" style="font-weight: 700;">
-          <!-- Opções geradas dinamicamente via JS -->
-        </select>
+        <select id="pagamento-select" class="form-input" style="font-weight: 700;"></select>
       </div>
 
-      <!-- Sumário de Custos Simples -->
       <div id="checkout-summary" style="width:100%; background:#f8fafc; padding:16px; border-radius:12px; margin-bottom:4px; font-size:1rem; color:var(--brown); font-weight:800; display:flex; flex-direction:column; gap:8px; border: 1px solid #e2e8f0;">
           <div style="display:flex; justify-content:space-between;"><span>Total do Pedido:</span><span id="chk-sub">R$ 0,00</span></div>
       </div>
 
-      <!-- Opções Finais (Confirmar / Voltar) -->
       <div style="display: flex; flex-direction: column; gap: 12px; width: 100%; margin-top: 8px;">
           <button class="confirm-btn" onclick="window.processCheckout()">✅ Confirmar Pedido (<span id="checkout-total-btn">R$ 0,00</span>)</button>
-          <button class="btn-ghost" style="width: 100%; justify-content: center; padding: 12px; font-size: 0.95rem; text-decoration: none;" onclick="window.backToCart()">⬅️ Voltar para o Carrinho</button>
+          <button class="btn-ghost" style="width: 100%; justify-content: center; padding: 12px; font-size: 0.95rem;" onclick="window.backToCart()">⬅️ Voltar para o Carrinho</button>
       </div>
     </div>
   </div>
@@ -313,21 +304,20 @@
     <div class="modal-top pix-top" style="background:linear-gradient(135deg,var(--green) 0%,#059669 100%); padding:28px; border-radius:32px 32px 0 0; color:#fff; text-align:center;">
       <div style="font-size:2.8rem; line-height:1; margin-bottom: 8px;">💚</div>
       <h3 style="font-size:1.4rem; font-weight:900;">Pagamento via PIX</h3>
-      <p style="font-size:.95rem; opacity:.9;">Escaneie o QR Code ou copie o código</p>
+      <p style="font-size:.95rem; opacity:.9;">Escaneie o QR Code ou copie a chave</p>
     </div>
     <div class="modal-body" style="padding:28px; display:flex; flex-direction:column; align-items:center; gap:20px;">
       <div id="qrcode-wrap" style="background:#fff; padding:16px; border-radius:24px; border:3px solid #f1f5f9; box-shadow: 0 8px 24px rgba(0,0,0,0.06);"><div id="qrcode"></div></div>
       <div class="pix-rows" style="width:100%; background: var(--cream); border-radius: 16px; padding: 12px 20px;">
-        <div class="pr" style="display:flex; justify-content:space-between; padding:12px 0; border-bottom:1px solid #e2e8f0; font-size:.9rem;"><label style="color:var(--muted); font-weight: 600;">Recebedor</label><span id="pix-nome" style="font-weight:800; color: var(--brown); text-align: right;">App Ovos Aline</span></div>
+        <div class="pr" style="display:flex; justify-content:space-between; padding:12px 0; border-bottom:1px solid #e2e8f0; font-size:.9rem;"><label style="color:var(--muted); font-weight: 600;">Recebedor</label><span id="pix-nome" style="font-weight:800; color: var(--brown); text-align: right;">Loja</span></div>
         <div class="pr" style="display:flex; justify-content:space-between; padding:12px 0; font-size:.9rem;"><label style="color:var(--muted); font-weight: 600;">Valor Total</label><span id="pix-val" style="font-weight:800; color: var(--brown); text-align: right;">R$ 0,00</span></div>
       </div>
       <p class="copy-lbl" style="font-size:.8rem; color:var(--muted); align-self:flex-start; margin-bottom:-12px; font-weight: 700;">Código Copia e Cola (clique para copiar):</p>
       <div class="copy-box" id="pix-code" onclick="window.doCopy()" style="width:100%; background:#f1f5f9; border:2px dashed #cbd5e1; border-radius:16px; padding:14px; font-size:.8rem; font-family:monospace; color:var(--brown); font-weight: bold; word-break:break-all; cursor:pointer; transition:all .2s; user-select:all; text-align: center;"></div>
       
-      <!-- Opções Finais PIX (Pagar / Voltar) -->
       <div style="display: flex; flex-direction: column; gap: 12px; width: 100%; margin-top: 10px;">
-          <button class="confirm-btn" style="background:var(--brown); width:100%; color:#fff; border:none; border-radius:16px; padding:18px; font-size:1.05rem; font-weight:800; cursor:pointer; transition:transform .2s; text-transform: uppercase; box-shadow: 0 8px 20px rgba(15,23,42,0.25);" onclick="window.saveOrderToFirebase()">✅ Já Paguei — Confirmar Pedido</button>
-          <button class="btn-ghost" style="width: 100%; justify-content: center; padding: 12px; font-size: 0.95rem; text-decoration: none;" onclick="window.backToCheckout()">⬅️ Alterar Método de Pagamento</button>
+          <button class="confirm-btn" style="background:var(--brown); width:100%; color:#fff; border:none; border-radius:16px; padding:18px; font-size:1.05rem; font-weight:800; cursor:pointer; transition:transform .2s; text-transform: uppercase; box-shadow: 0 8px 20px rgba(15,23,42,0.25);" onclick="window.saveOrderToFirebase()">✅ Já Paguei — Concluir</button>
+          <button class="btn-ghost" style="width: 100%; justify-content: center; padding: 12px; font-size: 0.95rem;" onclick="window.backToCheckout()">⬅️ Alterar Método de Pagamento</button>
       </div>
     </div>
   </div>
@@ -337,7 +327,7 @@
 <div class="success" id="success">
   <div class="icon">🎉</div>
   <h2>Pedido Registrado!</h2>
-  <p class="sub-msg">A sua encomenda foi gravada com sucesso! Alerte o proprietário da loja enviando a confirmação via WhatsApp.</p>
+  <p class="sub-msg">A sua encomenda foi gravada com sucesso! Alerte a loja enviando a confirmação via WhatsApp.</p>
   <div class="order-box" id="order-num">#000000</div>
   
   <button class="checkout-btn" style="margin-top:32px; background:#10b981; box-shadow: 0 8px 20px rgba(16,185,129,0.25);" onclick="window.sendWhatsApp()">📲 Enviar Pedido para a Loja</button>
@@ -346,13 +336,13 @@
 
 <div class="toast" id="toast"></div>
 
-<!-- LÓGICA PRINCIPAL ÚNICA (FIREBASE + CARRINHO + CHECKOUT) -->
+<!-- LÓGICA JAVASCRIPT & FIREBASE -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getFirestore, collection, addDoc, serverTimestamp, onSnapshot, doc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
-// Configuração Firebase e Ambiente
+// Configuração Firebase
 const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
     apiKey: "AIzaSyD3Otz9-zdZH-E5Feg9IOGWPzVycoe8gro",
     authDomain: "distribuidora-de-ovos-aline.firebaseapp.com",
@@ -380,41 +370,25 @@ async function initAuth() {
 }
 initAuth();
 
-// Catálogo de Emergência (Garante que a loja nunca fique em branco caso Firebase falhe ou o Admin apague tudo)
-const DEFAULT_PRODUTOS = [
-    { id: 'def-1', nome: 'Ovos Brancos Pequenos', emoji: '🥚', tipo: 'Tamanho P', embalagem: 'Dúzia (12)', preco: 8.90, desc: 'Ovos brancos selecionados, tamanho pequeno.', badge: '', badgeClass: '', foto_url: '', ativo: true },
-    { id: 'def-2', nome: 'Ovos Brancos Médios', emoji: '🥚', tipo: 'Tamanho M', embalagem: 'Cartela (30)', preco: 21.90, desc: 'O favorito do dia a dia! Tamanho ideal para qualquer receita.', badge: '', badgeClass: '', foto_url: '', ativo: true },
-    { id: 'def-3', nome: 'Ovos Brancos Grandes', emoji: '🥚', tipo: 'Tamanho G', embalagem: 'Dúzia (12)', preco: 12.90, desc: 'Ovos maiores com gema mais volumosa.', badge: 'Popular', badgeClass: 'rose', foto_url: '', ativo: true },
-    { id: 'def-4', nome: 'Ovos Extra Grandes', emoji: '🥚', tipo: 'Tamanho XG', embalagem: 'Dúzia (12)', preco: 14.90, desc: 'Os maiores! Gema rica e intensa.', badge: 'Top Venda', badgeClass: 'rose', foto_url: '', ativo: true },
-    { id: 'def-5', nome: 'Ovos Caipira', emoji: '🐓', tipo: 'Caipira', embalagem: 'Meia Dúzia (6)', preco: 9.90, desc: 'Criação livre no campo. Gema laranjinha e sabor incomparável.', badge: 'Especial', badgeClass: 'amber', foto_url: '', ativo: true },
-    { id: 'def-6', nome: 'Ovos Orgânicos', emoji: '🌿', tipo: 'Orgânico', embalagem: 'Caixa com 120 ovos', preco: 95.90, desc: '100% orgânicos, sem antibióticos. Certificado. Ideal para revenda.', badge: 'Premium', badgeClass: 'green', foto_url: '', ativo: true }
-];
-
-let configuracoes_loja = {
+// Variáveis Globais
+window.configuracoes_loja = {
   nome: 'App Ovos Aline',
   emoji: '🥚',
   slogan: 'Qualidade Premium',
   heroTitle: 'Ovos <em>Fresquinhos</em> 🥚',
-  heroDesc: 'Qualidade de granja direto para a sua mesa. Ovos frescos selecionados com rigor e carinho.',
+  heroDesc: 'Qualidade de granja direto para a sua mesa.',
   corPrimaria: '#e11d48',
   corSecundaria: '#be123c',
   whatsapp: ''
 };
 
-let pix_config = { copiaCola: '', nomeRecebedor: 'App Ovos Aline', rawKey: '', cidade: 'SAO PAULO' };
+// Aqui o PIX lê em tempo real da base de dados e guarda globalmente
+window.pix_config = { copiaCola: '', nomeRecebedor: 'App Ovos Aline', rawKey: '', cidade: 'SAO PAULO' };
 
 window.produtos = [];
 window.carrinho = {};
 window.currentOrderContext = {}; 
-window.catalogoCarregado = false; // Controlo de estado
-
-// Timeout de segurança: Se a internet estiver muito lenta ou a base de dados não responder, força a renderização em 2.5s
-setTimeout(() => {
-    if (!window.catalogoCarregado) {
-        window.catalogoCarregado = true;
-        window.renderProdutos();
-    }
-}, 2500);
+window.catalogoCarregado = false; 
 
 window.generateUUID = () => {
     if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
@@ -430,36 +404,32 @@ onAuthStateChanged(auth, (user) => {
             if (!snap.empty) {
                 window.produtos = snap.docs.map(d => ({id: d.id, ...d.data()})).sort((a,b)=>(a.nome||'').localeCompare(b.nome||''));
             } else {
-                window.produtos = []; // A array fica vazia e aciona o Fallback no renderProdutos()
+                window.produtos = []; 
             }
             window.catalogoCarregado = true;
             window.renderProdutos();
             window.syncCarrinho(); 
-        }, error => {
-            console.error("Erro ao ler catálogo:", error);
-            window.catalogoCarregado = true;
-            window.renderProdutos();
         });
 
         // Escuta Config da Loja
         onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'store_config'), snap => {
             if (snap.exists()) {
-                configuracoes_loja = { ...configuracoes_loja, ...snap.data() };
+                window.configuracoes_loja = { ...window.configuracoes_loja, ...snap.data() };
             }
-            window.applyConfig(); // Executa independentemente para limpar o texto de loading
+            window.applyConfig(); 
         });
 
         // Escuta PIX
         onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'pix_config'), snap => {
             if (snap.exists()) {
-                pix_config = snap.data();
+                window.pix_config = snap.data();
             }
         });
     }
 });
 
 window.applyConfig = () => {
-  const c = configuracoes_loja;
+  const c = window.configuracoes_loja;
   document.title = c.nome;
   document.getElementById('page-title').textContent  = c.nome;
   document.getElementById('h-name').textContent      = c.nome;
@@ -467,14 +437,10 @@ window.applyConfig = () => {
   document.getElementById('h-emoji').textContent     = c.emoji;
   if(c.heroTitle) document.getElementById('hero-title').innerHTML    = c.heroTitle;
   if(c.heroDesc) document.getElementById('hero-desc').textContent   = c.heroDesc;
-  document.getElementById('footer-text').textContent = `© ${new Date().getFullYear()} ${c.nome} · Todos os direitos reservados`;
-
+  
   document.documentElement.style.setProperty('--primary', c.corPrimaria);
   document.documentElement.style.setProperty('--dark', c.corSecundaria);
 };
-
-// Chamada inicial de fallback 
-window.applyConfig();
 
 window.toast = (msg) => {
     const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show');
@@ -493,18 +459,12 @@ window.renderProdutos = () => {
   
   let ativos = window.produtos.filter(p => p.ativo !== false); 
   
-  // FALLBACK SE O ADMIN NUNCA TIVER GUARDADO PRODUTOS:
   if (!ativos.length) { 
-      ativos = DEFAULT_PRODUTOS;
-      window.produtos = DEFAULT_PRODUTOS; // Vincula temporariamente à memória para permitir testes
+      grid.innerHTML = '<div class="no-products"><span>🥚</span>Nenhum produto disponível no momento.</div>';
+      return;
   }
   
   grid.innerHTML = ativos.map(p => {
-    let badgeColor = 'bg-slate-500';
-    if(p.badgeClass === 'green') badgeColor = 'bg-emerald-500';
-    if(p.badgeClass === 'amber') badgeColor = 'bg-amber-500';
-    if(p.badgeClass === 'rose') badgeColor = 'bg-rose-500';
-
     const imageElement = (p.foto_url && p.foto_url.length > 5) 
             ? `<img src="${p.foto_url}" style="width:100%;height:100%;object-fit:cover;">` 
             : `<span>${p.emoji || '🥚'}</span>`;
@@ -544,6 +504,16 @@ window.addCart = (id) => {
   window.toast('✅ Produto adicionado ao carrinho!');
 };
 
+// Controlos de Quantidade Diretos no Carrinho
+window.changeCartQty = (id, delta) => {
+    if (!window.carrinho[id]) return;
+    window.carrinho[id] += delta;
+    if (window.carrinho[id] <= 0) {
+        delete window.carrinho[id];
+    }
+    window.syncCarrinho();
+};
+
 window.syncCarrinho = () => {
   const total = Object.values(window.carrinho).reduce((s,v)=>s+v, 0);
   document.getElementById('cart-count').textContent = total;
@@ -571,10 +541,17 @@ window.renderCarrinho = () => {
       <div class="ci-emoji" style="padding:${p.foto_url ? '0':'8px'}; border:${p.foto_url ? 'none':''};">${imgHtml}</div>
       <div class="ci-info">
         <h4>${p.nome}</h4>
-        <p>${window.carrinho[k]} x ${p.embalagem || 'Unidade'} × R$ ${window.fmt(p.preco)}</p>
+        <p style="font-size:0.75rem; color:var(--muted);">${p.embalagem || 'Unidade'} · R$ ${window.fmt(p.preco)}</p>
+        <div class="qty-controls">
+            <button onclick="window.changeCartQty('${k}', -1)">-</button>
+            <span>${window.carrinho[k]}</span>
+            <button onclick="window.changeCartQty('${k}', 1)">+</button>
+        </div>
       </div>
-      <div class="ci-price">R$ ${window.fmt(sub)}</div>
-      <button class="ci-rm" onclick="window.remCart('${k}')">🗑</button>
+      <div style="display:flex; flex-direction:column; align-items:flex-end; gap:8px;">
+        <div class="ci-price">R$ ${window.fmt(sub)}</div>
+        <button class="ci-rm" onclick="window.remCart('${k}')">🗑 Remover</button>
+      </div>
     </div>`;
   }).join('');
   document.getElementById('cart-total').textContent = 'R$ ' + window.fmt(total);
@@ -598,7 +575,6 @@ window.closeAll = () => {
   ['sidebar','overlay','pix-modal','checkout-modal'].forEach(id => document.getElementById(id).classList.remove('open'));
 };
 
-// Funções Novas de "Voltar"
 window.backToCart = () => {
   document.getElementById('checkout-modal').classList.remove('open');
   document.getElementById('sidebar').classList.add('open');
@@ -702,37 +678,46 @@ window.processCheckout = async () => {
   }
 };
 
+window.removeAccents = (s) => (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^\x00-\x7F]/g,'').toUpperCase();
+window.pixPayload = (key, amount, name, city, txid) => {
+    const tlv = (id, v) => id + String(v.length).padStart(2,'0') + v;
+    const ma = tlv('00','BR.GOV.BCB.PIX') + tlv('01', key);
+    let p = tlv('00','01') + tlv('26', ma) + tlv('52','0000') + tlv('53','986') + tlv('54', amount.toFixed(2)) + tlv('58','BR') + tlv('59', window.removeAccents(name).slice(0,25)||'LOJA') + tlv('60', window.removeAccents(city).slice(0,15)||'BR') + tlv('62', tlv('05', window.removeAccents(txid).slice(0,25)||'TESTE'));
+    return p + tlv('63', window.crc16(p + '6304'));
+};
+window.crc16 = (s) => {
+    let c = 0xFFFF;
+    for (let i = 0; i < s.length; i++) {
+        c ^= (s.charCodeAt(i) & 0xFF) << 8;
+        for (let j = 0; j < 8; j++) c = (c & 0x8000) ? ((c << 1) ^ 0x1021) & 0xFFFF : (c << 1) & 0xFFFF;
+    }
+    return (c & 0xFFFF).toString(16).toUpperCase().padStart(4,'0');
+};
+
 window.openPix = () => {
   const total = window.totalCarrinho(); 
   
   let payloadCopiaCola = "";
-  if (pix_config.rawKey) {
-      const tlv = (id, v) => id + String(v.length).padStart(2,'0') + v;
+  let chavePix = window.pix_config.rawKey || window.pix_config.key || '';
+  
+  // A chave é usada EXATAMENTE COMO VEM DO ADMIN (sem forçar o +55).
+  // Apenas lemos a variável chavePix diretamente.
+  if (chavePix) {
       const txid = ('OVOS' + Date.now().toString().slice(-7)).substring(0,25);
-      const ma = tlv('00','BR.GOV.BCB.PIX') + tlv('01', pix_config.rawKey);
-      const adf = tlv('05', txid);
-      let p = tlv('00','01') + tlv('26', ma) + tlv('52','0000') + tlv('53','986') + tlv('54', total.toFixed(2)) + tlv('58','BR') + tlv('59', window.removeAccents(pix_config.nomeRecebedor||'LOJA').substring(0,25)) + tlv('60', window.removeAccents(pix_config.cidade||'SAO PAULO').substring(0,15)) + tlv('62', adf);
-      
-      let c = 0xFFFF;
-      let s = p + '6304';
-      for (let i = 0; i < s.length; i++) {
-        c ^= (s.charCodeAt(i) & 0xFF) << 8;
-        for (let j = 0; j < 8; j++) c = (c & 0x8000) ? ((c << 1) ^ 0x1021) & 0xFFFF : (c << 1) & 0xFFFF;
-      }
-      payloadCopiaCola = s + (c & 0xFFFF).toString(16).toUpperCase().padStart(4,'0');
+      payloadCopiaCola = window.pixPayload(chavePix, total, window.pix_config.nomeRecebedor, window.pix_config.cidade, txid);
   } else {
-      payloadCopiaCola = pix_config.copiaCola || "Chave PIX não configurada pelo Administrador.";
+      payloadCopiaCola = window.pix_config.copiaCola || "Chave PIX não configurada pelo Administrador.";
   }
 
-  document.getElementById('pix-nome').textContent  = pix_config.nomeRecebedor || configuracoes_loja.nome;
+  document.getElementById('pix-nome').textContent  = window.pix_config.nomeRecebedor || window.configuracoes_loja.nome;
   document.getElementById('pix-val').textContent   = 'R$ ' + window.fmt(total);
   document.getElementById('pix-code').textContent  = payloadCopiaCola;
 
   const qrDiv = document.getElementById('qrcode');
   qrDiv.innerHTML = '';
-  try {
-      new QRCode(qrDiv, { text:payloadCopiaCola, width:200, height:200, colorDark:'#0f172a', colorLight:'#FFFFFF', correctLevel:QRCode.CorrectLevel.M });
-  } catch(e) { qrDiv.innerHTML = 'Erro no QR Code'; }
+  setTimeout(()=>{
+      try { new QRCode(qrDiv, { text:payloadCopiaCola, width:200, height:200, colorDark: window.configuracoes_loja.corSecundaria || '#be123c', colorLight:'#FFFFFF', correctLevel:QRCode.CorrectLevel.M }); } catch(e){}
+  }, 50);
 
   document.getElementById('pix-modal').classList.add('open');
 };
@@ -777,14 +762,13 @@ window.saveOrderToFirebase = async () => {
         status: isPixOnline ? 'AGUARDANDO PIX' : 'CRIADO',
         criadoEm: serverTimestamp()
     });
-    console.log("Pedido salvo no Firebase com sucesso!");
   } catch (error) {
     console.error("Erro ao salvar pedido no Firebase:", error);
   }
 };
 
 window.sendWhatsApp = () => {
-    if (!configuracoes_loja.whatsapp) {
+    if (!window.configuracoes_loja.whatsapp) {
         window.toast("Aviso: A loja ainda não configurou um número de WhatsApp.");
         return;
     }
@@ -808,7 +792,7 @@ window.sendWhatsApp = () => {
         texto += `*Endereço para Entrega:*\n${d.rua}, ${d.num} - ${d.bairro}\nCEP: ${d.cep} | Ref/Comp: ${d.comp}`;
     }
     
-    const url = `https://wa.me/${configuracoes_loja.whatsapp}?text=${encodeURIComponent(texto)}`;
+    const url = `https://wa.me/${window.configuracoes_loja.whatsapp}?text=${encodeURIComponent(texto)}`;
     window.open(url, '_blank');
 };
 
@@ -835,7 +819,6 @@ window.confetti = () => {
     document.body.appendChild(e); setTimeout(() => e.remove(), 4500);
   }, i*20);
 };
-
 </script>
 </body>
 </html>
