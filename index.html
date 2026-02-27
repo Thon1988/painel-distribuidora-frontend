@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Admin — App Ovos Aline</title>
+  <title>Admin — AppEgg</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   
   <script>
     // Stub preventivo para evitar erros de clique antes do carregamento completo do módulo
     window.fazerLogin = function() {
-        alert("A ligar ao servidor. Por favor, aguarde um instante...");
+        alert("A preparar ambiente seguro. Por favor, aguarde...");
     };
   </script>
 
@@ -18,16 +18,15 @@
     *, *::before, *::after { box-sizing: border-box; margin:0; padding:0; }
     
     :root {
-      /* Identidade Premium Vermelha (Rose/Slate) perfeitamente integrada no seu layout */
-      --primary: #e11d48; /* Rose 600 */
-      --dark:    #be123c; /* Rose 700 */
-      --brown:   #0f172a; /* Slate 900 */
-      --cream:   #f8fafc; /* Slate 50 */
-      --muted:   #64748b; /* Slate 500 */
+      --primary: #e11d48; 
+      --dark:    #be123c; 
+      --brown:   #0f172a; 
+      --cream:   #f8fafc; 
+      --muted:   #64748b; 
       --white:   #ffffff;
-      --green:   #10b981; /* Emerald 500 */
-      --red:     #e11d48; /* Rose 600 */
-      --border:  #e2e8f0; /* Slate 200 */
+      --green:   #10b981; 
+      --red:     #e11d48; 
+      --border:  #e2e8f0; 
       --shadow:  0 4px 20px rgba(15, 23, 42, .08);
     }
     
@@ -97,7 +96,7 @@
     
     .modal-bg { position:fixed; inset:0; background:rgba(15,23,42,.7); backdrop-filter: blur(4px); z-index:300; display:flex; align-items:center; justify-content:center; padding:20px; opacity:0; pointer-events:none; transition:opacity .3s; }
     .modal-bg.open { opacity:1; pointer-events:all; }
-    .modal-box { background:var(--white); border-radius:24px; width:min(520px,100%); max-height:90vh; overflow-y:auto; box-shadow:0 24px 60px rgba(0,0,0,.28); transform:scale(.95) translateY(20px); transition:all .3s cubic-bezier(0.34, 1.56, 0.64, 1); border:1px solid var(--border); text-align: left;}
+    .modal-box { background:var(--white); border-radius:24px; width:min(520px,100%); max-height:90vh; overflow-y:auto; box-shadow:0 24px 64px rgba(0,0,0,.28); transform:scale(.95) translateY(20px); transition:all .3s cubic-bezier(0.34, 1.56, 0.64, 1); border:1px solid var(--border); text-align: left;}
     .modal-bg.open .modal-box { transform:scale(1) translateY(0); }
     .modal-head { background:linear-gradient(135deg,var(--dark),var(--primary)); color:#fff; padding:24px; border-radius:24px 24px 0 0; display:flex; justify-content:space-between; align-items:center; }
     .modal-head h3 { font-size:1.2rem; font-weight:900; margin:0;}
@@ -117,14 +116,7 @@
     .toast.show { transform:translateX(-50%) translateY(0); }
     
     .preview-bar { background:linear-gradient(135deg,var(--green),#059669); color:#fff; padding:12px 24px; display:flex; align-items:center; justify-content:space-between; font-size:.88rem; font-weight: 700; box-shadow:0 2px 10px rgba(16,185,129,.2);}
-    .preview-bar a { color:#fff; font-weight:800; text-decoration:none; padding:6px 16px; background:rgba(255,255,255,.2); border-radius:50px; transition:background .2s; }
-    .preview-bar a:hover { background:rgba(255,255,255,.35); }
     
-    .pix-types { display:flex; flex-wrap:wrap; gap:8px; }
-    .pix-type-btn { padding:8px 16px; border-radius:50px; border:2px solid var(--border); background:var(--white); color:var(--muted); font-size:.82rem; font-weight:800; cursor:pointer; transition:all .2s; }
-    .pix-type-btn:hover { border-color:var(--primary); color:var(--primary); }
-    .pix-type-btn.active { border-color:var(--primary); background:var(--primary); color:#fff; box-shadow:0 4px 10px rgba(225,29,72,.2); }
-
     /* Login Screen Setup */
     #login-view { position:fixed; inset:0; background:var(--brown); z-index:2000; display:flex; flex-direction:column; align-items:center; justify-content:center; }
     #app-view { display:none; flex-direction:column; min-height:100vh; }
@@ -142,11 +134,12 @@
 </head>
 <body>
 
-<!-- ECRÃ DE LOGIN ESTILO PREMIUM -->
+<!-- ECRÃ DE LOGIN - COM AVISO DE ATUALIZAÇÃO -->
 <div id="login-view">
     <div class="card" style="width:100%; max-width:400px; text-align:center; padding:40px; border-radius:32px; border:4px solid var(--border);">
-        <h2 style="color:var(--primary); margin-bottom: 5px; font-size: 2.2rem; font-weight: 900; font-style: italic; letter-spacing: -1px;">App Ovos Aline</h2>
-        <p style="color:var(--muted); font-size: 0.75rem; font-weight: 800; margin-bottom: 30px; text-transform: uppercase; letter-spacing: 2px;">Gestão Admin Cloud</p>
+        <h2 style="color:var(--primary); margin-bottom: 5px; font-size: 2.2rem; font-weight: 900; font-style: italic; letter-spacing: -1px;">AppEgg Admin</h2>
+        <!-- TEXTO PARA CONFIRMAR O CACHE -->
+        <p style="color:var(--green); font-size: 0.75rem; font-weight: 900; margin-bottom: 30px; text-transform: uppercase; letter-spacing: 2px;">Versão Forçada 3.0</p>
         
         <form id="login-form" onsubmit="event.preventDefault(); window.fazerLogin();">
             <div class="field" style="margin-bottom: 15px;">
@@ -155,7 +148,7 @@
             <div class="field" style="margin-bottom: 24px;">
                 <input type="password" id="login-pass" placeholder="Palavra-passe" style="text-align:center;" required>
             </div>
-            <button id="btn-login" type="submit" class="btn btn-primary" style="width:100%; justify-content:center; padding: 16px; font-size: 1rem;" disabled>A carregar...</button>
+            <button id="btn-login" type="submit" class="btn btn-primary" style="width:100%; justify-content:center; padding: 16px; font-size: 1rem;">Entrar no Painel</button>
         </form>
     </div>
 </div>
@@ -163,14 +156,14 @@
 <!-- ESTRUTURA PRINCIPAL DO APP -->
 <div id="app-view">
     <header>
-      <div class="h-logo"><span>🥚</span> App Ovos Aline</div>
+      <div class="h-logo"><span>🥚</span> AppEgg</div>
       <div style="display:flex; gap:10px;">
         <button class="h-back" style="background: rgba(255,255,255,0.15); border: none;" onclick="window.fazerLogout()">Sair do Painel</button>
       </div>
     </header>
 
     <div class="preview-bar">
-      <span>✅ As alterações são gravadas na Base de Dados Cloud em tempo real.</span>
+      <span>✅ Painel ligado à Base de Dados Cloud em tempo real.</span>
     </div>
 
     <div class="layout">
@@ -251,7 +244,7 @@
       </div>
       <div style="display:flex;gap:12px;margin-top:10px">
         <button id="btn-save-product-modal" class="btn btn-primary" style="flex:1" onclick="window.saveProd()">💾 Guardar no Firebase</button>
-        <button class="btn btn-ghost" onclick="window.closeProdModal()">Cancelar</button>
+        <button type="button" class="btn btn-ghost" onclick="window.closeProdModal()">Cancelar</button>
       </div>
     </div>
   </div>
@@ -265,7 +258,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebas
 import { getFirestore, collection, onSnapshot, doc, setDoc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getAuth, signInWithEmailAndPassword, signInWithCustomToken, signInAnonymously, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
-// --- CONFIGURAÇÃO FIREBASE PROTEGIDA ---
+// --- CONFIGURAÇÃO FIREBASE BLINDADA ---
 let firebaseConfig = {
     apiKey: "AIzaSyD3Otz9-zdZH-E5Feg9IOGWPzVycoe8gro",
     authDomain: "distribuidora-de-ovos-aline.firebaseapp.com",
@@ -280,7 +273,7 @@ try {
         firebaseConfig = typeof __firebase_config === 'string' ? JSON.parse(__firebase_config) : __firebase_config;
     }
 } catch(e) {
-    console.warn("Aviso: Utilizando fallback interno de configurações.");
+    console.warn("Utilizando chaves de base de dados integradas.");
 }
 
 const appFB = initializeApp(firebaseConfig);
@@ -314,7 +307,8 @@ window.firebaseUnsubs = [];
 window.isListening = false;
 window.state = { view: 'dashboard' };
 
-// --- FUNÇÕES GLOBAIS BLINDADAS ---
+// --- LÓGICA DE INTERFACE ANEXADA AO WINDOW ---
+
 window.clearAdminListeners = () => {
     window.firebaseUnsubs.forEach(unsub => {
         if (typeof unsub === 'function') unsub();
@@ -328,13 +322,13 @@ window.initAuth = async () => {
         if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
             await signInWithCustomToken(auth, __initial_auth_token);
         } else {
-            // Ignora silenciosamente restrições do Firebase para contas anónimas
+            // Se o login anónimo falhar devido a restrições no Firebase, não crasha.
             await signInAnonymously(auth).catch(err => {
-                console.warn("Firebase Restrito: O acesso anónimo não está permitido. Procedendo para login manual.");
+                console.warn("Aviso Firebase: Modo Anónimo desativado. Aguardando login manual.", err);
             });
         }
     } catch (e) {
-        console.error("Erro na autenticação base:", e);
+        console.error("Erro na autenticação:", e);
     }
 };
 
@@ -419,14 +413,14 @@ window.buildActiveViewBase = () => {
             <div class="space-y-10 fade-in">
                 <div class="mb-6">
                     <h2 class="text-4xl font-[950] text-slate-900 tracking-tighter uppercase italic mb-1">Configurar PIX</h2>
-                    <p class="text-slate-500 font-bold text-sm">Configure os dados de recebimento PIX que vão aparecer no Checkout.</p>
+                    <p class="text-slate-500 font-bold text-sm">Configure os dados de recebimento PIX que vão aparecer no Checkout da Loja.</p>
                 </div>
                 
                 <div class="bg-white rounded-[40px] p-8 border border-slate-200 shadow-sm">
                     <div class="flex flex-col lg:flex-row justify-between items-center gap-10">
                         <div class="flex-1 w-full">
                             <h3 class="text-2xl font-black uppercase text-slate-800 tracking-tighter mb-2">Chave PIX da Loja</h3>
-                            <p class="text-xs font-bold text-slate-500 mb-8">Estes dados aparecem no momento do Checkout do cliente.</p>
+                            <p class="text-xs font-bold text-slate-500 mb-8">Estes dados aparecerão quando o cliente escolher pagar por PIX.</p>
                             <form onsubmit="event.preventDefault(); window.handleSavePixConfig();" class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div class="field">
                                     <label class="text-[10px] font-black uppercase text-slate-400 ml-2">Tipo de Chave</label>
@@ -456,7 +450,7 @@ window.buildActiveViewBase = () => {
                             </form>
                         </div>
                         <div class="w-full lg:w-72 bg-slate-50 p-8 rounded-[32px] text-center border border-slate-200 flex flex-col items-center">
-                            <p class="text-[10px] font-black text-slate-400 uppercase mb-4 tracking-widest">Teste do QR Code (R$ 1,00)</p>
+                            <p class="text-[10px] font-black text-slate-400 uppercase mb-4 tracking-widest">Pré-visualização (R$ 1,00)</p>
                             <div id="pix-preview-qr" class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 w-[172px] h-[172px] flex items-center justify-center"></div>
                             <button class="btn btn-ghost btn-sm mt-4" onclick="window.renderPixPreview()">🔄 Gerar Prévia</button>
                         </div>
@@ -470,13 +464,11 @@ window.buildActiveViewBase = () => {
             return `
             <div class="space-y-10 fade-in">
                 <div class="mb-6">
-                    <h2 class="text-4xl font-[950] text-slate-900 tracking-tighter uppercase italic mb-1">Aparência da Loja</h2>
-                    <p class="text-slate-500 font-bold text-sm">Personalize os textos e as configurações base de contato.</p>
+                    <h2 class="text-4xl font-[950] text-slate-900 tracking-tighter uppercase italic mb-1">Dados da Loja</h2>
+                    <p class="text-slate-500 font-bold text-sm">Personalize os textos da loja e o número do WhatsApp de vendas.</p>
                 </div>
                 <div class="bg-white rounded-[40px] p-8 border border-slate-200 shadow-sm">
                     <form onsubmit="event.preventDefault(); window.handleSaveStoreConfig();">
-                        
-                        <h3 class="text-lg font-black text-slate-800 uppercase mb-4 border-b border-slate-100 pb-2">Identidade e Textos</h3>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                             <div class="field">
                                 <label class="text-[11px] font-black uppercase text-slate-500 ml-2">Nome da Loja</label>
@@ -492,21 +484,17 @@ window.buildActiveViewBase = () => {
                                     <input id="cfg-slogan" type="text" value="${s.slogan || ''}" class="input-egg" placeholder="Ex: Direto da Granja">
                                 </div>
                             </div>
+                            <div class="field md:col-span-2">
+                                <label class="text-[11px] font-black uppercase text-slate-500 ml-2">WhatsApp de Recebimento de Encomendas (Apenas Números c/ DDD)</label>
+                                <input id="cfg-whatsapp" type="text" value="${s.whatsapp || ''}" class="input-egg text-slate-900 font-black" placeholder="Ex: 11985706243">
+                            </div>
                             <div class="md:col-span-2 field">
-                                <label class="text-[11px] font-black uppercase text-slate-500 ml-2">Título Principal (Banner Destaque)</label>
+                                <label class="text-[11px] font-black uppercase text-slate-500 ml-2">Título do Topo (Banner)</label>
                                 <input id="cfg-heroTitle" type="text" value="${s.heroTitle || ''}" class="input-egg font-bold" placeholder="Ex: Ovos Fresquinhos 🥚">
                             </div>
                             <div class="md:col-span-2 field">
-                                <label class="text-[11px] font-black uppercase text-slate-500 ml-2">Subtítulo (Banner Destaque)</label>
+                                <label class="text-[11px] font-black uppercase text-slate-500 ml-2">Descrição do Topo (Banner)</label>
                                 <textarea id="cfg-heroDesc" rows="2" class="input-egg py-3" placeholder="Mensagem para os seus clientes...">${s.heroDesc || ''}</textarea>
-                            </div>
-                        </div>
-
-                        <h3 class="text-lg font-black text-slate-800 uppercase mb-4 border-b border-slate-100 pb-2">Contato (Novo)</h3>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
-                            <div class="field md:col-span-2">
-                                <label class="text-[11px] font-black uppercase text-slate-500 ml-2">WhatsApp da Loja (Apenas números c/ DDD)</label>
-                                <input id="cfg-whatsapp" type="text" value="${s.whatsapp || ''}" class="input-egg text-slate-900 font-black" placeholder="Ex: 11985706243">
                             </div>
                         </div>
 
@@ -521,7 +509,7 @@ window.buildActiveViewBase = () => {
             <div class="space-y-10 fade-in">
                 <div class="mb-6">
                     <h2 class="text-4xl font-[950] text-slate-900 tracking-tighter uppercase italic mb-1">Cores do Tema</h2>
-                    <p class="text-slate-500 font-bold text-sm">Personalize as cores principais que a loja vai exibir.</p>
+                    <p class="text-slate-500 font-bold text-sm">Personalize as cores principais da loja.</p>
                 </div>
                 <div class="bg-white rounded-[40px] p-8 border border-slate-200 shadow-sm">
                     <form onsubmit="event.preventDefault(); window.handleSaveAparencia();">
@@ -542,7 +530,7 @@ window.buildActiveViewBase = () => {
                             </div>
                         </div>
                         <div style="margin-top:20px;padding:20px;background:var(--cream);border-radius:16px;border:1px solid var(--border)">
-                          <p style="font-size:.85rem;font-weight:800;color:var(--brown);margin-bottom:12px;text-transform:uppercase;">Temas pré-definidos rápidos:</p>
+                          <p style="font-size:.85rem;font-weight:800;color:var(--brown);margin-bottom:12px;text-transform:uppercase;">Temas rápidos:</p>
                           <div style="display:flex;gap:10px;flex-wrap:wrap">
                             <button type="button" class="btn btn-sm" style="background:linear-gradient(135deg,#be123c,#e11d48);color:#fff" onclick="window.setTheme('#e11d48','#be123c')">❤️ Premium Rose</button>
                             <button type="button" class="btn btn-sm" style="background:linear-gradient(135deg,#D4500A,#E8960C);color:#fff" onclick="window.setTheme('#E8960C','#D4500A')">🥚 Original Laranja</button>
@@ -656,7 +644,7 @@ window.renderDashboard = () => {
     const dashRecent = document.getElementById('dash-orders-recent');
     if (dashRecent) {
         dashRecent.innerHTML = active.slice(0, 5).map(l => {
-            const cliente = l.dadosCliente?.nome || 'Anônimo';
+            const cliente = l.dadosCliente?.nome || 'Anónimo';
             const isEntrega = l.tipoEntrega === 'entrega';
             const badge = isEntrega ? `<span style="background:#e0f2fe;color:#1d4ed8;padding:4px 8px;border-radius:12px;font-size:0.7rem;font-weight:800;">🚚 ENTREGA</span>` : `<span style="background:#dcfce7;color:#047857;padding:4px 8px;border-radius:12px;font-size:0.7rem;font-weight:800;">🏪 RETIRADA</span>`;
             
@@ -700,7 +688,7 @@ window.renderPedidos = () => {
     }
 
     list.innerHTML = pending.map(l => {
-        const cliente = l.dadosCliente?.nome || 'Anônimo';
+        const cliente = l.dadosCliente?.nome || 'Anónimo';
         const tel = l.dadosCliente?.tel || 'Sem telefone';
         const isEntrega = l.tipoEntrega === 'entrega';
         const entregaStr = isEntrega ? '🚚 ENTREGA EM CASA' : '🏪 RETIRAR NA LOJA';
@@ -953,7 +941,7 @@ window.handleSaveStoreConfig = async () => {
         await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'store_config'), data, {merge:true});
         window.toast("✅ Loja sincronizada!");
     } catch(e) { window.toast("Erro ao sincronizar."); }
-    finally { if(btn) { btn.disabled = false; btn.innerText = "💾 Guardar Configurações na Nuvem"; } }
+    finally { if(btn) { btn.disabled = false; btn.innerText = "💾 Guardar Dados da Loja"; } }
 };
 
 window.handleSavePixConfig = async () => {
@@ -1004,23 +992,6 @@ window.handleSavePixConfig = async () => {
     } finally {
         if(btn) { btn.disabled = false; btn.innerText = "💾 Salvar Configurações do PIX"; }
     }
-};
-
-window.handleSaveAparencia = async () => {
-    const btn = document.getElementById('btn-save-aparencia');
-    if(btn) { btn.disabled = true; btn.innerText = "A guardar..."; }
-    try {
-        const corP = document.getElementById('cfg-corPrimaria').value;
-        const corS = document.getElementById('cfg-corSecundaria').value;
-        
-        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'store_config'), {
-            corPrimaria: corP, 
-            corSecundaria: corS, 
-            updatedAt: serverTimestamp()
-        }, {merge:true});
-        window.toast("✅ Estilo guardado na nuvem!");
-    } catch(e) { window.toast("Erro ao guardar estilo."); }
-    finally { if(btn) { btn.disabled = false; btn.innerText = "💾 Guardar Cores"; } }
 };
 
 window.renderPixPreview = () => {
@@ -1080,7 +1051,7 @@ window.fazerLogin = async () => {
     
     try { await signInWithEmailAndPassword(auth, em, ps); } 
     catch(e) { 
-        alert("Acesso negado."); 
+        alert("Acesso negado. Por favor, verifique os seus dados de acesso."); 
         if(btn) { btn.disabled = false; btn.innerText = "Entrar no Painel"; }
     }
 };
@@ -1094,7 +1065,7 @@ window.fazerLogout = async () => {
     const btn = document.getElementById('btn-login');
     if (btn) { btn.disabled = false; btn.innerText = "Entrar no Painel"; }
     
-    await signOut(auth);
+    try { await signOut(auth); } catch(e){}
 };
 
 window.removeAccents = (s) => (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^\x00-\x7F]/g,'').toUpperCase();
