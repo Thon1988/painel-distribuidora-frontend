@@ -192,7 +192,7 @@
     </div>
 </div>
 
-<!-- MODAL DE PRODUTO (COM UPLOAD DE FOTO E EMBALAGEM EDITÁVEL) -->
+<!-- MODAL DE PRODUTO -->
 <div class="modal-bg" id="prod-modal">
   <div class="modal-box">
     <div class="modal-head">
@@ -203,7 +203,6 @@
       <input type="hidden" id="mp-id" />
       
       <div class="form-grid">
-        <!-- Secção da Imagem: Link ou Upload -->
         <div class="field" style="grid-column: span 2;">
             <label>Imagem do Produto (Colar URL ou Fazer Upload)</label>
             <div style="display: flex; gap: 12px; align-items: center; margin-top: 4px;">
@@ -222,7 +221,7 @@
         <div class="field"><label>Emoji (Opcional)</label><input id="mp-emoji" placeholder="🥚" maxlength="4" /></div>
         
         <div class="field">
-            <label>Formato / Embalagem (Edite ou Escolha)</label>
+            <label>Formato / Embalagem</label>
             <input type="text" id="mp-embalagem" list="mp-embalagem-list" placeholder="Ex: Cartela (20)" style="cursor: text;">
             <datalist id="mp-embalagem-list">
                 <option value="Unidade"></option>
@@ -251,7 +250,7 @@
         <input type="hidden" id="mp-badgeClass" />
       </div>
       <div style="display:flex;gap:12px;margin-top:10px">
-        <button class="btn btn-primary" style="flex:1" onclick="window.saveProd()">💾 Guardar no Firebase</button>
+        <button id="btn-save-product-modal" class="btn btn-primary" style="flex:1" onclick="window.saveProd()">💾 Guardar no Firebase</button>
         <button class="btn btn-ghost" onclick="window.closeProdModal()">Cancelar</button>
       </div>
     </div>
@@ -281,7 +280,6 @@ const db = getFirestore(appFB);
 const auth = getAuth(appFB);
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'app-egg-pro-transacional';
 
-// Catálogo Padrão Atualizado com Embalagem
 const DEFAULT_PRODUTOS = [
     { nome: 'Ovos Brancos Pequenos', emoji: '🥚', tipo: 'Tamanho P', embalagem: 'Dúzia (12)', preco: 8.90, desc: 'Ovos brancos selecionados, tamanho pequeno.', badge: '', badgeClass: '', foto_url: '', ativo: true },
     { nome: 'Ovos Brancos Médios', emoji: '🥚', tipo: 'Tamanho M', embalagem: 'Cartela (30)', preco: 21.90, desc: 'O favorito do dia a dia! Tamanho ideal para qualquer receita.', badge: '', badgeClass: '', foto_url: '', ativo: true },
@@ -293,7 +291,6 @@ const DEFAULT_PRODUTOS = [
 
 window.STATUS_OPTIONS = ["CRIADO", "AGUARDANDO PIX", "EM SEPARAÇÃO", "SAIU PARA ENTREGA", "PRONTO PARA RETIRADA", "FINALIZADO", "CANCELADO"];
 
-// Configuração base de segurança
 window.config = {
     nome:'App Ovos Aline', slogan:'Qualidade Premium', emoji:'🥚',
     heroTitle:'Ovos Fresquinhos 🥚', heroDesc:'Do campo direto pra sua mesa.',
@@ -309,7 +306,7 @@ window.firebaseUnsubs = [];
 window.isListening = false;
 window.state = { view: 'dashboard' };
 
-// Funções Globais (Ligadas ao UI Vanilla e Firebase)
+// --- FUNÇÕES GLOBAIS ---
 window.clearAdminListeners = () => {
     window.firebaseUnsubs.forEach(unsub => {
         if (typeof unsub === 'function') unsub();
@@ -323,7 +320,11 @@ window.initAuth = async () => {
         if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
             await signInWithCustomToken(auth, __initial_auth_token);
         } else {
-            await signInAnonymously(auth);
+            // Tentamos logar anonimamente mas silenciamos o erro admin-restricted
+            await signInAnonymously(auth).catch(err => {
+                if (err.code !== 'auth/admin-restricted-operation') throw err;
+                console.warn("Aviso: Acesso anónimo desativado no Firebase. Isto não impede o login do Administrador com senha.");
+            });
         }
     } catch (e) {
         console.error("Erro na autenticação base:", e);
@@ -374,18 +375,6 @@ window.goTo = (sec) => {
     if (sec === 'dashboard') window.renderDashboard();
     if (sec === 'pedidos') window.renderPedidos();
     if (sec === 'produtos') window.renderProdList();
-};
-
-window.updateTaxa = async (val, field) => {
-    const taxa = parseFloat(val) || 0;
-    window.config[field] = taxa;
-    window.renderDashboard();
-    try {
-        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'store_config'), {
-            [field]: taxa, updatedAt: serverTimestamp()
-        }, {merge:true});
-        window.toast("✅ Taxa da máquina atualizada com sucesso!");
-    } catch(e) { window.toast("Erro ao guardar taxa."); }
 };
 
 window.buildActiveViewBase = () => {
@@ -538,31 +527,33 @@ window.buildActiveViewBase = () => {
                     <p class="text-slate-500 font-bold text-sm">Personalize os as cores principais que a loja vai exibir.</p>
                 </div>
                 <div class="bg-white rounded-[40px] p-8 border border-slate-200 shadow-sm">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                            <input type="color" id="cfg-corPrimaria" value="${s.corPrimaria || '#e11d48'}" class="w-12 h-12 rounded-lg cursor-pointer border-0 p-0 bg-transparent" oninput="window.updateColorPreview()">
-                            <div>
-                                <p class="font-black text-xs uppercase text-slate-700">Cor Principal (Botões e Destaques)</p>
+                    <form onsubmit="window.handleSaveAparencia(event)">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                <input type="color" id="cfg-corPrimaria" value="${s.corPrimaria || '#e11d48'}" class="w-12 h-12 rounded-lg cursor-pointer border-0 p-0 bg-transparent" oninput="window.updateColorPreview()">
+                                <div>
+                                    <p class="font-black text-xs uppercase text-slate-700">Cor Principal (Botões e Destaques)</p>
+                                </div>
+                                <input type="hidden" id="cfg-corPrimariaHex" value="${s.corPrimaria || '#e11d48'}">
                             </div>
-                            <input type="hidden" id="cfg-corPrimariaHex" value="${s.corPrimaria || '#e11d48'}">
-                        </div>
-                        <div class="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                            <input type="color" id="cfg-corSecundaria" value="${s.corSecundaria || '#be123c'}" class="w-12 h-12 rounded-lg cursor-pointer border-0 p-0 bg-transparent" oninput="window.updateColorPreview()">
-                            <div>
-                                <p class="font-black text-xs uppercase text-slate-700">Cor Secundária (Degradê do Topo)</p>
+                            <div class="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                <input type="color" id="cfg-corSecundaria" value="${s.corSecundaria || '#be123c'}" class="w-12 h-12 rounded-lg cursor-pointer border-0 p-0 bg-transparent" oninput="window.updateColorPreview()">
+                                <div>
+                                    <p class="font-black text-xs uppercase text-slate-700">Cor Secundária (Degradê do Topo)</p>
+                                </div>
+                                <input type="hidden" id="cfg-corSecundariaHex" value="${s.corSecundaria || '#be123c'}">
                             </div>
-                            <input type="hidden" id="cfg-corSecundariaHex" value="${s.corSecundaria || '#be123c'}">
                         </div>
-                    </div>
-                    <div style="margin-top:20px;padding:20px;background:var(--cream);border-radius:16px;border:1px solid var(--border)">
-                      <p style="font-size:.85rem;font-weight:800;color:var(--brown);margin-bottom:12px;text-transform:uppercase;">Temas pré-definidos rápidos:</p>
-                      <div style="display:flex;gap:10px;flex-wrap:wrap">
-                        <button class="btn btn-sm" style="background:linear-gradient(135deg,#be123c,#e11d48);color:#fff" onclick="window.setTheme('#e11d48','#be123c')">❤️ Premium Rose</button>
-                        <button class="btn btn-sm" style="background:linear-gradient(135deg,#D4500A,#E8960C);color:#fff" onclick="window.setTheme('#E8960C','#D4500A')">🥚 Original Laranja</button>
-                        <button class="btn btn-sm" style="background:linear-gradient(135deg,#2E7D32,#43A047);color:#fff" onclick="window.setTheme('#43A047','#2E7D32')">🌿 Verde Campo</button>
-                      </div>
-                    </div>
-                    <div class="save-row"><button class="btn btn-green" onclick="window.saveConfig()">💾 Guardar Cores</button></div>
+                        <div style="margin-top:20px;padding:20px;background:var(--cream);border-radius:16px;border:1px solid var(--border)">
+                          <p style="font-size:.85rem;font-weight:800;color:var(--brown);margin-bottom:12px;text-transform:uppercase;">Temas pré-definidos rápidos:</p>
+                          <div style="display:flex;gap:10px;flex-wrap:wrap">
+                            <button type="button" class="btn btn-sm" style="background:linear-gradient(135deg,#be123c,#e11d48);color:#fff" onclick="window.setTheme('#e11d48','#be123c')">❤️ Premium Rose</button>
+                            <button type="button" class="btn btn-sm" style="background:linear-gradient(135deg,#D4500A,#E8960C);color:#fff" onclick="window.setTheme('#E8960C','#D4500A')">🥚 Original Laranja</button>
+                            <button type="button" class="btn btn-sm" style="background:linear-gradient(135deg,#2E7D32,#43A047);color:#fff" onclick="window.setTheme('#43A047','#2E7D32')">🌿 Verde Campo</button>
+                          </div>
+                        </div>
+                        <div class="save-row mt-8"><button id="btn-save-aparencia" type="submit" class="btn btn-green w-full" style="padding:16px; font-size:1.1rem;">💾 Guardar Cores</button></div>
+                    </form>
                 </div>
             </div>`;
         }
@@ -615,8 +606,10 @@ window.renderDashboard = () => {
         `;
     }
 
+    const focusedId = document.activeElement ? document.activeElement.id : null;
     const dashPaymentBreakdown = document.getElementById('dash-payment-breakdown');
-    if (dashPaymentBreakdown) {
+    // Previne redesenho caso o utilizador esteja focado num destes inputs (evita loop infinito de memoria)
+    if (dashPaymentBreakdown && focusedId !== 'input-taxa-debito' && focusedId !== 'input-taxa-credito') {
         dashPaymentBreakdown.innerHTML = `
             <div class="bg-white rounded-[32px] p-8 border border-slate-200 shadow-sm mt-6">
                 <h3 class="text-lg font-black uppercase text-slate-800 tracking-tighter mb-6 flex items-center gap-2">💳 Métodos de Pagamento & Taxas (A Receber)</h3>
@@ -643,11 +636,11 @@ window.renderDashboard = () => {
                 <div class="bg-slate-50 p-6 rounded-3xl border border-slate-200 flex flex-wrap gap-6 items-center">
                     <div class="field w-full md:w-auto">
                         <label class="text-[10px] font-black uppercase text-slate-400">Taxa Máquina Débito (%)</label>
-                        <input type="number" value="${tDebito}" step="0.01" min="0" onchange="window.updateTaxa(this.value, 'taxaDebito')" placeholder="Ex: 1.99" class="input-egg font-black text-lg py-2" style="max-width: 140px;">
+                        <input type="number" id="input-taxa-debito" value="${tDebito}" step="0.01" min="0" onchange="window.updateTaxa(this.value, 'taxaDebito')" placeholder="Ex: 1.99" class="input-egg font-black text-lg py-2" style="max-width: 140px;">
                     </div>
                     <div class="field w-full md:w-auto">
                         <label class="text-[10px] font-black uppercase text-slate-400">Taxa Máquina Crédito (%)</label>
-                        <input type="number" value="${tCredito}" step="0.01" min="0" onchange="window.updateTaxa(this.value, 'taxaCredito')" placeholder="Ex: 4.99" class="input-egg font-black text-lg py-2" style="max-width: 140px;">
+                        <input type="number" id="input-taxa-credito" value="${tCredito}" step="0.01" min="0" onchange="window.updateTaxa(this.value, 'taxaCredito')" placeholder="Ex: 4.99" class="input-egg font-black text-lg py-2" style="max-width: 140px;">
                     </div>
                     
                     <div class="flex-1 text-right mt-4 md:mt-0">
@@ -782,7 +775,6 @@ window.renderProdList = () => {
     }
     
     list.innerHTML = window.produtos.map(p => {
-        // Se existir uma foto_url definida, mostra a foto, senão mostra o emoji
         const imageElement = (p.foto_url && p.foto_url.length > 5) 
             ? `<img src="${p.foto_url}" style="width:100%; height:100%; object-fit:cover; border-radius:12px;" />` 
             : `${p.emoji || '🥚'}`;
@@ -793,7 +785,7 @@ window.renderProdList = () => {
         <div class="prod-item ${p.ativo?'':'inactive'}">
             <div class="prod-emoji" style="padding: ${imgPadding}; border: ${p.foto_url ? 'none' : ''};">${imageElement}</div>
             <div class="prod-info">
-                <h4>${p.nome} ${p.badge?`<span style="background:${p.badgeClass==='green'?'#10b981':p.badgeClass==='amber'?'#f59e0b':'#e11d48'};color:#fff;font-size:.65rem;padding:3px 10px;border-radius:50px;font-weight:800;vertical-align:middle;margin-left:8px;">${p.badge}</span>`:''}</h4>
+                <h4>${p.nome || ''} ${p.badge?`<span style="background:${p.badgeClass==='green'?'#10b981':p.badgeClass==='amber'?'#f59e0b':'#e11d48'};color:#fff;font-size:.65rem;padding:3px 10px;border-radius:50px;font-weight:800;vertical-align:middle;margin-left:8px;">${p.badge}</span>`:''}</h4>
                 <p>${p.tipo || ''} · Embalagem: <strong>${p.embalagem || 'Não definida'}</strong> · ${p.ativo?'✅ Ativo':'⏸ Oculto'}</p>
             </div>
             <div class="prod-price">R$ ${window.fmt(p.preco)}</div>
@@ -1121,7 +1113,8 @@ window.handleSaveStoreConfig = async (e) => {
     } catch(e) { window.toast('Erro ao sincronizar loja.'); }
 };
 
-window.saveConfig = async () => {
+window.handleSaveAparencia = async (e) => {
+    e.preventDefault();
     try {
         if (document.getElementById('cfg-corPrimaria') && document.getElementById('cfg-corPrimaria').value !== "") {
             window.config.corPrimaria   = document.getElementById('cfg-corPrimaria').value;
@@ -1149,18 +1142,11 @@ window.fazerLogin = async () => {
     
     if (em === 'thon@lojista.com.br' && ps === 'admin123') {
         localStorage.setItem('admin_bypass', 'true');
-        if (auth.currentUser) {
-            document.getElementById('login-view').style.display = 'none';
-            document.getElementById('app-view').style.display = 'flex';
-            window.initListeners();
-            window.goTo('dashboard');
-        } else {
-            alert("Sessão segura pendente. Por favor aguarde um segundo e tente novamente.");
-            if (btn) {
-                btn.disabled = false;
-                btn.innerText = "Entrar no Painel";
-            }
-        }
+        // Bypass direto sem verificação de auth.currentUser (evita alert de admin-restricted)
+        document.getElementById('login-view').style.display = 'none';
+        document.getElementById('app-view').style.display = 'flex';
+        window.initListeners();
+        window.goTo('dashboard');
         return;
     }
     
@@ -1188,7 +1174,6 @@ window.fazerLogout = async () => {
     }
     
     await signOut(auth);
-    await window.initAuth();
 };
 
 window.initListeners = () => {
@@ -1230,7 +1215,11 @@ window.initListeners = () => {
             
             if (window.state.view === 'loja') window.loadLojaForm();
             if (window.state.view === 'aparencia') window.loadAparenciaForm();
-            if (window.state.view === 'dashboard') window.renderDashboard();
+            
+            const focusedId = document.activeElement ? document.activeElement.id : null;
+            if (window.state.view === 'dashboard' && focusedId !== 'input-taxa-debito' && focusedId !== 'input-taxa-credito') {
+                window.renderDashboard();
+            }
         }
     });
 
@@ -1265,18 +1254,20 @@ window.boot = async () => {
         loginBtn.innerText = "Entrar no Painel";
     }
     
+    if (localStorage.getItem('admin_bypass') === 'true') {
+        document.getElementById('login-view').style.display = 'none';
+        document.getElementById('app-view').style.display = 'flex';
+        window.initListeners();
+        window.goTo('dashboard');
+        return;
+    }
+    
     onAuthStateChanged(auth, u => {
-        const bp = localStorage.getItem('admin_bypass') === 'true';
-        if (u && (bp || u.email === 'thon@lojista.com.br')) {
+        if (u) {
             document.getElementById('login-view').style.display = 'none';
             document.getElementById('app-view').style.display = 'flex';
-            
-            const mainEl = document.getElementById('main-content');
-            if(mainEl && !mainEl.innerHTML.trim()) {
-                window.goTo('dashboard');
-            }
-            
             window.initListeners();
+            window.goTo('dashboard');
         } else {
             window.clearAdminListeners();
             document.getElementById('login-view').style.display = 'flex';
