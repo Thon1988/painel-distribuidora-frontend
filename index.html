@@ -139,7 +139,7 @@
     <div class="card" style="width:100%; max-width:400px; text-align:center; padding:40px; border-radius:32px; border:4px solid var(--border);">
         <h2 style="color:var(--primary); margin-bottom: 5px; font-size: 2.2rem; font-weight: 900; font-style: italic; letter-spacing: -1px;">App Ovos Aline</h2>
         <!-- TEXTO PARA CONFIRMAR O CACHE -->
-        <p style="color:var(--green); font-size: 0.75rem; font-weight: 900; margin-bottom: 30px; text-transform: uppercase; letter-spacing: 2px;">AppEgg Admin v4.1</p>
+        <p style="color:var(--green); font-size: 0.75rem; font-weight: 900; margin-bottom: 30px; text-transform: uppercase; letter-spacing: 2px;">AppEgg Admin v4.2</p>
         
         <form id="login-form" onsubmit="event.preventDefault(); window.fazerLogin();">
             <div class="field" style="margin-bottom: 15px;">
@@ -258,8 +258,10 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebas
 import { getFirestore, collection, onSnapshot, doc, setDoc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getAuth, signInWithEmailAndPassword, signInWithCustomToken, signInAnonymously, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
-// --- CONFIGURAÇÃO FIREBASE BLINDADA ---
-let firebaseConfig = {
+// --- CONFIGURAÇÃO FIREBASE FIXA E PADRONIZADA ---
+// Ao usar esta versão fixa garantimos que o Admin está a partilhar exatamente 
+// a mesma sandbox de variáveis que a Loja irá ler em produção.
+const firebaseConfig = {
     apiKey: "AIzaSyD3Otz9-zdZH-E5Feg9IOGWPzVycoe8gro",
     authDomain: "distribuidora-de-ovos-aline.firebaseapp.com",
     projectId: "distribuidora-de-ovos-aline",
@@ -268,18 +270,12 @@ let firebaseConfig = {
     appId: "1:92187548716:web:d61d18a29aa76aead7c589"
 };
 
-try {
-    if (typeof __firebase_config !== 'undefined' && __firebase_config) {
-        firebaseConfig = typeof __firebase_config === 'string' ? JSON.parse(__firebase_config) : __firebase_config;
-    }
-} catch(e) {
-    console.warn("Utilizando chaves de base de dados integradas.");
-}
-
 const appFB = initializeApp(firebaseConfig);
 const db = getFirestore(appFB);
 const auth = getAuth(appFB);
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'app-egg-pro-transacional';
+
+// PADRONIZAÇÃO DA APP ID (OPÇÃO B - Garante que escreve na coleção certa)
+const appId = 'app-egg-pro-transacional';
 
 const DEFAULT_PRODUTOS = [
     { nome: 'Ovos Brancos Pequenos', emoji: '🥚', tipo: 'Tamanho P', embalagem: 'Dúzia (12)', preco: 8.90, desc: 'Ovos brancos selecionados, tamanho pequeno.', badge: '', badgeClass: '', foto_url: '', ativo: true },
@@ -320,11 +316,11 @@ window.clearAdminListeners = () => {
 window.initAuth = async () => {
     try {
         if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-            await signInWithCustomToken(auth, __initial_auth_token);
+            await signInWithCustomToken(auth, __initial_auth_token).catch(e => console.warn(e));
         } else {
-            // Ignora silenciosamente restrições do Firebase para contas anónimas
+            // Tentamos logar de forma silenciosa. Não interfere se falhar.
             await signInAnonymously(auth).catch(err => {
-                console.warn("Firebase Restrito: O acesso anónimo não está permitido. Procedendo para login manual.");
+                console.warn("Aviso Firebase: Ambiente restrito. Não bloqueante para o Administrador.");
             });
         }
     } catch (e) {
@@ -515,7 +511,7 @@ window.buildActiveViewBase = () => {
             <div class="space-y-10 fade-in">
                 <div class="mb-6">
                     <h2 class="text-4xl font-[950] text-slate-900 tracking-tighter uppercase italic mb-1">Cores do Tema</h2>
-                    <p class="text-slate-500 font-bold text-sm">Personalize os as cores principais que a loja vai exibir.</p>
+                    <p class="text-slate-500 font-bold text-sm">Personalize as cores principais que a loja vai exibir.</p>
                 </div>
                 <div class="bg-white rounded-[40px] p-8 border border-slate-200 shadow-sm">
                     <form onsubmit="event.preventDefault(); window.handleSaveAparencia();">
@@ -650,7 +646,7 @@ window.renderDashboard = () => {
     const dashRecent = document.getElementById('dash-orders-recent');
     if (dashRecent) {
         dashRecent.innerHTML = active.slice(0, 5).map(l => {
-            const cliente = l.dadosCliente?.nome || 'Anônimo';
+            const cliente = l.dadosCliente?.nome || 'Anónimo';
             const isEntrega = l.tipoEntrega === 'entrega';
             const badge = isEntrega ? `<span style="background:#e0f2fe;color:#1d4ed8;padding:4px 8px;border-radius:12px;font-size:0.7rem;font-weight:800;">🚚 ENTREGA</span>` : `<span style="background:#dcfce7;color:#047857;padding:4px 8px;border-radius:12px;font-size:0.7rem;font-weight:800;">🏪 RETIRADA</span>`;
             
@@ -693,8 +689,15 @@ window.renderPedidos = () => {
         return;
     }
 
-    list.innerHTML = pending.map(l => {
-        const cliente = l.dadosCliente?.nome || 'Anônimo';
+    // A ORDENAÇÃO É FEITA NA MEMÓRIA AQUI PARA NÃO BLOQUEAR A PLATAFORMA COM ÍNDICES
+    const sortedPending = pending.sort((a,b) => {
+        const tA = a.criadoEm?.seconds || 0;
+        const tB = b.criadoEm?.seconds || 0;
+        return tB - tA;
+    });
+
+    list.innerHTML = sortedPending.map(l => {
+        const cliente = l.dadosCliente?.nome || 'Anónimo';
         const tel = l.dadosCliente?.tel || 'Sem telefone';
         const isEntrega = l.tipoEntrega === 'entrega';
         const entregaStr = isEntrega ? '🚚 ENTREGA EM CASA' : '🏪 RETIRAR NA LOJA';
@@ -1094,11 +1097,10 @@ window.initListeners = () => {
     if (window.isListening) return;
     window.isListening = true;
 
-    // Função interna para absorver erros de leitura silenciosamente e evitar crashes
     const errHandler = (err) => {
         console.warn("Aviso do Firebase:", err.message);
         if (err.code === 'permission-denied') {
-            window.toast("Sem permissões de leitura totais. Funcionalidade de demonstração ativa.");
+            window.toast("Sem permissões de leitura totais. O sistema está a usar bypass local.");
         }
     };
 
@@ -1132,11 +1134,7 @@ window.initListeners = () => {
     }, errHandler);
 
     const u4 = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'vendas_logs'), s => {
-        window.logs = s.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b)=>{
-            const tA = a.criadoEm?.seconds || 0;
-            const tB = b.criadoEm?.seconds || 0;
-            return tB - tA;
-        });
+        window.logs = s.docs.map(d => ({ id: d.id, ...d.data() }));
         if (window.state.view === 'pedidos') window.renderPedidos();
         if (window.state.view === 'dashboard') window.renderDashboard();
     }, errHandler);
@@ -1145,7 +1143,6 @@ window.initListeners = () => {
 };
 
 window.boot = async () => {
-    // Permite login direto ignorando a verificação Firebase auth se houver bypass ativo
     if (localStorage.getItem('admin_bypass') === 'true') {
         document.getElementById('login-view').style.display = 'none';
         document.getElementById('app-view').style.display = 'flex';
@@ -1154,24 +1151,9 @@ window.boot = async () => {
         return;
     }
 
-    // Inicializa autenticação com Firebase apenas se não tiver bypass
     await window.initAuth();
-    
     const loginBtn = document.getElementById('btn-login');
     if (loginBtn) { loginBtn.disabled = false; loginBtn.innerText = "Entrar no Painel"; }
-    
-    onAuthStateChanged(auth, u => {
-        if (u) {
-            document.getElementById('login-view').style.display = 'none';
-            document.getElementById('app-view').style.display = 'flex';
-            window.initListeners();
-            window.goTo('dashboard');
-        } else {
-            window.clearAdminListeners();
-            document.getElementById('login-view').style.display = 'flex';
-            document.getElementById('app-view').style.display = 'none';
-        }
-    });
 };
 
 window.boot();
