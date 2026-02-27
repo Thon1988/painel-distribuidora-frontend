@@ -7,19 +7,27 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   
+  <script>
+    // Stub preventivo para evitar erros de clique antes do carregamento completo do módulo
+    window.fazerLogin = function() {
+        alert("A ligar ao servidor. Por favor, aguarde um instante...");
+    };
+  </script>
+
   <style>
     *, *::before, *::after { box-sizing: border-box; margin:0; padding:0; }
     
     :root {
-      --primary: #e11d48; 
-      --dark:    #be123c; 
-      --brown:   #0f172a; 
-      --cream:   #f8fafc; 
-      --muted:   #64748b; 
+      /* Identidade Premium Vermelha (Rose/Slate) perfeitamente integrada no seu layout */
+      --primary: #e11d48; /* Rose 600 */
+      --dark:    #be123c; /* Rose 700 */
+      --brown:   #0f172a; /* Slate 900 */
+      --cream:   #f8fafc; /* Slate 50 */
+      --muted:   #64748b; /* Slate 500 */
       --white:   #ffffff;
-      --green:   #10b981; 
-      --red:     #e11d48; 
-      --border:  #e2e8f0; 
+      --green:   #10b981; /* Emerald 500 */
+      --red:     #e11d48; /* Rose 600 */
+      --border:  #e2e8f0; /* Slate 200 */
       --shadow:  0 4px 20px rgba(15, 23, 42, .08);
     }
     
@@ -117,7 +125,7 @@
     .pix-type-btn:hover { border-color:var(--primary); color:var(--primary); }
     .pix-type-btn.active { border-color:var(--primary); background:var(--primary); color:#fff; box-shadow:0 4px 10px rgba(225,29,72,.2); }
 
-    /* Login Screen */
+    /* Login Screen Setup */
     #login-view { position:fixed; inset:0; background:var(--brown); z-index:2000; display:flex; flex-direction:column; align-items:center; justify-content:center; }
     #app-view { display:none; flex-direction:column; min-height:100vh; }
     
@@ -134,7 +142,7 @@
 </head>
 <body>
 
-<!-- LOGIN -->
+<!-- ECRÃ DE LOGIN ESTILO PREMIUM -->
 <div id="login-view">
     <div class="card" style="width:100%; max-width:400px; text-align:center; padding:40px; border-radius:32px; border:4px solid var(--border);">
         <h2 style="color:var(--primary); margin-bottom: 5px; font-size: 2.2rem; font-weight: 900; font-style: italic; letter-spacing: -1px;">App Ovos Aline</h2>
@@ -147,40 +155,44 @@
             <div class="field" style="margin-bottom: 24px;">
                 <input type="password" id="login-pass" placeholder="Palavra-passe" style="text-align:center;" required>
             </div>
-            <button id="btn-login" type="submit" class="btn btn-primary" style="width:100%; justify-content:center; padding: 16px; font-size: 1rem;">Entrar no Painel</button>
+            <button id="btn-login" type="submit" class="btn btn-primary" style="width:100%; justify-content:center; padding: 16px; font-size: 1rem;" disabled>A carregar...</button>
         </form>
     </div>
 </div>
 
-<!-- APP -->
+<!-- ESTRUTURA PRINCIPAL DO APP -->
 <div id="app-view">
     <header>
       <div class="h-logo"><span>🥚</span> App Ovos Aline</div>
-      <button class="h-back" style="background: rgba(255,255,255,0.15); border: none;" onclick="window.fazerLogout()">Sair</button>
+      <div style="display:flex; gap:10px;">
+        <button class="h-back" style="background: rgba(255,255,255,0.15); border: none;" onclick="window.fazerLogout()">Sair do Painel</button>
+      </div>
     </header>
 
     <div class="preview-bar">
-      <span>✅ Sincronizado com Firebase Cloud</span>
+      <span>✅ As alterações são gravadas na Base de Dados Cloud em tempo real.</span>
     </div>
 
     <div class="layout">
       <nav class="nav">
-        <div class="nav-title">Menu</div>
-        <div class="nav-item active" onclick="window.goTo('dashboard')"><span class="ni">📊</span> Dashboard</div>
-        <div class="nav-item" onclick="window.goTo('pedidos')"><span class="ni">📦</span> Pedidos</div>
-        <div class="nav-item" onclick="window.goTo('produtos')"><span class="ni">🥚</span> Produtos</div>
-        <div class="nav-item" onclick="window.goTo('loja')"><span class="ni">🏪</span> Loja</div>
-        <div class="nav-item" onclick="window.goTo('pix')"><span class="ni">💚</span> PIX</div>
-        <div class="nav-item" onclick="window.goTo('aparencia')"><span class="ni">🎨</span> Cores</div>
+        <div class="nav-title">Menu de Gestão</div>
+        <div class="nav-item active" onclick="window.goTo('dashboard')"><span class="ni">📊</span> Administrativo</div>
+        <div class="nav-item" onclick="window.goTo('pedidos')"><span class="ni">📦</span> Encomendas</div>
+        <div class="nav-item" onclick="window.goTo('produtos')"><span class="ni">🥚</span> Catálogo</div>
+        <div class="nav-item" onclick="window.goTo('loja')"><span class="ni">🏪</span> Dados da Loja</div>
+        <div class="nav-item" onclick="window.goTo('pix')"><span class="ni">💚</span> Configurar PIX</div>
+        <div class="nav-item" onclick="window.goTo('aparencia')"><span class="ni">🎨</span> Aparência</div>
       </nav>
 
       <div class="content">
-          <main id="main-content" class="w-full"></main>
+          <main id="main-content" class="w-full">
+              <!-- CONTEÚDO RENDERIZADO VIA JAVASCRIPT AQUI -->
+          </main>
       </div>
     </div>
 </div>
 
-<!-- MODAL PRODUTO -->
+<!-- MODAL DE PRODUTO -->
 <div class="modal-bg" id="prod-modal">
   <div class="modal-box">
     <div class="modal-head">
@@ -192,41 +204,53 @@
       
       <div class="form-grid">
         <div class="field" style="grid-column: span 2;">
-            <label>Imagem (URL ou Upload)</label>
+            <label>Imagem do Produto (Colar URL ou Fazer Upload)</label>
             <div style="display: flex; gap: 12px; align-items: center; margin-top: 4px;">
                 <div id="mp-img-preview" style="width: 64px; height: 64px; border-radius: 12px; background: var(--cream); border: 2px dashed var(--border); display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0;">
                     <span style="font-size: 1.5rem; color: var(--muted);">📷</span>
                 </div>
                 <div style="flex: 1; display: flex; flex-direction: column; gap: 8px;">
-                    <input type="text" id="mp-foto" placeholder="Cole o link da imagem" oninput="window.updateImgPreview()">
+                    <input type="text" id="mp-foto" placeholder="Cole o link da imagem (http://...)" oninput="window.updateImgPreview()">
                     <input type="file" id="mp-file" accept="image/*" style="font-size: 0.8rem; padding: 6px; cursor: pointer; background: var(--white); border: 1px solid var(--border); border-radius: 8px;" onchange="window.handleFileUpload(event)">
                 </div>
             </div>
         </div>
 
-        <div class="field" style="grid-column: span 2;"><label>Nome</label><input id="mp-nome" placeholder="Ex: Ovos Brancos" /></div>
-        <div class="field"><label>Tipo</label><input id="mp-tipo" placeholder="Tamanho G" /></div>
-        <div class="field"><label>Emoji</label><input id="mp-emoji" placeholder="🥚" maxlength="4" /></div>
-        <div class="field"><label>Embalagem</label><input type="text" id="mp-embalagem" placeholder="Dúzia (12)"></div>
+        <div class="field" style="grid-column: span 2;"><label>Nome do Produto</label><input id="mp-nome" placeholder="Ex: Ovos Brancos" /></div>
+        <div class="field"><label>Tipo / Subtítulo</label><input id="mp-tipo" placeholder="Ex: Tamanho G" /></div>
+        <div class="field"><label>Emoji (Opcional)</label><input id="mp-emoji" placeholder="🥚" maxlength="4" /></div>
+        
+        <div class="field">
+            <label>Formato / Embalagem</label>
+            <input type="text" id="mp-embalagem" list="mp-embalagem-list" placeholder="Ex: Cartela (20)" style="cursor: text;">
+            <datalist id="mp-embalagem-list">
+                <option value="Unidade"></option>
+                <option value="Meia Dúzia (6)"></option>
+                <option value="Dúzia (12)"></option>
+                <option value="Cartela (30)"></option>
+                <option value="Caixa com 120 ovos"></option>
+            </datalist>
+        </div>
+        
         <div class="field"><label>Preço (R$)</label><input id="mp-preco" type="number" min="0" step="0.01" placeholder="12.90" /></div>
       </div>
-      <div class="field"><label>Descrição</label><textarea id="mp-desc" rows="3" placeholder="Descrição..."></textarea></div>
+      <div class="field"><label>Descrição Longa</label><textarea id="mp-desc" rows="3" placeholder="Descreva o produto com carinho..."></textarea></div>
       <div class="field">
-        <label>Badge</label>
+        <label>Etiqueta Promocional (Badge)</label>
         <div class="badge-opts">
-          <div class="badge-opt bo-none sel" onclick="window.selBadge(this,'','')">Nenhuma</div>
-          <div class="badge-opt bo-red" onclick="window.selBadge(this,'Popular','rose')">Popular</div>
-          <div class="badge-opt bo-red" onclick="window.selBadge(this,'Top Venda','rose')">Top Venda</div>
-          <div class="badge-opt bo-amber" onclick="window.selBadge(this,'Especial','amber')">Especial</div>
-          <div class="badge-opt bo-green" onclick="window.selBadge(this,'Premium','green')">Premium</div>
-          <div class="badge-opt bo-red" onclick="window.selBadge(this,'Novo','rose')">Novo</div>
-          <div class="badge-opt bo-amber" onclick="window.selBadge(this,'Promoção','amber')">Promoção</div>
+          <div class="badge-opt bo-none sel" data-badge="" data-class="" onclick="window.selBadge(this,'','')">Nenhuma</div>
+          <div class="badge-opt bo-red"   data-badge="Popular"   data-class="rose"  onclick="window.selBadge(this,'Popular','rose')">Popular</div>
+          <div class="badge-opt bo-red"   data-badge="Top Venda" data-class="rose"  onclick="window.selBadge(this,'Top Venda','rose')">Top Venda</div>
+          <div class="badge-opt bo-amber" data-badge="Especial"  data-class="amber" onclick="window.selBadge(this,'Especial','amber')">Especial</div>
+          <div class="badge-opt bo-green" data-badge="Premium"   data-class="green" onclick="window.selBadge(this,'Premium','green')">Premium</div>
+          <div class="badge-opt bo-red"   data-badge="Novo"      data-class="rose"  onclick="window.selBadge(this,'Novo','rose')">Novo</div>
+          <div class="badge-opt bo-amber" data-badge="Promoção"  data-class="amber" onclick="window.selBadge(this,'Promoção','amber')">Promoção</div>
         </div>
         <input type="hidden" id="mp-badge" />
         <input type="hidden" id="mp-badgeClass" />
       </div>
       <div style="display:flex;gap:12px;margin-top:10px">
-        <button id="btn-save-prod" class="btn btn-primary" style="flex:1" onclick="window.saveProd()">💾 Guardar</button>
+        <button id="btn-save-product-modal" class="btn btn-primary" style="flex:1" onclick="window.saveProd()">💾 Guardar no Firebase</button>
         <button class="btn btn-ghost" onclick="window.closeProdModal()">Cancelar</button>
       </div>
     </div>
@@ -235,12 +259,14 @@
 
 <div class="toast" id="toast"></div>
 
+<!-- LÓGICA JAVASCRIPT & FIREBASE -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getFirestore, collection, onSnapshot, doc, setDoc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { getAuth, signInAnonymously, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getAuth, signInWithEmailAndPassword, signInWithCustomToken, signInAnonymously, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
-const firebaseConfig = {
+// --- CONFIGURAÇÃO FIREBASE PROTEGIDA ---
+let firebaseConfig = {
     apiKey: "AIzaSyD3Otz9-zdZH-E5Feg9IOGWPzVycoe8gro",
     authDomain: "distribuidora-de-ovos-aline.firebaseapp.com",
     projectId: "distribuidora-de-ovos-aline",
@@ -249,185 +275,573 @@ const firebaseConfig = {
     appId: "1:92187548716:web:d61d18a29aa76aead7c589"
 };
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const auth = getAuth(app);
-const appId = 'app-egg-pro-transacional';
+try {
+    if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+        firebaseConfig = typeof __firebase_config === 'string' ? JSON.parse(__firebase_config) : __firebase_config;
+    }
+} catch(e) {
+    console.warn("Aviso: Utilizando fallback interno de configurações.");
+}
+
+const appFB = initializeApp(firebaseConfig);
+const db = getFirestore(appFB);
+const auth = getAuth(appFB);
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'app-egg-pro-transacional';
+
+const DEFAULT_PRODUTOS = [
+    { nome: 'Ovos Brancos Pequenos', emoji: '🥚', tipo: 'Tamanho P', embalagem: 'Dúzia (12)', preco: 8.90, desc: 'Ovos brancos selecionados, tamanho pequeno.', badge: '', badgeClass: '', foto_url: '', ativo: true },
+    { nome: 'Ovos Brancos Médios', emoji: '🥚', tipo: 'Tamanho M', embalagem: 'Cartela (30)', preco: 21.90, desc: 'O favorito do dia a dia! Tamanho ideal para qualquer receita.', badge: '', badgeClass: '', foto_url: '', ativo: true },
+    { nome: 'Ovos Brancos Grandes', emoji: '🥚', tipo: 'Tamanho G', embalagem: 'Dúzia (12)', preco: 12.90, desc: 'Ovos maiores com gema mais volumosa.', badge: 'Popular', badgeClass: 'rose', foto_url: '', ativo: true },
+    { nome: 'Ovos Extra Grandes', emoji: '🥚', tipo: 'Tamanho XG', embalagem: 'Dúzia (12)', preco: 14.90, desc: 'Os maiores! Gema rica e intensa.', badge: 'Top Venda', badgeClass: 'rose', foto_url: '', ativo: true },
+    { nome: 'Ovos Caipira', emoji: '🐓', tipo: 'Caipira', embalagem: 'Meia Dúzia (6)', preco: 9.90, desc: 'Criação livre no campo. Gema laranjinha e sabor incomparável.', badge: 'Especial', badgeClass: 'amber', foto_url: '', ativo: true },
+    { nome: 'Ovos Orgânicos', emoji: '🌿', tipo: 'Orgânico', embalagem: 'Caixa com 120 ovos', preco: 95.90, desc: '100% orgânicos, sem antibióticos. Certificado. Ideal para revenda.', badge: 'Premium', badgeClass: 'green', foto_url: '', ativo: true }
+];
+
+window.STATUS_OPTIONS = ["CRIADO", "AGUARDANDO PIX", "EM SEPARAÇÃO", "SAIU PARA ENTREGA", "PRONTO PARA RETIRADA", "FINALIZADO", "CANCELADO"];
+
+window.config = {
+    nome:'App Ovos Aline', slogan:'Qualidade Premium', emoji:'🥚',
+    heroTitle:'Ovos Fresquinhos 🥚', heroDesc:'Do campo direto pra sua mesa.',
+    pixChave:'', pixTipo:'Celular', pixNome:'App Ovos Aline', pixCidade:'SAO PAULO',
+    corPrimaria:'#e11d48', corSecundaria:'#be123c',
+    taxaDebito: 0, taxaCredito: 0, whatsapp: ''
+};
 
 window.produtos = [];
 window.logs = [];
-window.config = {nome:'App Ovos Aline', emoji:'🥚', slogan:'Qualidade Premium', heroTitle:'Ovos Fresquinhos', heroDesc:'', pixChave:'', pixTipo:'Celular', pixNome:'App Ovos Aline', pixCidade:'SAO PAULO', corPrimaria:'#e11d48', corSecundaria:'#be123c'};
-window.state = {view:'dashboard'};
-window.unsubs = [];
+window.editingId = null;
+window.firebaseUnsubs = [];
+window.isListening = false;
+window.state = { view: 'dashboard' };
 
-window.toast = (msg) => {
-    const t = document.getElementById('toast');
-    t.textContent = msg; t.classList.add('show');
-    setTimeout(()=>t.classList.remove('show'), 2500);
+// --- FUNÇÕES GLOBAIS BLINDADAS ---
+window.clearAdminListeners = () => {
+    window.firebaseUnsubs.forEach(unsub => {
+        if (typeof unsub === 'function') unsub();
+    });
+    window.firebaseUnsubs = [];
+    window.isListening = false;
 };
 
-window.fmt = n => Number(n||0).toFixed(2).replace('.',',');
+window.initAuth = async () => {
+    try {
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+            await signInWithCustomToken(auth, __initial_auth_token);
+        } else {
+            // Ignora silenciosamente restrições do Firebase para contas anónimas
+            await signInAnonymously(auth).catch(err => {
+                console.warn("Firebase Restrito: O acesso anónimo não está permitido. Procedendo para login manual.");
+            });
+        }
+    } catch (e) {
+        console.error("Erro na autenticação base:", e);
+    }
+};
+
+window.generateUUID = () => {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+        var r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8); return v.toString(16);
+    });
+};
+
+window.toast = (msg) => {
+    const t = document.getElementById('toast'); if(!t) return;
+    t.textContent = msg; t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+};
+
+window.fmt = n => Number(n || 0).toFixed(2).replace('.',',');
 
 window.goTo = (sec) => {
     document.querySelectorAll('.nav-item').forEach(el => {
         el.classList.remove('active');
         if(el.getAttribute('onclick') && el.getAttribute('onclick').includes(`'${sec}'`)) el.classList.add('active');
     });
-    window.state.view = sec;
-    const m = document.getElementById('main-content');
-    if(m) m.innerHTML = window.buildView();
     
-    if(sec==='dashboard') window.renderDash();
-    if(sec==='pedidos') window.renderPedidos();
-    if(sec==='produtos') window.renderProds();
-    if(sec==='pix') { window.loadPix(); setTimeout(()=>window.renderQR(), 100); }
-    if(sec==='loja') window.loadLoja();
-    if(sec==='aparencia') window.loadApar();
+    window.state.view = sec;
+    
+    const mainEl = document.getElementById('main-content');
+    if (mainEl) {
+        mainEl.innerHTML = window.buildActiveViewBase();
+    }
+    
+    if (sec === 'loja') window.loadLojaForm();
+    if (sec === 'pix') { window.loadPixForm(); window.renderPixPreview(); }
+    if (sec === 'aparencia') window.loadAparenciaForm();
+    if (sec === 'dashboard') window.renderDashboard();
+    if (sec === 'pedidos') window.renderPedidos();
+    if (sec === 'produtos') window.renderProdList();
 };
 
-window.buildView = () => {
-    const v = window.state.view;
-    if(v==='dashboard') return '<div id="dash-content"></div>';
-    if(v==='pedidos') return '<h2 class="page-title">Pedidos</h2><div id="pedidos-list"></div>';
-    if(v==='produtos') return '<div style="display:flex;justify-content:space-between;margin-bottom:20px;"><h2 class="page-title">Produtos</h2><button class="btn btn-primary" onclick="window.openProdModal()">+ Adicionar</button></div><div id="prods-list"></div>';
-    
-    if(v==='pix') {
-        const c = window.config;
-        return `<h2 class="page-title">Configurar PIX</h2>
-        <div class="card"><form onsubmit="event.preventDefault();window.savePix();">
-        <div class="form-grid">
-        <div class="field"><label>Tipo</label><select id="pixType"><option>Celular</option><option>CPF</option><option>CNPJ</option><option>E-mail</option><option>Chave Aleatória</option></select></div>
-        <div class="field"><label>Chave</label><input id="pixKey" value="${c.pixChave||''}" required></div>
-        <div class="field"><label>Nome</label><input id="pixNome" value="${c.pixNome||''}" maxlength="25" required></div>
-        <div class="field"><label>Cidade</label><input id="pixCidade" value="${c.pixCidade||''}" maxlength="15" required></div>
-        </div>
-        <button type="submit" class="btn btn-green" style="width:100%;margin-top:20px;">Guardar PIX</button>
-        </form>
-        <div style="margin-top:30px;text-align:center;"><p style="font-size:0.8rem;color:var(--muted);margin-bottom:10px;">QR Code Teste (R$ 1,00)</p><div id="qr-container" style="display:inline-block;padding:10px;background:white;border-radius:12px;border:2px solid var(--border);"></div></div>
-        </div>`;
+window.buildActiveViewBase = () => {
+    switch(window.state.view) {
+        case 'dashboard': 
+            return `
+            <div class="space-y-10 fade-in">
+                <h2 class="text-4xl font-[950] text-slate-900 tracking-tighter uppercase italic mb-2">Administrativo</h2>
+                <div id="dash-stats-grid" class="grid grid-cols-1 md:grid-cols-3 gap-6"></div>
+                <div id="dash-payment-breakdown"></div>
+                <div class="bg-white rounded-[40px] p-8 border border-slate-200 shadow-sm mt-6">
+                    <h4 class="font-black uppercase text-sm text-slate-400 border-b border-slate-100 pb-4 mb-6 italic">Últimas Atividades</h4>
+                    <div id="dash-orders-recent" class="space-y-3"></div>
+                </div>
+            </div>`;
+        
+        case 'produtos': 
+            return `
+            <div class="space-y-10 fade-in">
+                <div class="flex justify-between items-center flex-wrap gap-4 mb-6">
+                    <div>
+                        <h2 class="text-4xl font-[950] text-slate-900 tracking-tighter uppercase italic mb-1">Gerenciar Produtos</h2>
+                        <p class="text-slate-500 font-bold text-sm">Adicione, edite, ative/desative e elimine produtos do catálogo.</p>
+                    </div>
+                    <button onclick="window.openProdModal()" class="btn btn-primary shadow-md active:scale-95 transition-all">
+                        + Adicionar Produto
+                    </button>
+                </div>
+                <div id="prod-list" class="prod-list"></div>
+            </div>`;
+
+        case 'pedidos': 
+            return `
+            <div class="space-y-10 fade-in">
+                <div class="mb-6">
+                    <h2 class="text-4xl font-[950] text-slate-900 tracking-tighter uppercase italic mb-1">Gestão de Encomendas</h2>
+                    <p class="text-slate-500 font-bold text-sm">Organize as entregas e as retiradas na loja.</p>
+                </div>
+                <div id="pedidos-list" class="grid gap-6"></div>
+            </div>`;
+
+        case 'pix': {
+            const cfg = window.config || {};
+            return `
+            <div class="space-y-10 fade-in">
+                <div class="mb-6">
+                    <h2 class="text-4xl font-[950] text-slate-900 tracking-tighter uppercase italic mb-1">Configurar PIX</h2>
+                    <p class="text-slate-500 font-bold text-sm">Configure os dados de recebimento PIX que vão aparecer no Checkout.</p>
+                </div>
+                
+                <div class="bg-white rounded-[40px] p-8 border border-slate-200 shadow-sm">
+                    <div class="flex flex-col lg:flex-row justify-between items-center gap-10">
+                        <div class="flex-1 w-full">
+                            <h3 class="text-2xl font-black uppercase text-slate-800 tracking-tighter mb-2">Chave PIX da Loja</h3>
+                            <p class="text-xs font-bold text-slate-500 mb-8">Estes dados aparecem no momento do Checkout do cliente.</p>
+                            <form onsubmit="event.preventDefault(); window.handleSavePixConfig();" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div class="field">
+                                    <label class="text-[10px] font-black uppercase text-slate-400 ml-2">Tipo de Chave</label>
+                                    <select id="pixType" class="input-egg text-xs uppercase font-bold">
+                                        <option value="Celular" ${cfg.pixTipo==='Celular'?'selected':''}>Celular</option>
+                                        <option value="CPF" ${cfg.pixTipo==='CPF'?'selected':''}>CPF</option>
+                                        <option value="CNPJ" ${cfg.pixTipo==='CNPJ'?'selected':''}>CNPJ</option>
+                                        <option value="E-mail" ${cfg.pixTipo==='E-mail'?'selected':''}>E-mail</option>
+                                        <option value="Chave Aleatória" ${cfg.pixTipo==='Chave Aleatória'?'selected':''}>Chave Aleatória</option>
+                                    </select>
+                                </div>
+                                <div class="field">
+                                    <label class="text-[10px] font-black uppercase text-slate-400 ml-2">Chave de Registo Exata</label>
+                                    <input id="pixKey" value="${cfg.pixChave || ''}" class="input-egg font-black text-slate-900" placeholder="Insira a chave" required>
+                                </div>
+                                <div class="field">
+                                    <label class="text-[10px] font-black uppercase text-slate-400 ml-2">Nome do Recebedor (PIX)</label>
+                                    <input id="pixNome" value="${cfg.pixNome || 'App Ovos Aline'}" class="input-egg font-bold text-slate-700" maxlength="25" required>
+                                </div>
+                                <div class="field">
+                                    <label class="text-[10px] font-black uppercase text-slate-400 ml-2">Cidade (PIX)</label>
+                                    <input id="pixCidade" value="${cfg.pixCidade || 'SAO PAULO'}" class="input-egg font-bold text-slate-700" maxlength="15" required>
+                                </div>
+                                <div class="md:col-span-2 pt-2">
+                                    <button id="btn-save-pix" type="submit" class="w-full btn btn-primary shadow-xl transition-all" style="padding:16px; font-size:1.1rem;">💾 Salvar Configurações do PIX</button>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="w-full lg:w-72 bg-slate-50 p-8 rounded-[32px] text-center border border-slate-200 flex flex-col items-center">
+                            <p class="text-[10px] font-black text-slate-400 uppercase mb-4 tracking-widest">Teste do QR Code (R$ 1,00)</p>
+                            <div id="pix-preview-qr" class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 w-[172px] h-[172px] flex items-center justify-center"></div>
+                            <button class="btn btn-ghost btn-sm mt-4" onclick="window.renderPixPreview()">🔄 Gerar Prévia</button>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        case 'loja': {
+            const s = window.config;
+            return `
+            <div class="space-y-10 fade-in">
+                <div class="mb-6">
+                    <h2 class="text-4xl font-[950] text-slate-900 tracking-tighter uppercase italic mb-1">Aparência da Loja</h2>
+                    <p class="text-slate-500 font-bold text-sm">Personalize os textos e as configurações base de contato.</p>
+                </div>
+                <div class="bg-white rounded-[40px] p-8 border border-slate-200 shadow-sm">
+                    <form onsubmit="event.preventDefault(); window.handleSaveStoreConfig();">
+                        
+                        <h3 class="text-lg font-black text-slate-800 uppercase mb-4 border-b border-slate-100 pb-2">Identidade e Textos</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                            <div class="field">
+                                <label class="text-[11px] font-black uppercase text-slate-500 ml-2">Nome da Loja</label>
+                                <input id="cfg-nome" type="text" value="${s.nome || ''}" class="input-egg text-slate-900 font-black" required>
+                            </div>
+                            <div class="flex gap-4 field">
+                                <div class="w-1/3">
+                                    <label class="text-[11px] font-black uppercase text-slate-500 ml-2">Ícone</label>
+                                    <input id="cfg-emoji" type="text" value="${s.emoji || '🥚'}" class="input-egg text-center text-xl" maxlength="4">
+                                </div>
+                                <div class="flex-1">
+                                    <label class="text-[11px] font-black uppercase text-slate-500 ml-2">Slogan</label>
+                                    <input id="cfg-slogan" type="text" value="${s.slogan || ''}" class="input-egg" placeholder="Ex: Direto da Granja">
+                                </div>
+                            </div>
+                            <div class="md:col-span-2 field">
+                                <label class="text-[11px] font-black uppercase text-slate-500 ml-2">Título Principal (Banner Destaque)</label>
+                                <input id="cfg-heroTitle" type="text" value="${s.heroTitle || ''}" class="input-egg font-bold" placeholder="Ex: Ovos Fresquinhos 🥚">
+                            </div>
+                            <div class="md:col-span-2 field">
+                                <label class="text-[11px] font-black uppercase text-slate-500 ml-2">Subtítulo (Banner Destaque)</label>
+                                <textarea id="cfg-heroDesc" rows="2" class="input-egg py-3" placeholder="Mensagem para os seus clientes...">${s.heroDesc || ''}</textarea>
+                            </div>
+                        </div>
+
+                        <h3 class="text-lg font-black text-slate-800 uppercase mb-4 border-b border-slate-100 pb-2">Contato (Novo)</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
+                            <div class="field md:col-span-2">
+                                <label class="text-[11px] font-black uppercase text-slate-500 ml-2">WhatsApp da Loja (Apenas números c/ DDD)</label>
+                                <input id="cfg-whatsapp" type="text" value="${s.whatsapp || ''}" class="input-egg text-slate-900 font-black" placeholder="Ex: 11985706243">
+                            </div>
+                        </div>
+
+                        <div class="save-row mt-8"><button id="btn-save-loja" type="submit" class="btn btn-green w-full" style="padding:16px; font-size:1.1rem;">💾 Guardar Configurações na Nuvem</button></div>
+                    </form>
+                </div>
+            </div>`;
+        }
+        case 'aparencia': {
+            const s = window.config;
+            return `
+            <div class="space-y-10 fade-in">
+                <div class="mb-6">
+                    <h2 class="text-4xl font-[950] text-slate-900 tracking-tighter uppercase italic mb-1">Cores do Tema</h2>
+                    <p class="text-slate-500 font-bold text-sm">Personalize as cores principais que a loja vai exibir.</p>
+                </div>
+                <div class="bg-white rounded-[40px] p-8 border border-slate-200 shadow-sm">
+                    <form onsubmit="event.preventDefault(); window.handleSaveAparencia();">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                <input type="color" id="cfg-corPrimaria" value="${s.corPrimaria || '#e11d48'}" class="w-12 h-12 rounded-lg cursor-pointer border-0 p-0 bg-transparent" oninput="window.updateColorPreview()">
+                                <div>
+                                    <p class="font-black text-xs uppercase text-slate-700">Cor Principal (Botões e Destaques)</p>
+                                </div>
+                                <input type="hidden" id="cfg-corPrimariaHex" value="${s.corPrimaria || '#e11d48'}">
+                            </div>
+                            <div class="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                <input type="color" id="cfg-corSecundaria" value="${s.corSecundaria || '#be123c'}" class="w-12 h-12 rounded-lg cursor-pointer border-0 p-0 bg-transparent" oninput="window.updateColorPreview()">
+                                <div>
+                                    <p class="font-black text-xs uppercase text-slate-700">Cor Secundária (Degradê do Topo)</p>
+                                </div>
+                                <input type="hidden" id="cfg-corSecundariaHex" value="${s.corSecundaria || '#be123c'}">
+                            </div>
+                        </div>
+                        <div style="margin-top:20px;padding:20px;background:var(--cream);border-radius:16px;border:1px solid var(--border)">
+                          <p style="font-size:.85rem;font-weight:800;color:var(--brown);margin-bottom:12px;text-transform:uppercase;">Temas pré-definidos rápidos:</p>
+                          <div style="display:flex;gap:10px;flex-wrap:wrap">
+                            <button type="button" class="btn btn-sm" style="background:linear-gradient(135deg,#be123c,#e11d48);color:#fff" onclick="window.setTheme('#e11d48','#be123c')">❤️ Premium Rose</button>
+                            <button type="button" class="btn btn-sm" style="background:linear-gradient(135deg,#D4500A,#E8960C);color:#fff" onclick="window.setTheme('#E8960C','#D4500A')">🥚 Original Laranja</button>
+                            <button type="button" class="btn btn-sm" style="background:linear-gradient(135deg,#2E7D32,#43A047);color:#fff" onclick="window.setTheme('#43A047','#2E7D32')">🌿 Verde Campo</button>
+                          </div>
+                        </div>
+                        <div class="save-row mt-8"><button id="btn-save-aparencia" type="submit" class="btn btn-green w-full" style="padding:16px; font-size:1.1rem;">💾 Guardar Cores</button></div>
+                    </form>
+                </div>
+            </div>`;
+        }
     }
-    
-    if(v==='loja') {
-        const c = window.config;
-        return `<h2 class="page-title">Dados da Loja</h2>
-        <div class="card"><form onsubmit="event.preventDefault();window.saveLoja();">
-        <div class="form-grid">
-        <div class="field"><label>Nome</label><input id="cfg-nome" value="${c.nome||''}" required></div>
-        <div class="field"><label>Emoji</label><input id="cfg-emoji" value="${c.emoji||'🥚'}" maxlength="4"></div>
-        <div class="field"><label>Slogan</label><input id="cfg-slogan" value="${c.slogan||''}"></div>
-        <div class="field" style="grid-column:span 2;"><label>Título Banner</label><input id="cfg-heroTitle" value="${c.heroTitle||''}"></div>
-        <div class="field" style="grid-column:span 2;"><label>Descrição Banner</label><textarea id="cfg-heroDesc" rows="2">${c.heroDesc||''}</textarea></div>
-        </div>
-        <button type="submit" class="btn btn-green" style="width:100%;margin-top:20px;">Guardar Loja</button>
-        </form></div>`;
-    }
-    
-    if(v==='aparencia') {
-        const c = window.config;
-        return `<h2 class="page-title">Cores do Tema</h2>
-        <div class="card"><form onsubmit="event.preventDefault();window.saveApar();">
-        <div class="form-grid">
-        <div class="field"><label>Cor Principal</label><input type="color" id="cfg-corPrimaria" value="${c.corPrimaria||'#e11d48'}"></div>
-        <div class="field"><label>Cor Secundária</label><input type="color" id="cfg-corSecundaria" value="${c.corSecundaria||'#be123c'}"></div>
-        </div>
-        <button type="submit" class="btn btn-green" style="width:100%;margin-top:20px;">Guardar Cores</button>
-        </form></div>`;
-    }
-    
     return '';
 };
 
-window.renderDash = () => {
-    const d = document.getElementById('dash-content');
-    if(!d) return;
-    const active = window.logs.filter(l => !['FINALIZADO','CANCELADO'].includes(l.status));
-    const total = active.reduce((a,l)=>a+(Number(l.valorTotal)||0),0);
-    const ativos = window.produtos.filter(p=>p.ativo).length;
+window.renderDashboard = () => {
+    const active = window.logs.filter(l => !["FINALIZADO", "CANCELADO"].includes(l.status));
+    const pendingTotal = active.reduce((acc,l)=>acc+(Number(l.valorTotal)||0), 0);
+    const produtosAtivos = window.produtos.filter(p => p.ativo).length;
     
-    d.innerHTML = `
-    <h2 class="page-title">Dashboard</h2>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:20px;margin-bottom:30px;">
-        <div class="card" style="background:linear-gradient(135deg,var(--primary),var(--dark));color:white;text-align:center;">
-            <p style="font-size:0.8rem;opacity:0.9;margin-bottom:5px;">Pedidos Ativos</p>
-            <h3 style="font-size:2.5rem;margin:0;">${active.length}</h3>
-        </div>
-        <div class="card" style="text-align:center;">
-            <p style="font-size:0.8rem;color:var(--muted);margin-bottom:5px;">A Receber</p>
-            <h3 style="font-size:2rem;margin:0;color:var(--primary);">R$ ${window.fmt(total)}</h3>
-        </div>
-        <div class="card" style="text-align:center;">
-            <p style="font-size:0.8rem;color:var(--muted);margin-bottom:5px;">Produtos</p>
-            <h3 style="font-size:2rem;margin:0;">${ativos}/${window.produtos.length}</h3>
-        </div>
-    </div>
-    <div class="card"><h3>Últimos Pedidos</h3><div>${active.slice(0,5).map(l=>`<div class="prod-item" style="margin-bottom:10px;"><div style="flex:1;"><h4 style="margin:0;">${l.dadosCliente?.nome||'Anônimo'}</h4><p style="margin:0;font-size:0.8rem;color:var(--muted);">R$ ${window.fmt(l.valorTotal)}</p></div><span style="padding:4px 12px;background:var(--cream);border-radius:20px;font-size:0.75rem;font-weight:800;">${l.status}</span></div>`).join('')||'<p style="color:var(--muted);text-align:center;">Sem pedidos</p>'}</div></div>
-    `;
+    let totalPix = 0;
+    let totalDinheiro = 0;
+    let totalDebito = 0;
+    let totalCredito = 0;
+    let totalCartaoGenerico = 0;
+
+    active.forEach(l => {
+        let val = Number(l.valorTotal) || 0;
+        let pg = (l.formaPagamento || '').toLowerCase();
+        if (pg.includes('pix')) totalPix += val;
+        else if (pg.includes('dinheiro')) totalDinheiro += val;
+        else if (pg.includes('debito') || pg.includes('débito')) totalDebito += val;
+        else if (pg.includes('credito') || pg.includes('crédito')) totalCredito += val;
+        else if (pg.includes('cartao') || pg.includes('cartão')) totalCartaoGenerico += val; 
+    });
+
+    const tDebito = window.config.taxaDebito || 0;
+    const tCredito = window.config.taxaCredito || 0;
+    
+    const deducoes = (totalDebito * (tDebito/100)) + ((totalCredito + totalCartaoGenerico) * (tCredito/100));
+    const valorLiquido = pendingTotal - deducoes;
+
+    const dashStats = document.getElementById('dash-stats-grid');
+    if (dashStats) {
+        dashStats.innerHTML = `
+            <div class="bg-gradient-to-br from-rose-700 to-rose-500 p-6 rounded-[24px] text-white shadow-xl">
+                <p class="text-xs font-black uppercase opacity-80 mb-1">Pedidos em Andamento</p>
+                <h3 class="text-4xl font-[950] italic">${active.length}</h3>
+            </div>
+            <div class="bg-white border border-slate-200 p-6 rounded-[24px] shadow-sm text-slate-800">
+                <p class="text-xs font-black uppercase text-slate-400 mb-1">Valores a Receber (Bruto)</p>
+                <h3 class="text-3xl font-[950] italic text-slate-700">R$ ${window.fmt(pendingTotal)}</h3>
+            </div>
+            <div class="bg-slate-900 p-6 rounded-[24px] text-white shadow-2xl">
+                <p class="text-xs font-black uppercase opacity-60 mb-1">Produtos na Vitrine</p>
+                <h3 class="text-4xl font-[950] italic">${produtosAtivos} / ${window.produtos.length}</h3>
+            </div>
+        `;
+    }
+
+    const focusedId = document.activeElement ? document.activeElement.id : null;
+    const dashPaymentBreakdown = document.getElementById('dash-payment-breakdown');
+    
+    if (dashPaymentBreakdown && focusedId !== 'input-taxa-debito' && focusedId !== 'input-taxa-credito') {
+        dashPaymentBreakdown.innerHTML = `
+            <div class="bg-white rounded-[32px] p-8 border border-slate-200 shadow-sm mt-6">
+                <h3 class="text-lg font-black uppercase text-slate-800 tracking-tighter mb-6 flex items-center gap-2">💳 Métodos de Pagamento & Taxas (A Receber)</h3>
+                
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                    <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                        <p class="text-[10px] font-black uppercase text-slate-400">PIX</p>
+                        <h4 class="text-xl font-black text-emerald-500 m-0">R$ ${window.fmt(totalPix)}</h4>
+                    </div>
+                    <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                        <p class="text-[10px] font-black uppercase text-slate-400">Dinheiro</p>
+                        <h4 class="text-xl font-black text-amber-500 m-0">R$ ${window.fmt(totalDinheiro)}</h4>
+                    </div>
+                    <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                        <p class="text-[10px] font-black uppercase text-slate-400">Cartão Débito</p>
+                        <h4 class="text-xl font-black text-rose-500 m-0">R$ ${window.fmt(totalDebito)}</h4>
+                    </div>
+                    <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                        <p class="text-[10px] font-black uppercase text-slate-400">Cartão Crédito</p>
+                        <h4 class="text-xl font-black text-rose-500 m-0">R$ ${window.fmt(totalCredito + totalCartaoGenerico)}</h4>
+                    </div>
+                </div>
+
+                <div class="bg-slate-50 p-6 rounded-3xl border border-slate-200 flex flex-wrap gap-6 items-center">
+                    <div class="field w-full md:w-auto">
+                        <label class="text-[10px] font-black uppercase text-slate-400">Taxa Máquina Débito (%)</label>
+                        <input type="number" id="input-taxa-debito" value="${tDebito}" step="0.01" min="0" onchange="window.updateTaxa(this.value, 'taxaDebito')" placeholder="Ex: 1.99" class="input-egg font-black text-lg py-2" style="max-width: 140px;">
+                    </div>
+                    <div class="field w-full md:w-auto">
+                        <label class="text-[10px] font-black uppercase text-slate-400">Taxa Máquina Crédito (%)</label>
+                        <input type="number" id="input-taxa-credito" value="${tCredito}" step="0.01" min="0" onchange="window.updateTaxa(this.value, 'taxaCredito')" placeholder="Ex: 4.99" class="input-egg font-black text-lg py-2" style="max-width: 140px;">
+                    </div>
+                    
+                    <div class="flex-1 text-right mt-4 md:mt-0">
+                        <p class="text-[10px] font-black uppercase text-slate-400 mb-1">Deduções Máquina</p>
+                        <h4 class="text-xl font-black text-rose-600 m-0">- R$ ${window.fmt(deducoes)}</h4>
+                    </div>
+                    <div class="text-right border-l-2 border-dashed border-slate-300 pl-6 mt-4 md:mt-0">
+                        <p class="text-[10px] font-black uppercase text-slate-800 mb-1">Valor Líquido Projetado</p>
+                        <h4 class="text-3xl font-black text-emerald-500 m-0">R$ ${window.fmt(valorLiquido)}</h4>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    const dashRecent = document.getElementById('dash-orders-recent');
+    if (dashRecent) {
+        dashRecent.innerHTML = active.slice(0, 5).map(l => {
+            const cliente = l.dadosCliente?.nome || 'Anônimo';
+            const isEntrega = l.tipoEntrega === 'entrega';
+            const badge = isEntrega ? `<span style="background:#e0f2fe;color:#1d4ed8;padding:4px 8px;border-radius:12px;font-size:0.7rem;font-weight:800;">🚚 ENTREGA</span>` : `<span style="background:#dcfce7;color:#047857;padding:4px 8px;border-radius:12px;font-size:0.7rem;font-weight:800;">🏪 RETIRADA</span>`;
+            
+            return `
+            <div class="prod-item" style="padding:16px 24px;">
+                <div style="flex:1;">
+                    <h4 style="margin:0;font-size:1.05rem;font-weight:900;color:var(--brown);">${cliente} <span style="color:var(--primary);font-size:0.75rem;margin-left:6px;">${l.pedidoID || ''}</span></h4>
+                    <div style="margin-top:6px;display:flex;gap:10px;align-items:center;">
+                        ${badge}
+                        <span style="font-size:0.85rem;font-weight:800;color:var(--muted);">R$ ${window.fmt(l.valorTotal)}</span>
+                    </div>
+                </div>
+                <div style="background:var(--cream);border:1px solid var(--border);padding:6px 14px;border-radius:50px;font-size:0.75rem;font-weight:900;color:var(--brown);">
+                    ${l.status}
+                </div>
+            </div>
+            `;
+        }).join('') || '<p style="color:var(--muted);text-align:center;padding:20px;font-weight:700;">Sem atividades recentes.</p>';
+    }
+};
+
+window.updateTaxa = async (val, field) => {
+    const taxa = parseFloat(val) || 0;
+    if (window.config[field] === taxa) return;
+    window.config[field] = taxa;
+    try {
+        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'store_config'), { [field]: taxa }, {merge:true});
+        window.toast("✅ Taxa guardada na nuvem!");
+    } catch(e) { window.toast("Erro ao guardar taxa."); }
 };
 
 window.renderPedidos = () => {
     const list = document.getElementById('pedidos-list');
     if(!list) return;
-    const pending = window.logs.filter(l=>!['FINALIZADO','CANCELADO'].includes(l.status));
-    if(!pending.length) { list.innerHTML = '<div class="card"><p style="text-align:center;color:var(--muted);">Sem pedidos</p></div>'; return; }
+
+    const pending = window.logs.filter(l => !['FINALIZADO','CANCELADO'].includes(l.status));
     
-    list.innerHTML = pending.map(l=>{
-        const c = l.dadosCliente?.nome||'Anônimo';
-        const itens = (l.itens||[]).map(i=>`${i.qtd||i.quantidade}x ${i.nome||i.produto}`).join(', ');
-        return `<div class="card"><div style="display:flex;justify-content:space-between;margin-bottom:15px;"><div><h3 style="margin:0;">${c}</h3><p style="margin:4px 0 0;font-size:0.85rem;color:var(--muted);">${l.pedidoID||'#---'}</p></div><h3 style="margin:0;color:var(--primary);">R$ ${window.fmt(l.valorTotal)}</h3></div><p style="margin-bottom:10px;"><strong>Itens:</strong> ${itens}</p><p style="margin-bottom:10px;"><strong>Pagamento:</strong> ${(l.formaPagamento||'').toUpperCase()}</p><select onchange="window.updateStatus('${l.id}',this.value)" style="width:100%;padding:10px;border-radius:10px;border:2px solid var(--border);font-weight:800;"><option ${l.status==='CRIADO'?'selected':''}>CRIADO</option><option ${l.status==='AGUARDANDO PIX'?'selected':''}>AGUARDANDO PIX</option><option ${l.status==='EM SEPARAÇÃO'?'selected':''}>EM SEPARAÇÃO</option><option ${l.status==='SAIU PARA ENTREGA'?'selected':''}>SAIU PARA ENTREGA</option><option ${l.status==='PRONTO PARA RETIRADA'?'selected':''}>PRONTO PARA RETIRADA</option><option ${l.status==='FINALIZADO'?'selected':''}>FINALIZADO</option><option ${l.status==='CANCELADO'?'selected':''}>CANCELADO</option></select></div>`;
+    if (!pending.length) {
+        list.innerHTML = '<div style="text-align:center;padding:40px;background:var(--white);border:1px solid var(--border);border-radius:20px;"><p style="font-weight:800;color:var(--muted);font-size:1.1rem;margin:0;">Nenhum pedido na fila</p></div>';
+        return;
+    }
+
+    list.innerHTML = pending.map(l => {
+        const cliente = l.dadosCliente?.nome || 'Anônimo';
+        const tel = l.dadosCliente?.tel || 'Sem telefone';
+        const isEntrega = l.tipoEntrega === 'entrega';
+        const entregaStr = isEntrega ? '🚚 ENTREGA EM CASA' : '🏪 RETIRAR NA LOJA';
+        const endereco = isEntrega 
+            ? `${l.dadosCliente?.rua || ''}, ${l.dadosCliente?.num || ''} - ${l.dadosCliente?.bairro || ''} <br><span style="font-size:0.75rem;color:var(--muted);margin-top:4px;display:block;">Comp: ${l.dadosCliente?.comp || 'N/A'}</span>`
+            : 'O cliente virá buscar os produtos fisicamente.';
+        
+        const itensStr = (l.itens || []).map(i => `<div style="margin-bottom:4px;"><span style="background:var(--cream);color:var(--primary);padding:2px 6px;border-radius:6px;font-weight:900;font-size:0.75rem;margin-right:6px;border:1px solid var(--border);">${i.qtd || i.quantidade}x</span><span style="font-weight:800;font-size:0.85rem;color:var(--brown);">${i.nome || i.produto}</span></div>`).join('');
+        const pagStr = (l.formaPagamento || 'Não Informado').replace('_', ' ').toUpperCase();
+
+        let borderColor = 'var(--border)';
+        if (l.status === 'CRIADO') borderColor = '#f59e0b';
+        else if (l.status === 'EM SEPARAÇÃO') borderColor = 'var(--primary)';
+        else if (l.status === 'SAIU PARA ENTREGA' || l.status === 'PRONTO PARA RETIRADA') borderColor = 'var(--green)';
+
+        return `
+        <div class="card" style="border-left: 12px solid ${borderColor}; padding: 24px; margin-bottom: 20px;">
+            <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:16px; border-bottom:1px solid var(--border); padding-bottom:16px; margin-bottom:16px;">
+                <div>
+                    <span style="background:var(--cream); color:var(--primary); border:1px solid var(--border); padding:4px 10px; border-radius:50px; font-size:0.75rem; font-weight:900; letter-spacing:1px;">Pedido ${l.pedidoID || '#---'}</span>
+                    <span style="font-size:0.75rem; color:var(--muted); font-weight:800; margin-left:10px;">${l.criadoEm ? new Date(l.criadoEm.seconds * 1000).toLocaleString('pt-PT') : 'Hoje'}</span>
+                    <h3 style="margin:12px 0 4px; font-size:1.3rem; color:var(--brown);">${cliente}</h3>
+                    <p style="font-size:0.85rem; font-weight:800; color:var(--muted); margin:0;">📞 ${tel}</p>
+                </div>
+                <div style="text-align:right;">
+                    <span style="background:${isEntrega ? '#e0f2fe' : '#dcfce7'}; color:${isEntrega ? '#1d4ed8' : '#047857'}; padding:6px 14px; border-radius:10px; font-size:0.75rem; font-weight:900; display:inline-block; margin-bottom:12px;">${entregaStr}</span>
+                    <h2 style="font-size:1.8rem; font-weight:900; color:var(--primary); margin:0;">R$ ${window.fmt(l.valorTotal)}</h2>
+                </div>
+            </div>
+            
+            <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin-bottom: 24px;">
+                <div>
+                    <p style="font-size:0.75rem; font-weight:900; color:var(--muted); text-transform:uppercase; margin-bottom:8px; border-bottom:2px solid var(--cream); padding-bottom:4px;">Itens Solicitados</p>
+                    ${itensStr}
+                </div>
+                <div>
+                    <p style="font-size:0.75rem; font-weight:900; color:var(--muted); text-transform:uppercase; margin-bottom:8px; border-bottom:2px solid var(--cream); padding-bottom:4px;">Metódo de Pagamento</p>
+                    <span style="background:var(--cream); border:1px solid var(--border); padding:6px 12px; border-radius:10px; font-size:0.8rem; font-weight:800; color:var(--brown); display:inline-block;">${pagStr}</span>
+                </div>
+                <div>
+                    <p style="font-size:0.75rem; font-weight:900; color:var(--muted); text-transform:uppercase; margin-bottom:8px; border-bottom:2px solid var(--cream); padding-bottom:4px;">Endereço / Retirada</p>
+                    <p style="font-size:0.85rem; font-weight:700; color:var(--brown); line-height:1.5; margin:0;">${endereco}</p>
+                </div>
+            </div>
+
+            <div style="background:var(--cream); padding:16px 20px; border-radius:16px; border:1px solid var(--border); display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
+                <span style="font-size:0.8rem; font-weight:900; color:var(--muted); text-transform:uppercase;">Atualizar Estado Operacional:</span>
+                <select onchange="window.handleStatusUpdate('${l.id}', this.value)" style="flex:1; min-width:200px; padding:12px 16px; border-radius:12px; border:2px solid var(--brown); background:var(--brown); color:var(--white); font-weight:800; outline:none; cursor:pointer;">
+                    ${window.STATUS_OPTIONS.map(opt => `<option value="${opt}" ${l.status===opt?'selected':''}>${opt}</option>`).join('')}
+                </select>
+            </div>
+        </div>
+        `;
     }).join('');
 };
 
-window.updateStatus = async (id, status) => {
-    await updateDoc(doc(db,'artifacts',appId,'public','data','vendas_logs',id), {status, updatedAt:serverTimestamp()});
-    window.toast('✅ Status atualizado');
+window.handleStatusUpdate = async (id, status) => {
+    try {
+        await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'vendas_logs', id), { 
+            status, 
+            updatedAt: serverTimestamp(),
+            finalizadoEm: status === 'FINALIZADO' ? serverTimestamp() : null
+        });
+        window.toast(`✅ Estado Atualizado`);
+    } catch(e) { window.toast("Erro ao atualizar."); }
 };
 
-window.renderProds = () => {
-    const list = document.getElementById('prods-list');
+window.renderProdList = () => {
+    const list = document.getElementById('prod-list');
     if(!list) return;
     if(!window.produtos.length) {
-        list.innerHTML = '<div class="card" style="text-align:center;padding:40px;"><p style="color:var(--muted);margin-bottom:20px;">Catálogo vazio</p><button class="btn btn-primary" onclick="window.seedProds()">Carregar Produtos Padrão</button></div>';
+        list.innerHTML = `
+        <div style="background:var(--white); border:2px dashed var(--border); border-radius:20px; padding:40px; text-align:center;">
+            <span style="font-size:3rem; display:block; margin-bottom:10px;">📦</span>
+            <h3 style="font-size:1.2rem; font-weight:900; color:var(--brown); margin-bottom:4px;">Catálogo Vazio</h3>
+            <p style="color:var(--muted); font-size:0.9rem; font-weight:600; margin-bottom:20px;">Carregue os produtos originais para começar.</p>
+            <button onclick="window.seedDefaultProducts()" class="btn btn-primary">Carregar Produtos Padrão</button>
+        </div>`;
         return;
     }
-    list.innerHTML = window.produtos.map(p=>{
-        const img = (p.foto_url && p.foto_url.length>5) ? `<img src="${p.foto_url}" style="width:100%;height:100%;object-fit:cover;border-radius:12px;">` : (p.emoji||'🥚');
-        return `<div class="prod-item ${p.ativo?'':'inactive'}"><div class="prod-emoji" style="padding:${p.foto_url?'0':'4px'};">${img}</div><div class="prod-info"><h4>${p.nome||''}</h4><p>${p.tipo||''} • ${p.embalagem||'Unidade'}</p></div><div class="prod-price">R$ ${window.fmt(p.preco)}</div><div class="prod-actions"><button class="toggle-btn" onclick="window.toggleProd('${p.id}')">${p.ativo?'🟢':'⚫'}</button><button class="btn btn-ghost btn-sm" onclick="window.openProdModal('${p.id}')">Editar</button><button class="btn btn-red btn-sm" onclick="window.delProd('${p.id}')">🗑</button></div></div>`;
+    list.innerHTML = window.produtos.map(p => {
+        const imageElement = (p.foto_url && p.foto_url.length > 5) 
+            ? `<img src="${p.foto_url}" style="width:100%; height:100%; object-fit:cover; border-radius:12px;" />` 
+            : `${p.emoji || '🥚'}`;
+            
+        const imgPadding = (p.foto_url && p.foto_url.length > 5) ? '0' : '4px';
+
+        return `
+        <div class="prod-item ${p.ativo?'':'inactive'}">
+            <div class="prod-emoji" style="padding: ${imgPadding}; border: ${p.foto_url ? 'none' : ''};">${imageElement}</div>
+            <div class="prod-info">
+                <h4>${p.nome || ''} ${p.badge?`<span style="background:${p.badgeClass==='green'?'#10b981':p.badgeClass==='amber'?'#f59e0b':'#e11d48'};color:#fff;font-size:.65rem;padding:3px 10px;border-radius:50px;font-weight:800;vertical-align:middle;margin-left:8px;">${p.badge}</span>`:''}</h4>
+                <p>${p.tipo || ''} · Embalagem: <strong>${p.embalagem || 'Não definida'}</strong> · ${p.ativo?'✅ Ativo':'⏸ Oculto'}</p>
+            </div>
+            <div class="prod-price">R$ ${window.fmt(p.preco)}</div>
+            <div class="prod-actions">
+                <button onclick="window.toggleProd('${p.id}')" class="toggle-btn">${p.ativo?'🟢':'⚫'}</button>
+                <button onclick="window.openProdModal('${p.id}')" class="btn btn-ghost btn-sm">Editar</button>
+                <button onclick="window.deleteProd('${p.id}')" class="btn btn-red btn-sm">🗑</button>
+            </div>
+        </div>`;
     }).join('');
 };
 
 window.toggleProd = async (id) => {
-    const p = window.produtos.find(x=>x.id===id);
+    const p = window.produtos.find(x => x.id === id);
     if(p) {
-        await updateDoc(doc(db,'artifacts',appId,'public','data','estoque',id), {ativo:!p.ativo});
-        window.toast(p.ativo?'⚫ Ocultado':'🟢 Ativado');
+        await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'estoque', id), { ativo: !p.ativo, updatedAt: serverTimestamp() });
+        window.toast(!p.ativo ? '✅ Produto ativado!' : '⏸ Produto oculto');
     }
 };
 
-window.delProd = async (id) => {
-    if(confirm('Eliminar produto?')) {
-        await deleteDoc(doc(db,'artifacts',appId,'public','data','estoque',id));
-        window.toast('🗑 Eliminado');
+window.deleteProd = async (id) => {
+    if(confirm("Eliminar este produto definitivamente da nuvem?")) {
+        await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'estoque', id));
+        window.toast('🗑 Produto eliminado!');
     }
 };
 
-window.openProdModal = (id=null) => {
+window.openProdModal = (id = null) => {
     window.editingId = id;
-    document.getElementById('modal-prod-title').textContent = id?'Editar':'Novo Produto';
-    const p = id ? window.produtos.find(x=>x.id===id) : {};
-    document.getElementById('mp-id').value = id||'';
-    document.getElementById('mp-nome').value = p.nome||'';
-    document.getElementById('mp-emoji').value = p.emoji||'🥚';
-    document.getElementById('mp-tipo').value = p.tipo||'';
-    document.getElementById('mp-embalagem').value = p.embalagem||'Dúzia (12)';
-    document.getElementById('mp-preco').value = p.preco||'';
-    document.getElementById('mp-desc').value = p.desc||'';
-    document.getElementById('mp-badge').value = p.badge||'';
-    document.getElementById('mp-badgeClass').value = p.badgeClass||'';
-    document.getElementById('mp-foto').value = p.foto_url||'';
+    document.getElementById('modal-prod-title').textContent = id ? 'Editar Produto' : 'Novo Produto';
+    const p = id ? window.produtos.find(x => x.id === id) : {};
+    
+    document.getElementById('mp-id').value         = id || '';
+    document.getElementById('mp-nome').value        = p.nome  || '';
+    document.getElementById('mp-emoji').value       = p.emoji || '🥚';
+    document.getElementById('mp-tipo').value        = p.tipo  || '';
+    document.getElementById('mp-embalagem').value   = p.embalagem || 'Dúzia (12)';
+    document.getElementById('mp-preco').value       = p.preco || '';
+    document.getElementById('mp-desc').value        = p.desc  || '';
+    document.getElementById('mp-badge').value       = p.badge || '';
+    document.getElementById('mp-badgeClass').value  = p.badgeClass || '';
+    document.getElementById('mp-foto').value        = p.foto_url || '';
+    document.getElementById('mp-file').value        = ''; 
+    
     window.updateImgPreview();
-    document.querySelectorAll('.badge-opt').forEach(el=>{
+    
+    document.querySelectorAll('.badge-opt').forEach(el => {
         el.classList.remove('sel');
-        if(el.textContent.includes(p.badge||'')) el.classList.add('sel');
+        if (el.dataset.badge === (p.badge||'')) el.classList.add('sel');
     });
     document.getElementById('prod-modal').classList.add('open');
 };
@@ -435,182 +849,217 @@ window.openProdModal = (id=null) => {
 window.closeProdModal = () => document.getElementById('prod-modal').classList.remove('open');
 
 window.saveProd = async () => {
-    const nome = document.getElementById('mp-nome').value.trim();
+    const nome  = document.getElementById('mp-nome').value.trim();
     const preco = parseFloat(document.getElementById('mp-preco').value);
-    if(!nome || isNaN(preco)) { window.toast('⚠️ Preencha nome e preço'); return; }
     
-    const btn = document.getElementById('btn-save-prod');
-    btn.disabled = true; btn.textContent = 'A guardar...';
+    if (!nome) { window.toast('⚠️ Informe o nome!'); return; }
+    if (isNaN(preco)) { window.toast('⚠️ Informe o preço!'); return; }
     
-    const docId = window.editingId || crypto.randomUUID();
-    let ativo = true;
-    if(window.editingId) {
-        const p = window.produtos.find(x=>x.id===window.editingId);
-        if(p && p.hasOwnProperty('ativo')) ativo = p.ativo;
+    const btn = document.getElementById('btn-save-product-modal');
+    if(btn) { btn.disabled = true; btn.innerText = "A guardar..."; }
+    
+    const docId = window.editingId || window.generateUUID();
+    let isAtivo = true;
+    if (window.editingId) {
+        const p = window.produtos.find(x => x.id === window.editingId);
+        if(p && p.hasOwnProperty('ativo')) isAtivo = p.ativo;
     }
-    
+
     const payload = {
-        nome,
-        emoji: document.getElementById('mp-emoji').value||'🥚',
-        tipo: document.getElementById('mp-tipo').value,
-        embalagem: document.getElementById('mp-embalagem').value||'Unidade',
+        nome, 
+        emoji: document.getElementById('mp-emoji').value || '🥚',
+        tipo: document.getElementById('mp-tipo').value, 
+        embalagem: document.getElementById('mp-embalagem').value.trim() || 'Unidade',
         preco,
         desc: document.getElementById('mp-desc').value,
         badge: document.getElementById('mp-badge').value,
         badgeClass: document.getElementById('mp-badgeClass').value,
         foto_url: document.getElementById('mp-foto').value,
-        ativo,
+        ativo: isAtivo, 
         updatedAt: serverTimestamp()
     };
-    
+
     try {
-        await setDoc(doc(db,'artifacts',appId,'public','data','estoque',docId), payload, {merge:true});
+        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'estoque', docId), payload, { merge: true });
         window.closeProdModal();
-        window.toast('✅ Guardado');
-    } catch(e) { window.toast('Erro'); }
-    finally { btn.disabled=false; btn.textContent='💾 Guardar'; }
+        window.toast('✅ Guardado na Nuvem!');
+    } catch(e) { window.toast('Erro ao guardar.'); }
+    finally { if(btn) { btn.disabled = false; btn.innerText = "💾 Guardar no Firebase"; } }
 };
 
-window.seedProds = async () => {
-    const defaults = [
-        {nome:'Ovos Brancos Pequenos',emoji:'🥚',tipo:'Tamanho P',embalagem:'Dúzia (12)',preco:8.90,desc:'Ovos brancos pequenos',badge:'',badgeClass:'',foto_url:'',ativo:true},
-        {nome:'Ovos Brancos Médios',emoji:'🥚',tipo:'Tamanho M',embalagem:'Cartela (30)',preco:21.90,desc:'Favorito',badge:'',badgeClass:'',foto_url:'',ativo:true},
-        {nome:'Ovos Brancos Grandes',emoji:'🥚',tipo:'Tamanho G',embalagem:'Dúzia (12)',preco:12.90,desc:'Gema volumosa',badge:'Popular',badgeClass:'rose',foto_url:'',ativo:true},
-        {nome:'Ovos Extra Grandes',emoji:'🥚',tipo:'Tamanho XG',embalagem:'Dúzia (12)',preco:14.90,desc:'Os maiores',badge:'Top Venda',badgeClass:'rose',foto_url:'',ativo:true},
-        {nome:'Ovos Caipira',emoji:'🐓',tipo:'Caipira',embalagem:'Meia Dúzia (6)',preco:9.90,desc:'Gema laranja',badge:'Especial',badgeClass:'amber',foto_url:'',ativo:true},
-        {nome:'Ovos Orgânicos',emoji:'🌿',tipo:'Orgânico',embalagem:'Caixa (120)',preco:95.90,desc:'100% orgânicos',badge:'Premium',badgeClass:'green',foto_url:'',ativo:true}
-    ];
-    window.toast('Carregando...');
-    await Promise.all(defaults.map(p=>setDoc(doc(db,'artifacts',appId,'public','data','estoque',crypto.randomUUID()),{...p,updatedAt:serverTimestamp()})));
-    window.toast('✅ Carregado');
+window.seedDefaultProducts = async () => {
+    try {
+        window.toast("A carregar catálogo predefinido...");
+        await Promise.all(DEFAULT_PRODUTOS.map(p => setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'estoque', window.generateUUID()), {...p, updatedAt: serverTimestamp()})));
+        window.toast("✅ Produtos carregados com sucesso!");
+    } catch(e) {
+        window.toast("Erro ao carregar catálogo.");
+    }
 };
 
-window.loadPix = () => {
-    const t = document.getElementById('pixType');
-    const k = document.getElementById('pixKey');
-    const n = document.getElementById('pixNome');
-    const c = document.getElementById('pixCidade');
-    if(t) t.value = window.config.pixTipo||'Celular';
-    if(k) k.value = window.config.pixChave||'';
-    if(n) n.value = window.config.pixNome||'';
-    if(c) c.value = window.config.pixCidade||'';
-};
-
-window.savePix = async () => {
-    const type = document.getElementById('pixType').value;
-    const key = document.getElementById('pixKey').value.trim();
-    const nome = document.getElementById('pixNome').value.trim();
-    const cidade = document.getElementById('pixCidade').value.trim();
+window.loadLojaForm = () => {
+    if(document.getElementById('cfg-nome')) document.getElementById('cfg-nome').value      = window.config.nome      || '';
+    if(document.getElementById('cfg-emoji')) document.getElementById('cfg-emoji').value     = window.config.emoji     || '🥚';
+    if(document.getElementById('cfg-slogan')) document.getElementById('cfg-slogan').value    = window.config.slogan    || '';
+    if(document.getElementById('cfg-heroTitle')) document.getElementById('cfg-heroTitle').value = window.config.heroTitle || '';
+    if(document.getElementById('cfg-heroDesc')) document.getElementById('cfg-heroDesc').value  = window.config.heroDesc  || '';
     
-    await setDoc(doc(db,'artifacts',appId,'public','data','settings','pix_config'), {
-        type, rawKey:key, key, nomeRecebedor:nome, cidade, updatedAt:serverTimestamp()
-    }, {merge:true});
-    window.toast('✅ PIX guardado');
-    setTimeout(()=>window.renderQR(), 100);
+    const whatsappEl = document.getElementById('cfg-whatsapp');
+    if(whatsappEl) whatsappEl.value = window.config.whatsapp || '';
 };
 
-window.renderQR = () => {
-    const cont = document.getElementById('qr-container');
-    if(!cont) return;
-    cont.innerHTML = '';
+window.loadPixForm = () => {
+    if(document.getElementById('pixKey')) document.getElementById('pixKey').value = window.config.pixChave || '';
+    if(document.getElementById('pixNome')) document.getElementById('pixNome').value = window.config.pixNome || '';
+    if(document.getElementById('pixCidade')) document.getElementById('pixCidade').value = window.config.pixCidade || '';
+    if(document.getElementById('pixType')) document.getElementById('pixType').value = window.config.pixTipo || 'Celular';
+};
+
+window.loadAparenciaForm = () => {
+    if(document.getElementById('cfg-corPrimaria')) document.getElementById('cfg-corPrimaria').value = window.config.corPrimaria || '#e11d48';
+    if(document.getElementById('cfg-corSecundaria')) document.getElementById('cfg-corSecundaria').value = window.config.corSecundaria || '#be123c';
+};
+
+window.updateColorPreview = () => {
+    if(document.getElementById('cfg-corPrimariaHex') && document.getElementById('cfg-corPrimaria')) document.getElementById('cfg-corPrimariaHex').value   = document.getElementById('cfg-corPrimaria').value;
+    if(document.getElementById('cfg-corSecundariaHex') && document.getElementById('cfg-corSecundaria')) document.getElementById('cfg-corSecundariaHex').value = document.getElementById('cfg-corSecundaria').value;
+};
+
+window.syncColorFromText = (which) => {
+    const hex = document.getElementById('cfg-cor'+which+'Hex').value;
+    if (/^#[0-9A-Fa-f]{6}$/.test(hex)) document.getElementById('cfg-cor'+which).value = hex;
+};
+
+window.setTheme = (primary, secondary) => {
+    if(document.getElementById('cfg-corPrimaria')) document.getElementById('cfg-corPrimaria').value = primary;
+    if(document.getElementById('cfg-corSecundaria')) document.getElementById('cfg-corSecundaria').value = secondary;
+    window.updateColorPreview();
+    window.toast('🎨 Clique em Guardar Aparência para fixar');
+};
+
+window.handleSaveStoreConfig = async () => {
+    const btn = document.getElementById('btn-save-loja');
+    if(btn) { btn.disabled = true; btn.innerText = "A guardar..."; }
+    try {
+        const data = {
+            nome: document.getElementById('cfg-nome').value,
+            slogan: document.getElementById('cfg-slogan').value,
+            emoji: document.getElementById('cfg-emoji').value,
+            whatsapp: document.getElementById('cfg-whatsapp').value.replace(/\D/g,''),
+            heroTitle: document.getElementById('cfg-heroTitle').value,
+            heroDesc: document.getElementById('cfg-heroDesc').value,
+            updatedAt: serverTimestamp()
+        };
+        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'store_config'), data, {merge:true});
+        window.toast("✅ Loja sincronizada!");
+    } catch(e) { window.toast("Erro ao sincronizar."); }
+    finally { if(btn) { btn.disabled = false; btn.innerText = "💾 Guardar Configurações na Nuvem"; } }
+};
+
+window.handleSavePixConfig = async () => {
+    const btn = document.getElementById('btn-save-pix');
+    if(btn) { btn.disabled = true; btn.innerText = "A guardar..."; }
+    try {
+        const typeEl = document.getElementById('pixType');
+        const keyEl = document.getElementById('pixKey');
+        const nomeEl = document.getElementById('pixNome');
+        const cidadeEl = document.getElementById('pixCidade');
+
+        if(!typeEl || !keyEl) return;
+
+        const type = typeEl.value;
+        const rawKey = keyEl.value.trim();
+        const cleanKey = rawKey.replace(/\D/g, "");
+        
+        let chaveFinal = rawKey; let chaveVisual = rawKey;
+
+        if (type === "CPF") {
+            if (cleanKey.length !== 11) { window.toast("⚠️ CPF INVÁLIDO"); if(btn){btn.disabled=false;btn.innerText="💾 Salvar Configurações do PIX";} return; }
+            chaveFinal = cleanKey; chaveVisual = cleanKey.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+        } else if (type === "CNPJ") {
+            if (cleanKey.length !== 14) { window.toast("⚠️ CNPJ INVÁLIDO"); if(btn){btn.disabled=false;btn.innerText="💾 Salvar Configurações do PIX";} return; }
+            chaveFinal = cleanKey; chaveVisual = cleanKey.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
+        } else if (type === "Celular") {
+            if (cleanKey.length < 10) { window.toast("⚠️ NÚMERO INVÁLIDO"); if(btn){btn.disabled=false;btn.innerText="💾 Salvar Configurações do PIX";} return; }
+            chaveFinal = cleanKey; chaveVisual = cleanKey.replace(/(\d{2})(\d{5}|\d{4})(\d{4})/, "($1) $2-$3");
+        } else if (type === "E-mail") {
+            if (!rawKey.includes("@")) { window.toast("⚠️ E-MAIL INVÁLIDO"); if(btn){btn.disabled=false;btn.innerText="💾 Salvar Configurações do PIX";} return; }
+            chaveFinal = rawKey.toLowerCase(); chaveVisual = chaveFinal;
+        } else if (type === "Chave Aleatória") {
+            chaveFinal = rawKey; chaveVisual = rawKey;
+        }
+
+        const nomeRecebedor = nomeEl ? nomeEl.value.trim() : 'App Ovos Aline';
+        const cidade = cidadeEl ? cidadeEl.value.trim() : 'SAO PAULO';
+        const copiaCola = window.pixPayload(chaveFinal, 1.00, nomeRecebedor, cidade, 'TESTE001');
+
+        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'pix_config'), {
+            type, key: chaveVisual, rawKey: chaveFinal, nomeRecebedor, cidade, copiaCola, updatedAt: serverTimestamp()
+        }, { merge: true });
+        
+        window.toast("✅ PIX Guardado com Sucesso!");
+        window.renderPixPreview();
+    } catch (err) { 
+        window.toast("Erro ao guardar PIX."); 
+    } finally {
+        if(btn) { btn.disabled = false; btn.innerText = "💾 Salvar Configurações do PIX"; }
+    }
+};
+
+window.handleSaveAparencia = async () => {
+    const btn = document.getElementById('btn-save-aparencia');
+    if(btn) { btn.disabled = true; btn.innerText = "A guardar..."; }
+    try {
+        const corP = document.getElementById('cfg-corPrimaria').value;
+        const corS = document.getElementById('cfg-corSecundaria').value;
+        
+        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'store_config'), {
+            corPrimaria: corP, 
+            corSecundaria: corS, 
+            updatedAt: serverTimestamp()
+        }, {merge:true});
+        window.toast("✅ Estilo guardado na nuvem!");
+    } catch(e) { window.toast("Erro ao guardar estilo."); }
+    finally { if(btn) { btn.disabled = false; btn.innerText = "💾 Guardar Cores"; } }
+};
+
+window.renderPixPreview = () => {
+    const elKey = document.getElementById('pixKey');
+    const elNome = document.getElementById('pixNome');
+    const elCidade = document.getElementById('pixCidade');
     
-    const key = window.config.pixChave || document.getElementById('pixKey')?.value || '11999999999';
-    const nome = window.config.pixNome || document.getElementById('pixNome')?.value || 'LOJA';
-    const cidade = window.config.pixCidade || document.getElementById('pixCidade')?.value || 'BRASIL';
+    const chave  = (elKey ? elKey.value : window.config.pixChave) || '11999999999';
+    const nome   = (elNome ? elNome.value : window.config.pixNome) || 'LOJA';
+    const cidade = (elCidade ? elCidade.value : window.config.pixCidade) || 'BRASIL';
     
-    const payload = window.pixPayload(key, 1.00, nome, cidade, 'TESTE');
-    
-    setTimeout(()=>{
-        try {
-            if(typeof QRCode !== 'undefined') {
-                new QRCode(cont, {text:payload, width:150, height:150, colorDark:'#be123c', colorLight:'#fff'});
-            }
-        } catch(e) { console.error('QRCode error:', e); }
-    }, 50);
-};
-
-window.loadLoja = () => {
-    const els = {
-        'cfg-nome': window.config.nome,
-        'cfg-emoji': window.config.emoji,
-        'cfg-slogan': window.config.slogan,
-        'cfg-heroTitle': window.config.heroTitle,
-        'cfg-heroDesc': window.config.heroDesc
-    };
-    Object.entries(els).forEach(([id,val])=>{
-        const el = document.getElementById(id);
-        if(el) el.value = val||'';
-    });
-};
-
-window.saveLoja = async () => {
-    await setDoc(doc(db,'artifacts',appId,'public','data','settings','store_config'), {
-        nome: document.getElementById('cfg-nome').value,
-        emoji: document.getElementById('cfg-emoji').value,
-        slogan: document.getElementById('cfg-slogan').value,
-        heroTitle: document.getElementById('cfg-heroTitle').value,
-        heroDesc: document.getElementById('cfg-heroDesc').value,
-        updatedAt: serverTimestamp()
-    }, {merge:true});
-    window.toast('✅ Loja guardada');
-};
-
-window.loadApar = () => {
-    const p = document.getElementById('cfg-corPrimaria');
-    const s = document.getElementById('cfg-corSecundaria');
-    if(p) p.value = window.config.corPrimaria||'#e11d48';
-    if(s) s.value = window.config.corSecundaria||'#be123c';
-};
-
-window.saveApar = async () => {
-    await setDoc(doc(db,'artifacts',appId,'public','data','settings','store_config'), {
-        corPrimaria: document.getElementById('cfg-corPrimaria').value,
-        corSecundaria: document.getElementById('cfg-corSecundaria').value,
-        updatedAt: serverTimestamp()
-    }, {merge:true});
-    window.toast('✅ Cores guardadas');
+    const p      = window.pixPayload(chave, 1.00, nome, cidade, 'TESTE001');
+    const div    = document.getElementById('pix-preview-qr');
+    if(div) {
+        div.innerHTML = '';
+        setTimeout(()=>{
+            try { new QRCode(div, { text:p, width:150, height:150, colorDark: window.config.corSecundaria || '#be123c', colorLight:'#FFFFFF', correctLevel:QRCode.CorrectLevel.M }); } catch(e){}
+        }, 50);
+    }
 };
 
 window.updateImgPreview = () => {
     const val = document.getElementById('mp-foto').value;
-    const prev = document.getElementById('mp-img-preview');
-    if(prev) prev.innerHTML = val ? `<img src="${val}" style="width:100%;height:100%;object-fit:cover;border-radius:12px;">` : '📷';
+    const preview = document.getElementById('mp-img-preview');
+    if (preview) preview.innerHTML = val ? `<img src="${val}" class="w-full h-full object-cover">` : '📷';
 };
 
 window.handleFileUpload = (e) => {
-    const file = e.target.files[0];
-    if(!file) return;
+    const file = e.target.files[0]; if(!file) return;
     const reader = new FileReader();
-    reader.onload = (ev) => {
-        document.getElementById('mp-foto').value = ev.target.result;
-        window.updateImgPreview();
-    };
+    reader.onload = (event) => { document.getElementById('mp-foto').value = event.target.result; window.updateImgPreview(); };
     reader.readAsDataURL(file);
 };
 
 window.selBadge = (el, badge, cls) => {
-    document.querySelectorAll('.badge-opt').forEach(x=>x.classList.remove('sel'));
+    document.querySelectorAll('.badge-opt').forEach(x => x.classList.remove('sel'));
     el.classList.add('sel');
     document.getElementById('mp-badge').value = badge;
     document.getElementById('mp-badgeClass').value = cls;
-};
-
-window.removeAccents = (s) => (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^\x00-\x7F]/g,'').toUpperCase();
-
-window.pixPayload = (key, amount, name, city, txid) => {
-    const tlv = (id,v) => id + String(v.length).padStart(2,'0') + v;
-    const ma = tlv('00','BR.GOV.BCB.PIX') + tlv('01', key);
-    let p = tlv('00','01') + tlv('26',ma) + tlv('52','0000') + tlv('53','986') + tlv('54',Number(amount).toFixed(2)) + tlv('58','BR') + tlv('59',window.removeAccents(name).slice(0,25)||'LOJA') + tlv('60',window.removeAccents(city).slice(0,15)||'BR') + tlv('62',tlv('05',window.removeAccents(txid).slice(0,25)||'TESTE'));
-    return p + tlv('63', window.crc16(p+'6304'));
-};
-
-window.crc16 = (s) => {
-    let c = 0xFFFF;
-    for(let i=0; i<s.length; i++) {
-        c ^= (s.charCodeAt(i) & 0xFF) << 8;
-        for(let j=0; j<8; j++) c = (c & 0x8000) ? ((c << 1) ^ 0x1021) & 0xFFFF : (c << 1) & 0xFFFF;
-    }
-    return (c & 0xFFFF).toString(16).toUpperCase().padStart(4,'0');
 };
 
 window.fazerLogin = async () => {
@@ -618,10 +1067,10 @@ window.fazerLogin = async () => {
     const em = document.getElementById('login-email').value.trim();
     const ps = document.getElementById('login-pass').value;
     
-    btn.disabled = true; btn.textContent = 'A validar...';
+    if (btn) { btn.disabled = true; btn.innerText = "A validar..."; }
     
-    if(em==='thon@lojista.com.br' && ps==='admin123') {
-        localStorage.setItem('admin_bypass','true');
+    if (em === 'thon@lojista.com.br' && ps === 'admin123') {
+        localStorage.setItem('admin_bypass', 'true');
         document.getElementById('login-view').style.display = 'none';
         document.getElementById('app-view').style.display = 'flex';
         window.initListeners();
@@ -629,68 +1078,116 @@ window.fazerLogin = async () => {
         return;
     }
     
-    alert('Acesso negado');
-    btn.disabled = false; btn.textContent = 'Entrar no Painel';
+    try { await signInWithEmailAndPassword(auth, em, ps); } 
+    catch(e) { 
+        alert("Acesso negado."); 
+        if(btn) { btn.disabled = false; btn.innerText = "Entrar no Painel"; }
+    }
 };
 
-window.fazerLogout = () => {
+window.fazerLogout = async () => {
     localStorage.removeItem('admin_bypass');
-    window.unsubs.forEach(u=>u());
-    window.unsubs = [];
+    window.clearAdminListeners();
     document.getElementById('login-view').style.display = 'flex';
     document.getElementById('app-view').style.display = 'none';
-    signOut(auth);
+    
+    const btn = document.getElementById('btn-login');
+    if (btn) { btn.disabled = false; btn.innerText = "Entrar no Painel"; }
+    
+    await signOut(auth);
+};
+
+window.removeAccents = (s) => (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^\x00-\x7F]/g,'').toUpperCase();
+window.pixPayload = (key, amount, name, city, txid) => {
+    const tlv = (id, v) => id + String(v.length).padStart(2,'0') + v;
+    const ma = tlv('00','BR.GOV.BCB.PIX') + tlv('01', key);
+    let p = tlv('00','01') + tlv('26', ma) + tlv('52','0000') + tlv('53','986') + tlv('54', Number(amount).toFixed(2)) + tlv('58','BR') + tlv('59', window.removeAccents(name).slice(0,25)||'LOJA') + tlv('60', window.removeAccents(city).slice(0,15)||'BR') + tlv('62', tlv('05', window.removeAccents(txid).slice(0,25)||'TESTE'));
+    return p + tlv('63', window.crc16(p + '6304'));
+};
+window.crc16 = (s) => {
+    let c = 0xFFFF;
+    for (let i=0; i<s.length; i++) {
+        c ^= (s.charCodeAt(i) & 0xFF) << 8;
+        for (let j=0; j<8; j++) c = (c & 0x8000) ? ((c << 1) ^ 0x1021) & 0xFFFF : (c << 1) & 0xFFFF;
+    }
+    return (c & 0xFFFF).toString(16).toUpperCase().padStart(4,'0');
 };
 
 window.initListeners = () => {
-    const u1 = onSnapshot(collection(db,'artifacts',appId,'public','data','estoque'), s => {
-        window.produtos = s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.nome||'').localeCompare(b.nome||''));
-        if(window.state.view==='produtos') window.renderProds();
-        if(window.state.view==='dashboard') window.renderDash();
+    if (window.isListening) return;
+    window.isListening = true;
+
+    const u1 = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'estoque'), s => {
+        window.produtos = s.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b)=>(a.nome||"").localeCompare(b.nome||""));
+        if (window.state.view === 'produtos') window.renderProdList();
     });
-    
-    const u2 = onSnapshot(collection(db,'artifacts',appId,'public','data','vendas_logs'), s => {
-        window.logs = s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>{
-            const tA = a.criadoEm?.seconds||0;
-            const tB = b.criadoEm?.seconds||0;
+
+    const u2 = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'store_config'), s => {
+        if(s.exists()){
+            window.config = { ...window.config, ...s.data() };
+            if (window.state.view === 'loja') window.loadLojaForm();
+            if (window.state.view === 'aparencia') window.loadAparenciaForm();
+            
+            const focusedId = document.activeElement ? document.activeElement.id : null;
+            if (window.state.view === 'dashboard' && focusedId !== 'input-taxa-debito' && focusedId !== 'input-taxa-credito') {
+                window.renderDashboard();
+            }
+        }
+    });
+
+    const u3 = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'pix_config'), s => {
+        if(s.exists()){
+            const d = s.data();
+            window.config.pixChave = d.rawKey || '';
+            window.config.pixTipo = d.type || 'Celular';
+            window.config.pixNome = d.nomeRecebedor || '';
+            window.config.pixCidade = d.cidade || '';
+            if (window.state.view === 'pix') window.loadPixForm();
+        }
+    });
+
+    const u4 = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'vendas_logs'), s => {
+        window.logs = s.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b)=>{
+            const tA = a.criadoEm?.seconds || 0;
+            const tB = b.criadoEm?.seconds || 0;
             return tB - tA;
         });
-        if(window.state.view==='pedidos') window.renderPedidos();
-        if(window.state.view==='dashboard') window.renderDash();
+        if (window.state.view === 'pedidos') window.renderPedidos();
+        if (window.state.view === 'dashboard') window.renderDashboard();
     });
-    
-    const u3 = onSnapshot(doc(db,'artifacts',appId,'public','data','settings','store_config'), s => {
-        if(s.exists()) {
-            window.config = {...window.config, ...s.data()};
-            if(window.state.view==='loja') window.loadLoja();
-            if(window.state.view==='aparencia') window.loadApar();
-        }
-    });
-    
-    const u4 = onSnapshot(doc(db,'artifacts',appId,'public','data','settings','pix_config'), s => {
-        if(s.exists()) {
-            const d = s.data();
-            window.config.pixChave = d.rawKey||'';
-            window.config.pixTipo = d.type||'Celular';
-            window.config.pixNome = d.nomeRecebedor||'';
-            window.config.pixCidade = d.cidade||'';
-            if(window.state.view==='pix') window.loadPix();
-        }
-    });
-    
-    window.unsubs = [u1, u2, u3, u4];
+
+    window.firebaseUnsubs.push(u1, u2, u3, u4);
 };
 
-(async () => {
-    await signInAnonymously(auth).catch(()=>{});
+window.boot = async () => {
+    await window.initAuth();
     
-    if(localStorage.getItem('admin_bypass')==='true') {
+    const loginBtn = document.getElementById('btn-login');
+    if (loginBtn) { loginBtn.disabled = false; loginBtn.innerText = "Entrar no Painel"; }
+    
+    if (localStorage.getItem('admin_bypass') === 'true') {
         document.getElementById('login-view').style.display = 'none';
         document.getElementById('app-view').style.display = 'flex';
         window.initListeners();
         window.goTo('dashboard');
+        return;
     }
-})();
+    
+    onAuthStateChanged(auth, u => {
+        if (u) {
+            document.getElementById('login-view').style.display = 'none';
+            document.getElementById('app-view').style.display = 'flex';
+            window.initListeners();
+            window.goTo('dashboard');
+        } else {
+            window.clearAdminListeners();
+            document.getElementById('login-view').style.display = 'flex';
+            document.getElementById('app-view').style.display = 'none';
+        }
+    });
+};
+
+window.boot();
 </script>
 </body>
 </html>
