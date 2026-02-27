@@ -341,8 +341,44 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebas
 import { getFirestore, collection, addDoc, serverTimestamp, onSnapshot, doc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
-// Configuração Firebase Segura e Blindada
-let firebaseConfig = {
+// --- UTILITÁRIOS (Garantir que estão definidos ANTES de qualquer uso) ---
+window.fmt = n => Number(n || 0).toFixed(2).replace('.',',');
+
+window.toast = (msg) => {
+    const t = document.getElementById('toast'); 
+    if(!t) return;
+    t.textContent = msg; 
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+};
+
+window.generateUUID = () => {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+        var r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8); return v.toString(16);
+    });
+};
+
+window.removeAccents = (s) => (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^\x00-\x7F]/g,'').toUpperCase();
+
+window.crc16 = (s) => {
+    let c = 0xFFFF;
+    for (let i = 0; i < s.length; i++) {
+        c ^= (s.charCodeAt(i) & 0xFF) << 8;
+        for (let j = 0; j < 8; j++) c = (c & 0x8000) ? ((c << 1) ^ 0x1021) & 0xFFFF : (c << 1) & 0xFFFF;
+    }
+    return (c & 0xFFFF).toString(16).toUpperCase().padStart(4,'0');
+};
+
+window.pixPayload = (key, amount, name, city, txid) => {
+    const tlv = (id, v) => id + String(v.length).padStart(2,'0') + v;
+    const ma = tlv('00','BR.GOV.BCB.PIX') + tlv('01', key);
+    let p = tlv('00','01') + tlv('26', ma) + tlv('52','0000') + tlv('53','986') + tlv('54', Number(amount).toFixed(2)) + tlv('58','BR') + tlv('59', window.removeAccents(name).slice(0,25)||'LOJA') + tlv('60', window.removeAccents(city).slice(0,15)||'BR') + tlv('62', tlv('05', window.removeAccents(txid).slice(0,25)||'TESTE'));
+    return p + tlv('63', window.crc16(p + '6304'));
+};
+
+// --- CONFIGURAÇÃO FIREBASE ---
+const firebaseConfig = {
     apiKey: "AIzaSyD3Otz9-zdZH-E5Feg9IOGWPzVycoe8gro",
     authDomain: "distribuidora-de-ovos-aline.firebaseapp.com",
     projectId: "distribuidora-de-ovos-aline",
@@ -351,32 +387,10 @@ let firebaseConfig = {
     appId: "1:92187548716:web:d61d18a29aa76aead7c589"
 };
 
-try {
-    if (typeof __firebase_config !== 'undefined' && __firebase_config) {
-        firebaseConfig = JSON.parse(__firebase_config);
-    }
-} catch(e) {
-    console.warn("Utilizando configurações internas de base de dados.");
-}
-
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'app-egg-pro-transacional';
-
 const appFB = initializeApp(firebaseConfig);
 const auth = getAuth(appFB);
 const db = getFirestore(appFB);
-
-async function initAuth() {
-    try {
-        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-            await signInWithCustomToken(auth, __initial_auth_token);
-        } else {
-            await signInAnonymously(auth);
-        }
-    } catch (e) {
-        console.error("Erro na autenticação:", e);
-    }
-}
-initAuth();
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'app-egg-pro-transacional';
 
 // Catálogo de Emergência
 const DEFAULT_PRODUTOS = [
@@ -387,6 +401,12 @@ const DEFAULT_PRODUTOS = [
     { id: 'def-5', nome: 'Ovos Caipira', emoji: '🐓', tipo: 'Caipira', embalagem: 'Meia Dúzia (6)', preco: 9.90, desc: 'Criação livre no campo. Gema laranjinha e sabor incomparável.', badge: 'Especial', badgeClass: 'amber', foto_url: '', ativo: true },
     { id: 'def-6', nome: 'Ovos Orgânicos', emoji: '🌿', tipo: 'Orgânico', embalagem: 'Caixa com 120 ovos', preco: 95.90, desc: '100% orgânicos, sem antibióticos. Certificado. Ideal para revenda.', badge: 'Premium', badgeClass: 'green', foto_url: '', ativo: true }
 ];
+
+// --- ESTADO ---
+window.produtosFirebase = null; 
+window.carrinho = {};
+window.currentOrderContext = {}; 
+window.catalogoCarregado = false; 
 
 window.configuracoes_loja = {
   nome: 'App Ovos Aline',
@@ -399,140 +419,54 @@ window.configuracoes_loja = {
   whatsapp: ''
 };
 
-window.pix_config = { rawKey: '11999999999', nomeRecebedor: 'Loja', cidade: 'SAO PAULO' };
+window.pix_config = { rawKey: '11983454007', nomeRecebedor: 'App Ovos Aline', cidade: 'SAO PAULO' };
 
-// ======= NOVO SISTEMA DE ESTADO (Source of Truth) =======
-window.produtosFirebase = null; 
-window.carrinho = {};
-window.currentOrderContext = {}; 
-window.catalogoCarregado = false; 
-
-// Obtém produtos protegendo contra estados de erro/loading
 window.getProdutos = () => {
-    if (window.produtosFirebase !== null) {
-        return window.produtosFirebase;
-    }
+    if (window.produtosFirebase !== null) return window.produtosFirebase;
     return DEFAULT_PRODUTOS;
 };
 
-// Timeout de segurança ultra-rápido (1.5s)
-setTimeout(() => {
-    if (!window.catalogoCarregado) {
-        window.catalogoCarregado = true;
-        window.renderProdutos(); // Renderiza usando fallback, pois Firebase ainda é null
-    }
-}, 1500);
-
-window.generateUUID = () => {
-    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-        var r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8); return v.toString(16);
-    });
-};
-
-onAuthStateChanged(auth, (user) => {
-    if (user) {
-        // Escuta Estoque Real-time
-        onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'estoque'), snap => {
-            if (!snap.empty) {
-                window.produtosFirebase = snap.docs.map(d => ({id: d.id, ...d.data()})).sort((a,b)=>(a.nome||'').localeCompare(b.nome||''));
-            } else {
-                window.produtosFirebase = []; // Se Firebase confirmar que está vazio, fica vazio []. Não puxa default.
-            }
-            window.catalogoCarregado = true;
-            window.renderProdutos();
-            window.syncCarrinho(); 
-        }, error => {
-            console.warn("Aviso na leitura do catálogo (Permissões ou Rede). A iniciar plano de contingência.");
-            window.catalogoCarregado = true;
-            window.renderProdutos();
-        });
-
-        // Escuta Config da Loja
-        onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'store_config'), snap => {
-            if (snap.exists()) {
-                window.configuracoes_loja = { ...window.configuracoes_loja, ...snap.data() };
-            }
-            window.applyConfig(); 
-        }, err => console.warn(err));
-
-        // Escuta PIX
-        onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'pix_config'), snap => {
-            if (snap.exists()) {
-                const d = snap.data();
-                window.pix_config = {
-                    rawKey: d.rawKey || d.key || '11999999999',
-                    nomeRecebedor: d.nomeRecebedor || 'App Ovos Aline',
-                    cidade: d.cidade || 'SAO PAULO',
-                    copiaCola: d.copiaCola || ''
-                };
-            }
-        }, err => console.warn("Aviso PIX:", err));
-    }
-});
-
+// --- FUNÇÕES DE INTERFACE ---
 window.applyConfig = () => {
   try {
       const c = window.configuracoes_loja || {};
       document.title = c.nome || 'App Ovos Aline';
-      
-      const elPT = document.getElementById('page-title'); if(elPT) elPT.textContent = c.nome;
-      const elHN = document.getElementById('h-name'); if(elHN) elHN.textContent = c.nome;
-      const elHS = document.getElementById('h-slogan'); if(elHS) elHS.textContent = c.slogan;
-      const elHE = document.getElementById('h-emoji'); if(elHE) elHE.textContent = c.emoji;
-      const elHT = document.getElementById('hero-title'); if(elHT && c.heroTitle) elHT.innerHTML = c.heroTitle;
-      const elHD = document.getElementById('hero-desc'); if(elHD && c.heroDesc) elHD.textContent = c.heroDesc;
-      
+      const els = { 'page-title': c.nome, 'h-name': c.nome, 'h-slogan': c.slogan, 'h-emoji': c.emoji, 'hero-title': c.heroTitle, 'hero-desc': c.heroDesc };
+      Object.entries(els).forEach(([id, val]) => {
+          const el = document.getElementById(id);
+          if(el) {
+              if(id.includes('title') && id !== 'page-title') el.innerHTML = val;
+              else el.textContent = val;
+          }
+      });
       const elFT = document.getElementById('footer-text'); 
       if(elFT) elFT.textContent = `© ${new Date().getFullYear()} ${c.nome || 'Loja'} · Todos os direitos reservados`;
-
       if(c.corPrimaria) document.documentElement.style.setProperty('--primary', c.corPrimaria);
       if(c.corSecundaria) document.documentElement.style.setProperty('--dark', c.corSecundaria);
   } catch(e) { console.error(e); }
 };
 
-window.applyConfig();
-
-window.toast = (msg) => {
-    const t = document.getElementById('toast'); 
-    if(!t) return;
-    t.textContent = msg; 
-    t.classList.add('show');
-    setTimeout(() => t.classList.remove('show'), 2500);
-};
-
-window.fmt = n => Number(n || 0).toFixed(2).replace('.',',');
-
 window.renderProdutos = () => {
   try {
       const grid = document.getElementById('product-grid');
       if(!grid) return;
-      
       if (!window.catalogoCarregado) {
           grid.innerHTML = '<div class="no-products"><span class="animate-pulse">⏳</span>A ligar aos servidores da granja...</div>'; 
           return; 
       }
-      
       const prods = window.getProdutos();
       let ativos = prods.filter(p => p.ativo !== false); 
-      
-      // Se não há itens ativos no banco de dados verdadeiro
       if (!ativos.length) { 
           grid.innerHTML = '<div class="no-products"><span>🥚</span>Nenhum produto disponível no momento.</div>';
           return;
       }
-      
       grid.innerHTML = ativos.map(p => {
-        const imageElement = (p.foto_url && p.foto_url.length > 5) 
+        const imgEl = (p.foto_url && p.foto_url.length > 5) 
                 ? `<img src="${p.foto_url}" style="width:100%;height:100%;object-fit:cover;">` 
                 : `<span>${p.emoji || '🥚'}</span>`;
-
         return `
         <div class="card">
-          <div class="card-img" style="font-size: ${p.foto_url ? '1rem' : '4.8rem'};">
-            ${imageElement}
-            ${p.badge ? `<div class="pill" style="background-color: var(--primary);">${p.badge}</div>` : ''}
-          </div>
+          <div class="card-img" style="font-size: ${p.foto_url ? '1rem' : '4.8rem'};">${imgEl}${p.badge ? `<div class="pill">${p.badge}</div>` : ''}</div>
           <div class="card-body">
             <h3>${p.nome || ''}</h3>
             <div class="sub">${p.tipo || ''}</div>
@@ -569,27 +503,19 @@ window.addCart = (id) => {
 window.changeCartQty = (id, delta) => {
     if (!window.carrinho[id]) return;
     window.carrinho[id] += delta;
-    if (window.carrinho[id] <= 0) {
-        delete window.carrinho[id];
-    }
+    if (window.carrinho[id] <= 0) delete window.carrinho[id];
     window.syncCarrinho();
 };
 
 window.syncCarrinho = () => {
-  // Limpeza de Orfãos (Se um admin deletar o produto, ele some do carrinho de quem está online)
   const prods = window.getProdutos();
   Object.keys(window.carrinho).forEach(k => {
-      if (!prods.find(p => String(p.id) === String(k))) {
-          delete window.carrinho[k];
-      }
+      if (!prods.find(p => String(p.id) === String(k))) delete window.carrinho[k];
   });
-
   const total = Object.values(window.carrinho).reduce((s,v)=>s+v, 0);
   const cc = document.getElementById('cart-count'); if(cc) cc.textContent = total;
   const cb = document.getElementById('checkout-btn'); if(cb) cb.disabled = total === 0;
   window.renderCarrinho();
-
-  // Atualiza em tempo real os botões do modal de checkout se ele estiver aberto!
   const cm = document.getElementById('checkout-modal');
   if (cm && cm.classList.contains('open')) {
       const tot = window.totalCarrinho();
@@ -602,7 +528,6 @@ window.renderCarrinho = () => {
   const keys = Object.keys(window.carrinho).filter(k => window.carrinho[k] > 0);
   const el = document.getElementById('cart-items');
   if(!el) return;
-
   if (!keys.length) {
     el.innerHTML = '<div class="empty"><span>🥚</span>Seu carrinho está vazio</div>';
     const ct = document.getElementById('cart-total'); if(ct) ct.textContent = 'R$ 0,00';
@@ -615,17 +540,12 @@ window.renderCarrinho = () => {
     const sub = (p.preco||0) * window.carrinho[k];
     total += sub;
     const imgHtml = (p.foto_url && p.foto_url.length > 5) ? `<img src="${p.foto_url}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;">` : (p.emoji || '🥚');
-    
     return `<div class="ci">
       <div class="ci-emoji" style="padding:${p.foto_url ? '0':'8px'}; border:${p.foto_url ? 'none':''};">${imgHtml}</div>
       <div class="ci-info">
         <h4>${p.nome || ''}</h4>
         <p style="font-size:0.75rem; color:var(--muted);">${p.embalagem || 'Unidade'} · R$ ${window.fmt(p.preco)}</p>
-        <div class="qty-controls">
-            <button onclick="window.changeCartQty('${k}', -1)">-</button>
-            <span>${window.carrinho[k]}</span>
-            <button onclick="window.changeCartQty('${k}', 1)">+</button>
-        </div>
+        <div class="qty-controls"><button onclick="window.changeCartQty('${k}', -1)">-</button><span>${window.carrinho[k]}</span><button onclick="window.changeCartQty('${k}', 1)">+</button></div>
       </div>
       <div style="display:flex; flex-direction:column; align-items:flex-end; gap:8px;">
         <div class="ci-price">R$ ${window.fmt(sub)}</div>
@@ -637,277 +557,151 @@ window.renderCarrinho = () => {
 };
 
 window.remCart = (id) => { delete window.carrinho[id]; window.syncCarrinho(); };
-
-window.totalCarrinho = () => {
-  return Object.keys(window.carrinho).reduce((s,k) => {
-    const p = window.getProdutos().find(x => String(x.id) === String(k));
-    return s + (p ? (p.preco||0) * window.carrinho[k] : 0);
-  }, 0);
-};
-
-window.toggleCart = () => {
-  const sb = document.getElementById('sidebar'); if(sb) sb.classList.toggle('open');
-  const ov = document.getElementById('overlay'); if(ov) ov.classList.toggle('open');
-};
-
-window.closeAll = () => {
-  ['sidebar','overlay','pix-modal','checkout-modal'].forEach(id => {
-      const el = document.getElementById(id); if(el) el.classList.remove('open');
-  });
-};
-
-window.backToCart = () => {
-  const cm = document.getElementById('checkout-modal'); if(cm) cm.classList.remove('open');
-  const sb = document.getElementById('sidebar'); if(sb) sb.classList.add('open');
-};
-
-window.backToCheckout = () => {
-  const pm = document.getElementById('pix-modal'); if(pm) pm.classList.remove('open');
-  const cm = document.getElementById('checkout-modal'); if(cm) cm.classList.add('open');
-};
-
+window.totalCarrinho = () => Object.keys(window.carrinho).reduce((s,k) => { const p = window.getProdutos().find(x => String(x.id) === String(k)); return s + (p ? (p.preco||0) * window.carrinho[k] : 0); }, 0);
+window.toggleCart = () => { document.getElementById('sidebar').classList.toggle('open'); document.getElementById('overlay').classList.toggle('open'); };
+window.closeAll = () => { ['sidebar','overlay','pix-modal','checkout-modal'].forEach(id => { const el = document.getElementById(id); if(el) el.classList.remove('open'); }); };
+window.backToCart = () => { const cm = document.getElementById('checkout-modal'); if(cm) cm.classList.remove('open'); const sb = document.getElementById('sidebar'); if(sb) sb.classList.add('open'); };
+window.backToCheckout = () => { const pm = document.getElementById('pix-modal'); if(pm) pm.classList.remove('open'); const cm = document.getElementById('checkout-modal'); if(cm) cm.classList.add('open'); };
 window.currentDeliveryType = 'retirada';
 
 window.setDelivery = (type) => {
   window.currentDeliveryType = type;
-  
   const br = document.getElementById('btn-retirada'); if(br) br.classList.toggle('active', type === 'retirada');
   const be = document.getElementById('btn-entrega'); if(be) be.classList.toggle('active', type === 'entrega');
   const ir = document.getElementById('info-retirada'); if(ir) ir.style.display = type === 'retirada' ? 'block' : 'none';
   const ie = document.getElementById('info-entrega'); if(ie) ie.style.display = type === 'entrega' ? 'block' : 'none';
-  
   const tot = window.totalCarrinho();
   const ctb = document.getElementById('checkout-total-btn'); if(ctb) ctb.textContent = 'R$ ' + window.fmt(tot);
   const cs = document.getElementById('chk-sub'); if(cs) cs.textContent = 'R$ ' + window.fmt(tot);
-
   document.querySelectorAll('.form-input').forEach(el => el.classList.remove('error'));
   window.updatePaymentOptions();
 };
 
 window.updatePaymentOptions = () => {
-  const select = document.getElementById('pagamento-select');
-  if(!select) return;
+  const select = document.getElementById('pagamento-select'); if(!select) return;
   select.innerHTML = '';
-  
   select.add(new Option('PIX Online (Pagar Agora)', 'pix_online'));
-
   if (window.currentDeliveryType === 'retirada') {
-    select.add(new Option('PIX na Retirada', 'pix_retirada'));
-    select.add(new Option('Cartão na Retirada', 'cartao_retirada'));
-    select.add(new Option('Dinheiro na Retirada', 'dinheiro_retirada'));
+    ['PIX na Retirada', 'Cartão na Retirada', 'Dinheiro na Retirada'].forEach(v => select.add(new Option(v, v.toLowerCase().replace(' ', '_'))));
   } else {
-    select.add(new Option('PIX na Entrega', 'pix_entrega'));
-    select.add(new Option('Cartão na Entrega', 'cartao_entrega'));
-    select.add(new Option('Dinheiro na Entrega', 'dinheiro_entrega'));
+    ['PIX na Entrega', 'Cartão na Entrega', 'Dinheiro na Entrega'].forEach(v => select.add(new Option(v, v.toLowerCase().replace(' ', '_'))));
   }
 };
 
-window.openCheckout = () => {
-  window.setDelivery('retirada'); 
-  const cm = document.getElementById('checkout-modal'); if(cm) cm.classList.add('open');
-  const sb = document.getElementById('sidebar'); if(sb) sb.classList.remove('open');
-  const ov = document.getElementById('overlay'); if(ov) ov.classList.add('open'); 
-};
+window.openCheckout = () => { window.setDelivery('retirada'); const cm = document.getElementById('checkout-modal'); if(cm) cm.classList.add('open'); const sb = document.getElementById('sidebar'); if(sb) sb.classList.remove('open'); const ov = document.getElementById('overlay'); if(ov) ov.classList.add('open'); };
 
 window.processCheckout = async () => {
-  let clienteData = {};
   let temErro = false;
-  
   document.querySelectorAll('.form-input').forEach(el => el.classList.remove('error'));
-  
-  const nomeEl = document.getElementById('cli-nome');
-  const telEl = document.getElementById('cli-tel');
-
-  if (!nomeEl || !nomeEl.value.trim()) { if(nomeEl) nomeEl.classList.add('error'); temErro = true; }
-  if (!telEl || !telEl.value.trim()) { if(telEl) telEl.classList.add('error'); temErro = true; }
-
+  const n = document.getElementById('cli-nome'); const t = document.getElementById('cli-tel');
+  if (!n?.value.trim()) { n.classList.add('error'); temErro = true; }
+  if (!t?.value.trim()) { t.classList.add('error'); temErro = true; }
   if (window.currentDeliveryType === 'entrega') {
-    const camposEntrega = ['cli-rua', 'cli-num', 'cli-bairro'];
-    camposEntrega.forEach(id => {
-      const el = document.getElementById(id);
-      if (!el || !el.value.trim()) { if(el) el.classList.add('error'); temErro = true; }
-    });
+    ['cli-rua', 'cli-num', 'cli-bairro'].forEach(id => { const el = document.getElementById(id); if (!el?.value.trim()) { el.classList.add('error'); temErro = true; } });
   }
-
-  if (temErro) {
-    window.toast('Por favor, preencha todos os campos obrigatórios!');
-    return;
-  }
-  
-  clienteData = {
-    nome: nomeEl.value.trim(),
-    tel: telEl.value.trim(),
-    rua: document.getElementById('cli-rua') ? document.getElementById('cli-rua').value.trim() : '',
-    num: document.getElementById('cli-num') ? document.getElementById('cli-num').value.trim() : '',
-    bairro: document.getElementById('cli-bairro') ? document.getElementById('cli-bairro').value.trim() : '',
-    cep: document.getElementById('cli-cep') ? document.getElementById('cli-cep').value.trim() : '',
-    comp: document.getElementById('cli-comp') ? document.getElementById('cli-comp').value.trim() : ''
-  };
-
-  const sel = document.getElementById('pagamento-select');
-  const paymentMethod = sel ? sel.value : 'dinheiro';
-  
+  if (temErro) return window.toast('Preencha os campos obrigatórios!');
   window.currentOrderContext = {
     tipoEntrega: window.currentDeliveryType,
-    clienteData,
-    paymentMethod
+    clienteData: { nome: n.value.trim(), tel: t.value.trim(), rua: document.getElementById('cli-rua')?.value.trim()||'', num: document.getElementById('cli-num')?.value.trim()||'', bairro: document.getElementById('cli-bairro')?.value.trim()||'', cep: document.getElementById('cli-cep')?.value.trim()||'', comp: document.getElementById('cli-comp')?.value.trim()||'' },
+    paymentMethod: document.getElementById('pagamento-select')?.value || 'dinheiro'
   };
-
-  const cm = document.getElementById('checkout-modal'); if(cm) cm.classList.remove('open');
-
-  if (paymentMethod === 'pix_online') {
-    window.openPix();
-  } else {
-    await window.saveOrderToFirebase();
-  }
-};
-
-window.removeAccents = (s) => (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^\x00-\x7F]/g,'').toUpperCase();
-
-window.pixPayload = (key, amount, name, city, txid) => {
-    const tlv = (id, v) => id + String(v.length).padStart(2,'0') + v;
-    const ma = tlv('00','BR.GOV.BCB.PIX') + tlv('01', key);
-    let p = tlv('00','01') + tlv('26', ma) + tlv('52','0000') + tlv('53','986') + tlv('54', Number(amount).toFixed(2)) + tlv('58','BR') + tlv('59', window.removeAccents(name).slice(0,25)||'LOJA') + tlv('60', window.removeAccents(city).slice(0,15)||'BR') + tlv('62', tlv('05', window.removeAccents(txid).slice(0,25)||'TESTE'));
-    return p + tlv('63', window.crc16(p + '6304'));
-};
-
-window.crc16 = (s) => {
-    let c = 0xFFFF;
-    for (let i = 0; i < s.length; i++) {
-        c ^= (s.charCodeAt(i) & 0xFF) << 8;
-        for (let j = 0; j < 8; j++) c = (c & 0x8000) ? ((c << 1) ^ 0x1021) & 0xFFFF : (c << 1) & 0xFFFF;
-    }
-    return (c & 0xFFFF).toString(16).toUpperCase().padStart(4,'0');
+  document.getElementById('checkout-modal')?.classList.remove('open');
+  if (window.currentOrderContext.paymentMethod === 'pix_online') window.openPix();
+  else await window.saveOrderToFirebase();
 };
 
 window.openPix = () => {
   const total = window.totalCarrinho(); 
-  let payloadCopiaCola = "";
-  
-  let cfg = window.pix_config || {};
-  let scfg = window.configuracoes_loja || {};
-  
-  let chavePix = (cfg.rawKey || scfg.pixChave || '11999999999').trim();
-  let recebedor = (cfg.nomeRecebedor || scfg.nome || 'App Ovos Aline').trim();
-  let cidade = (cfg.cidade || 'SAO PAULO').trim();
-
+  const chave = window.pix_config.rawKey; const rec = window.pix_config.nomeRecebedor; const cid = window.pix_config.cidade;
   const txid = ('OVOS' + Date.now().toString().slice(-7)).substring(0,25);
-  payloadCopiaCola = window.pixPayload(chavePix, total, recebedor, cidade, txid);
-
-  const pn = document.getElementById('pix-nome'); if(pn) pn.textContent  = recebedor;
-  const pv = document.getElementById('pix-val'); if(pv) pv.textContent   = 'R$ ' + window.fmt(total);
-  const pc = document.getElementById('pix-code'); if(pc) pc.textContent  = payloadCopiaCola;
-
+  const payload = window.pixPayload(chave, total, rec, cid, txid);
+  const pn = document.getElementById('pix-nome'); if(pn) pn.textContent = rec;
+  const pv = document.getElementById('pix-val'); if(pv) pv.textContent = 'R$ ' + window.fmt(total);
+  const pc = document.getElementById('pix-code'); if(pc) pc.textContent = payload;
   const qrDiv = document.getElementById('qrcode');
-  if(qrDiv) {
-      qrDiv.innerHTML = '';
-      setTimeout(()=>{
-         try { new QRCode(qrDiv, { text:payloadCopiaCola, width:200, height:200, colorDark: scfg.corSecundaria || '#be123c', colorLight:'#FFFFFF', correctLevel:QRCode.CorrectLevel.M }); } catch(e){}
-      }, 50);
-  }
-
-  const pm = document.getElementById('pix-modal'); if(pm) pm.classList.add('open');
+  if(qrDiv) { qrDiv.innerHTML = ''; setTimeout(()=>{ try { new QRCode(qrDiv, { text:payload, width:200, height:200, colorDark: window.configuracoes_loja.corSecundaria, colorLight:'#FFFFFF', correctLevel:QRCode.CorrectLevel.M }); } catch(e){} }, 50); }
+  document.getElementById('pix-modal')?.classList.add('open');
 };
 
-window.doCopy = () => {
-  const pc = document.getElementById('pix-code');
-  if(!pc) return;
-  navigator.clipboard.writeText(pc.textContent)
-    .then(() => window.toast('📋 Código PIX copiado com sucesso!'))
-    .catch(() => window.toast('Selecione o código e copie manualmente'));
-};
+window.doCopy = () => { const pc = document.getElementById('pix-code'); if(!pc) return; navigator.clipboard.writeText(pc.textContent).then(() => window.toast('📋 Código PIX copiado!')).catch(() => window.toast('Selecione e copie manualmente')); };
 
 window.saveOrderToFirebase = async () => {
   const pm = document.getElementById('pix-modal'); if(pm) pm.classList.remove('open');
-  
   const orderNum = Math.floor(100000 + Math.random() * 900000);
   const pedidoHash = '#' + orderNum;
-  
-  const on = document.getElementById('order-num'); if(on) on.textContent = pedidoHash;
+  document.getElementById('order-num').textContent = pedidoHash;
   window.currentOrderContext.hash = pedidoHash; 
-
-  const suc = document.getElementById('success'); if(suc) suc.classList.add('open');
-  const ov = document.getElementById('overlay'); if(ov) ov.classList.remove('open');
+  document.getElementById('success').classList.add('open');
+  document.getElementById('overlay').classList.remove('open');
   window.confetti();
-
-  const userId = auth.currentUser ? auth.currentUser.uid : window.generateUUID();
-
   try {
-    const itens = Object.keys(window.carrinho).map(k => {
-        const p = window.getProdutos().find(x => String(x.id) === String(k));
-        return { id: p.id, nome: p.nome, qtd: window.carrinho[k], preco: p.preco };
-    });
-    
-    const isPixOnline = window.currentOrderContext.paymentMethod === 'pix_online';
-    
-    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'vendas_logs'), {
-        clienteId: userId,
-        pedidoID: pedidoHash,
-        valorTotal: window.totalCarrinho(),
-        itens: itens,
-        tipoEntrega: window.currentOrderContext.tipoEntrega,
-        dadosCliente: window.currentOrderContext.clienteData || {},
-        formaPagamento: window.currentOrderContext.paymentMethod,
-        status: isPixOnline ? 'AGUARDANDO PIX' : 'CRIADO',
-        criadoEm: serverTimestamp()
-    });
-  } catch (error) {
-    console.error("Erro ao salvar pedido no Firebase:", error);
-  }
+    const itens = Object.keys(window.carrinho).map(k => { const p = window.getProdutos().find(x => String(x.id) === String(k)); return { id: p.id, nome: p.nome, qtd: window.carrinho[k], preco: p.preco }; });
+    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'vendas_logs'), { clienteId: auth.currentUser?.uid || window.generateUUID(), pedidoID: pedidoHash, valorTotal: window.totalCarrinho(), itens, tipoEntrega: window.currentOrderContext.tipoEntrega, dadosCliente: window.currentOrderContext.clienteData, formaPagamento: window.currentOrderContext.paymentMethod, status: window.currentOrderContext.paymentMethod === 'pix_online' ? 'AGUARDANDO PIX' : 'CRIADO', criadoEm: serverTimestamp() });
+  } catch (error) { console.error("Erro ao salvar pedido:", error); }
 };
 
 window.sendWhatsApp = () => {
-    if (!window.configuracoes_loja.whatsapp) {
-        window.toast("Aviso: A loja ainda não configurou um número de WhatsApp.");
-        return;
-    }
-    
-    let texto = `*NOVO PEDIDO:* ${window.currentOrderContext.hash} 🥚\n\n`;
-    texto += `*Cliente:* ${window.currentOrderContext.clienteData.nome}\n`;
-    texto += `*Telefone:* ${window.currentOrderContext.clienteData.tel}\n`;
-    texto += `*Método de Entrega:* ${window.currentOrderContext.tipoEntrega === 'entrega' ? '🚚 Entrega em Casa' : '🏪 Retirar na Loja'}\n`;
-    texto += `*Método de Pagamento:* ${window.currentOrderContext.paymentMethod.replace('_', ' ').toUpperCase()}\n\n`;
-    
-    texto += `*ITENS SOLICITADOS:*\n`;
-    Object.keys(window.carrinho).forEach(k => {
-        const p = window.getProdutos().find(x => String(x.id) === String(k));
-        if(p) texto += `• ${window.carrinho[k]}x ${p.nome} (${p.embalagem || 'Unidade'}) : R$ ${window.fmt(p.preco * window.carrinho[k])}\n`;
-    });
-    
-    texto += `\n*TOTAL A PAGAR: R$ ${window.fmt(window.totalCarrinho())}*\n\n`;
-    
-    if (window.currentOrderContext.tipoEntrega === 'entrega') {
-        const d = window.currentOrderContext.clienteData;
-        texto += `*Endereço para Entrega:*\n${d.rua}, ${d.num} - ${d.bairro}\nCEP: ${d.cep} | Ref/Comp: ${d.comp}`;
-    }
-    
-    const url = `https://wa.me/${window.configuracoes_loja.whatsapp}?text=${encodeURIComponent(texto)}`;
+    if (!window.configuracoes_loja.whatsapp) return window.toast("Aviso: WhatsApp não configurado.");
+    let t = `*NOVO PEDIDO:* ${window.currentOrderContext.hash} 🥚\n\n*Cliente:* ${window.currentOrderContext.clienteData.nome}\n*Total:* R$ ${window.fmt(window.totalCarrinho())}\n\n*ITENS:*\n`;
+    Object.keys(window.carrinho).forEach(k => { const p = window.getProdutos().find(x => String(x.id) === String(k)); if(p) t += `• ${window.carrinho[k]}x ${p.nome} : R$ ${window.fmt(p.preco * window.carrinho[k])}\n`; });
+    const url = `https://wa.me/${window.configuracoes_loja.whatsapp}?text=${encodeURIComponent(t)}`;
     window.open(url, '_blank');
 };
 
-window.resetTudo = () => {
-  Object.keys(window.carrinho).forEach(k => delete window.carrinho[k]);
-  window.currentOrderContext = {};
-  window.syncCarrinho();
-  
-  const suc = document.getElementById('success'); if(suc) suc.classList.remove('open');
-  document.querySelectorAll('.form-input').forEach(el => {
-    if(el.tagName === 'INPUT') el.value = '';
-    el.classList.remove('error');
-  });
-  
-  window.setDelivery('retirada');
-  window.renderProdutos();
-};
+window.resetTudo = () => { window.carrinho = {}; window.currentOrderContext = {}; window.syncCarrinho(); document.getElementById('success').classList.remove('open'); document.querySelectorAll('.form-input').forEach(el => { if(el.tagName === 'INPUT') el.value = ''; el.classList.remove('error'); }); window.setDelivery('retirada'); window.renderProdutos(); };
 
 const COLS = ['#e11d48','#be123c','#10b981','#0f172a','#f59e0b','#3b82f6'];
-window.confetti = () => {
-  for(let i=0;i<100;i++) setTimeout(() => {
-    const e = document.createElement('div'); e.className = 'cf';
-    e.style.cssText = `left:${Math.random()*100}vw;background:${COLS[Math.random()*COLS.length|0]};animation-duration:${1.4+Math.random()*2}s;animation-delay:${Math.random()*.6}s;width:${6+Math.random()*8}px;height:${10+Math.random()*8}px;transform:rotate(${Math.random()*360}deg);`;
-    document.body.appendChild(e); setTimeout(() => { if(e.parentNode) e.remove(); }, 4500);
-  }, i*20);
-};
+window.confetti = () => { for(let i=0;i<100;i++) setTimeout(() => { const e = document.createElement('div'); e.className = 'cf'; e.style.cssText = `left:${Math.random()*100}vw;background:${COLS[Math.random()*COLS.length|0]};animation-duration:${1.4+Math.random()*2}s;animation-delay:${Math.random()*.6}s;width:${6+Math.random()*8}px;height:${10+Math.random()*8}px;transform:rotate(${Math.random()*360}deg);`; document.body.appendChild(e); setTimeout(() => { if(e.parentNode) e.remove(); }, 4500); }, i*20); };
+
+// --- ARRANQUE ---
+async function initAuth() {
+    try {
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+            await signInWithCustomToken(auth, __initial_auth_token);
+        } else {
+            await signInAnonymously(auth);
+        }
+    } catch (e) { console.error("Erro na autenticação:", e); }
+}
+
+initAuth();
+
+setTimeout(() => {
+    if (!window.catalogoCarregado) {
+        window.catalogoCarregado = true;
+        window.renderProdutos();
+    }
+}, 1500);
+
+onAuthStateChanged(auth, (user) => {
+    if (user) {
+        onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'estoque'), snap => {
+            if (!snap.empty) window.produtosFirebase = snap.docs.map(d => ({id: d.id, ...d.data()})).sort((a,b)=>(a.nome||'').localeCompare(b.nome||''));
+            else window.produtosFirebase = [];
+            window.catalogoCarregado = true;
+            window.renderProdutos();
+            window.syncCarrinho(); 
+        }, error => {
+            console.warn("Plano de contingência ativado.");
+            window.catalogoCarregado = true;
+            window.renderProdutos();
+        });
+
+        onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'store_config'), snap => {
+            if (snap.exists()) window.configuracoes_loja = { ...window.configuracoes_loja, ...snap.data() };
+            window.applyConfig(); 
+        });
+
+        onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'pix_config'), snap => {
+            if (snap.exists()) {
+                const d = snap.data();
+                window.pix_config = { rawKey: d.rawKey || d.key || '11983454007', nomeRecebedor: d.nomeRecebedor || 'App Ovos Aline', cidade: d.cidade || 'SAO PAULO' };
+            }
+        });
+    }
+});
+
+window.applyConfig();
 </script>
 </body>
 </html>
