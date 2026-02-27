@@ -242,7 +242,6 @@
   </div>
 </div>
 
-<!-- MODAL CHECKOUT OTIMIZADO -->
 <div class="mbk" id="checkout-modal">
   <div class="modal">
     <div class="checkout-top">
@@ -252,20 +251,17 @@
     </div>
     <div class="modal-body">
       
-      <!-- Toggle Entrega/Retirada -->
       <div class="delivery-toggle">
         <button class="dt-btn active" id="btn-retirada" onclick="window.setDelivery('retirada')">🏪 Retirar na Loja</button>
         <button class="dt-btn" id="btn-entrega" onclick="window.setDelivery('entrega')">🚚 Entrega em Casa</button>
       </div>
 
-      <!-- Sessão Identificação do Cliente -->
       <div class="checkout-section" style="margin-top: 15px;">
         <label class="form-label" style="text-transform: none; margin-bottom: 4px;">Informações de Contato</label>
         <input type="text" id="cli-nome" placeholder="Seu Nome Completo" class="form-input" required>
         <input type="tel" id="cli-tel" placeholder="Telefone / WhatsApp" class="form-input" required>
       </div>
 
-      <!-- Sessão Retirada -->
       <div id="info-retirada" class="checkout-section">
         <div class="info-box">
           <p>A <strong>Distribuidora de Ovos Aline</strong> está localizada na:</p>
@@ -273,7 +269,6 @@
         </div>
       </div>
 
-      <!-- Sessão Entrega -->
       <div id="info-entrega" class="checkout-section" style="display:none;">
         <label class="form-label" style="text-transform: none; margin-bottom: 4px;">Endereço de Entrega</label>
         <div class="form-row">
@@ -287,20 +282,16 @@
         <input type="text" id="cli-comp" placeholder="Complemento / Referência" class="form-input">
       </div>
 
-      <!-- Pagamento e Resumo -->
       <div class="checkout-section" style="margin-top: -10px;">
         <label class="form-label">Forma de Pagamento:</label>
         <select id="pagamento-select" class="form-input" style="font-weight: 700;">
-          <!-- Opções geradas dinamicamente via JS -->
-        </select>
+          </select>
       </div>
 
-      <!-- Sumário de Custos Simples -->
       <div id="checkout-summary" style="width:100%; background:#f8fafc; padding:16px; border-radius:12px; margin-bottom:4px; font-size:1rem; color:var(--brown); font-weight:800; display:flex; flex-direction:column; gap:8px; border: 1px solid #e2e8f0;">
           <div style="display:flex; justify-content:space-between;"><span>Total do Pedido:</span><span id="chk-sub">R$ 0,00</span></div>
       </div>
 
-      <!-- Opções Finais (Confirmar / Voltar) -->
       <div style="display: flex; flex-direction: column; gap: 12px; width: 100%; margin-top: 8px;">
           <button class="confirm-btn" onclick="window.processCheckout()">✅ Confirmar Pedido (<span id="checkout-total-btn">R$ 0,00</span>)</button>
           <button class="btn-ghost" style="width: 100%; justify-content: center; padding: 12px; font-size: 0.95rem; text-decoration: none;" onclick="window.backToCart()">⬅️ Voltar para o Carrinho</button>
@@ -309,7 +300,6 @@
   </div>
 </div>
 
-<!-- MODAL PIX -->
 <div class="mbk" id="pix-modal">
   <div class="modal">
     <div class="modal-top pix-top" style="background:linear-gradient(135deg,var(--green) 0%,#059669 100%); padding:28px; border-radius:32px 32px 0 0; color:#fff; text-align:center;">
@@ -326,7 +316,6 @@
       <p class="copy-lbl" style="font-size:.8rem; color:var(--muted); align-self:flex-start; margin-bottom:-12px; font-weight: 700;">Código Copia e Cola (clique para copiar):</p>
       <div class="copy-box" id="pix-code" onclick="window.doCopy()" style="width:100%; background:#f1f5f9; border:2px dashed #cbd5e1; border-radius:16px; padding:14px; font-size:.8rem; font-family:monospace; color:var(--brown); font-weight: bold; word-break:break-all; cursor:pointer; transition:all .2s; user-select:all; text-align: center;"></div>
       
-      <!-- Opções Finais PIX (Pagar / Voltar) -->
       <div style="display: flex; flex-direction: column; gap: 12px; width: 100%; margin-top: 10px;">
           <button class="confirm-btn" style="background:var(--brown); width:100%; color:#fff; border:none; border-radius:16px; padding:18px; font-size:1.05rem; font-weight:800; cursor:pointer; transition:transform .2s; text-transform: uppercase; box-shadow: 0 8px 20px rgba(15,23,42,0.25);" onclick="window.saveOrderToFirebase()">✅ Já Paguei — Confirmar Pedido</button>
           <button class="btn-ghost" style="width: 100%; justify-content: center; padding: 12px; font-size: 0.95rem; text-decoration: none;" onclick="window.backToCheckout()">⬅️ Alterar Método de Pagamento</button>
@@ -335,7 +324,6 @@
   </div>
 </div>
 
-<!-- SUCCESS -->
 <div class="success" id="success">
   <div class="icon">🎉</div>
   <h2>Pedido Registrado!</h2>
@@ -348,7 +336,6 @@
 
 <div class="toast" id="toast"></div>
 
-<!-- LÓGICA JAVASCRIPT & FIREBASE BLINDADA -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getFirestore, collection, addDoc, serverTimestamp, onSnapshot, doc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -414,16 +401,25 @@ window.configuracoes_loja = {
 
 window.pix_config = { rawKey: '11999999999', nomeRecebedor: 'Loja', cidade: 'SAO PAULO' };
 
-window.produtos = [];
+// ======= NOVO SISTEMA DE ESTADO (Source of Truth) =======
+window.produtosFirebase = null; 
 window.carrinho = {};
 window.currentOrderContext = {}; 
 window.catalogoCarregado = false; 
+
+// Obtém produtos protegendo contra estados de erro/loading
+window.getProdutos = () => {
+    if (window.produtosFirebase !== null) {
+        return window.produtosFirebase;
+    }
+    return DEFAULT_PRODUTOS;
+};
 
 // Timeout de segurança ultra-rápido (1.5s)
 setTimeout(() => {
     if (!window.catalogoCarregado) {
         window.catalogoCarregado = true;
-        window.renderProdutos();
+        window.renderProdutos(); // Renderiza usando fallback, pois Firebase ainda é null
     }
 }, 1500);
 
@@ -436,12 +432,12 @@ window.generateUUID = () => {
 
 onAuthStateChanged(auth, (user) => {
     if (user) {
-        // Escuta Estoque
+        // Escuta Estoque Real-time
         onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'estoque'), snap => {
             if (!snap.empty) {
-                window.produtos = snap.docs.map(d => ({id: d.id, ...d.data()})).sort((a,b)=>(a.nome||'').localeCompare(b.nome||''));
+                window.produtosFirebase = snap.docs.map(d => ({id: d.id, ...d.data()})).sort((a,b)=>(a.nome||'').localeCompare(b.nome||''));
             } else {
-                window.produtos = []; 
+                window.produtosFirebase = []; // Se Firebase confirmar que está vazio, fica vazio []. Não puxa default.
             }
             window.catalogoCarregado = true;
             window.renderProdutos();
@@ -460,7 +456,7 @@ onAuthStateChanged(auth, (user) => {
             window.applyConfig(); 
         }, err => console.warn(err));
 
-        // Escuta PIX da Base de Dados CORRETA
+        // Escuta PIX
         onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'pix_config'), snap => {
             if (snap.exists()) {
                 const d = snap.data();
@@ -517,11 +513,13 @@ window.renderProdutos = () => {
           return; 
       }
       
-      let ativos = (window.produtos || []).filter(p => p.ativo !== false); 
+      const prods = window.getProdutos();
+      let ativos = prods.filter(p => p.ativo !== false); 
       
+      // Se não há itens ativos no banco de dados verdadeiro
       if (!ativos.length) { 
-          ativos = DEFAULT_PRODUTOS;
-          window.produtos = DEFAULT_PRODUTOS; 
+          grid.innerHTML = '<div class="no-products"><span>🥚</span>Nenhum produto disponível no momento.</div>';
+          return;
       }
       
       grid.innerHTML = ativos.map(p => {
@@ -578,10 +576,26 @@ window.changeCartQty = (id, delta) => {
 };
 
 window.syncCarrinho = () => {
+  // Limpeza de Orfãos (Se um admin deletar o produto, ele some do carrinho de quem está online)
+  const prods = window.getProdutos();
+  Object.keys(window.carrinho).forEach(k => {
+      if (!prods.find(p => String(p.id) === String(k))) {
+          delete window.carrinho[k];
+      }
+  });
+
   const total = Object.values(window.carrinho).reduce((s,v)=>s+v, 0);
   const cc = document.getElementById('cart-count'); if(cc) cc.textContent = total;
   const cb = document.getElementById('checkout-btn'); if(cb) cb.disabled = total === 0;
   window.renderCarrinho();
+
+  // Atualiza em tempo real os botões do modal de checkout se ele estiver aberto!
+  const cm = document.getElementById('checkout-modal');
+  if (cm && cm.classList.contains('open')) {
+      const tot = window.totalCarrinho();
+      const ctb = document.getElementById('checkout-total-btn'); if(ctb) ctb.textContent = 'R$ ' + window.fmt(tot);
+      const cs = document.getElementById('chk-sub'); if(cs) cs.textContent = 'R$ ' + window.fmt(tot);
+  }
 };
 
 window.renderCarrinho = () => {
@@ -596,7 +610,7 @@ window.renderCarrinho = () => {
   }
   let total = 0;
   el.innerHTML = keys.map(k => {
-    const p = (window.produtos||[]).find(x => String(x.id) === String(k));
+    const p = window.getProdutos().find(x => String(x.id) === String(k));
     if (!p) return '';
     const sub = (p.preco||0) * window.carrinho[k];
     total += sub;
@@ -626,7 +640,7 @@ window.remCart = (id) => { delete window.carrinho[id]; window.syncCarrinho(); };
 
 window.totalCarrinho = () => {
   return Object.keys(window.carrinho).reduce((s,k) => {
-    const p = (window.produtos||[]).find(x => String(x.id) === String(k));
+    const p = window.getProdutos().find(x => String(x.id) === String(k));
     return s + (p ? (p.preco||0) * window.carrinho[k] : 0);
   }, 0);
 };
@@ -820,7 +834,7 @@ window.saveOrderToFirebase = async () => {
 
   try {
     const itens = Object.keys(window.carrinho).map(k => {
-        const p = (window.produtos||[]).find(x => String(x.id) === String(k));
+        const p = window.getProdutos().find(x => String(x.id) === String(k));
         return { id: p.id, nome: p.nome, qtd: window.carrinho[k], preco: p.preco };
     });
     
@@ -856,7 +870,7 @@ window.sendWhatsApp = () => {
     
     texto += `*ITENS SOLICITADOS:*\n`;
     Object.keys(window.carrinho).forEach(k => {
-        const p = (window.produtos||[]).find(x => String(x.id) === String(k));
+        const p = window.getProdutos().find(x => String(x.id) === String(k));
         if(p) texto += `• ${window.carrinho[k]}x ${p.nome} (${p.embalagem || 'Unidade'}) : R$ ${window.fmt(p.preco * window.carrinho[k])}\n`;
     });
     
