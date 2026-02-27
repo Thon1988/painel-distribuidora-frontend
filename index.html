@@ -10,7 +10,7 @@
   <script>
     // Stub preventivo para evitar erros de clique antes do carregamento completo do módulo
     window.fazerLogin = function() {
-        alert("A ligar ao servidor. Por favor, aguarde um instante...");
+        alert("A preparar ambiente seguro. Por favor, aguarde a atualização da página...");
     };
   </script>
 
@@ -18,16 +18,15 @@
     *, *::before, *::after { box-sizing: border-box; margin:0; padding:0; }
     
     :root {
-      /* Identidade Premium Vermelha (Rose/Slate) perfeitamente integrada no seu layout */
-      --primary: #e11d48; /* Rose 600 */
-      --dark:    #be123c; /* Rose 700 */
-      --brown:   #0f172a; /* Slate 900 */
-      --cream:   #f8fafc; /* Slate 50 */
-      --muted:   #64748b; /* Slate 500 */
+      --primary: #e11d48; 
+      --dark:    #be123c; 
+      --brown:   #0f172a; 
+      --cream:   #f8fafc; 
+      --muted:   #64748b; 
       --white:   #ffffff;
-      --green:   #10b981; /* Emerald 500 */
-      --red:     #e11d48; /* Rose 600 */
-      --border:  #e2e8f0; /* Slate 200 */
+      --green:   #10b981; 
+      --red:     #e11d48; 
+      --border:  #e2e8f0; 
       --shadow:  0 4px 20px rgba(15, 23, 42, .08);
     }
     
@@ -142,11 +141,11 @@
 </head>
 <body>
 
-<!-- ECRÃ DE LOGIN ESTILO PREMIUM -->
+<!-- ECRÃ DE LOGIN ESTILO PREMIUM COM INDICADOR DE VERSÃO -->
 <div id="login-view">
     <div class="card" style="width:100%; max-width:400px; text-align:center; padding:40px; border-radius:32px; border:4px solid var(--border);">
         <h2 style="color:var(--primary); margin-bottom: 5px; font-size: 2.2rem; font-weight: 900; font-style: italic; letter-spacing: -1px;">App Ovos Aline</h2>
-        <p style="color:var(--muted); font-size: 0.75rem; font-weight: 800; margin-bottom: 30px; text-transform: uppercase; letter-spacing: 2px;">Gestão Admin Cloud</p>
+        <p style="color:var(--muted); font-size: 0.75rem; font-weight: 800; margin-bottom: 30px; text-transform: uppercase; letter-spacing: 2px;">Gestão Admin Cloud (Versão 2.1)</p>
         
         <form id="login-form" onsubmit="event.preventDefault(); window.fazerLogin();">
             <div class="field" style="margin-bottom: 15px;">
@@ -155,7 +154,7 @@
             <div class="field" style="margin-bottom: 24px;">
                 <input type="password" id="login-pass" placeholder="Palavra-passe" style="text-align:center;" required>
             </div>
-            <button id="btn-login" type="submit" class="btn btn-primary" style="width:100%; justify-content:center; padding: 16px; font-size: 1rem;" disabled>A carregar...</button>
+            <button id="btn-login" type="submit" class="btn btn-primary" style="width:100%; justify-content:center; padding: 16px; font-size: 1rem;">Entrar no Painel</button>
         </form>
     </div>
 </div>
@@ -953,7 +952,7 @@ window.handleSaveStoreConfig = async () => {
         await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'store_config'), data, {merge:true});
         window.toast("✅ Loja sincronizada!");
     } catch(e) { window.toast("Erro ao sincronizar."); }
-    finally { if(btn) { btn.disabled = false; btn.innerText = "💾 Guardar Configurações na Nuvem"; } }
+    finally { if(btn) { btn.disabled = false; btn.innerText = "💾 Guardar Dados da Loja"; } }
 };
 
 window.handleSavePixConfig = async () => {
@@ -1080,7 +1079,7 @@ window.fazerLogin = async () => {
     
     try { await signInWithEmailAndPassword(auth, em, ps); } 
     catch(e) { 
-        alert("Acesso negado."); 
+        alert("Acesso negado. Por favor, verifique os seus dados de acesso."); 
         if(btn) { btn.disabled = false; btn.innerText = "Entrar no Painel"; }
     }
 };
