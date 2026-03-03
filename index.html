@@ -8,7 +8,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   
   <script>
-    // Stub preventivo para evitar erros de clique antes do carregamento completo do módulo
     window.fazerLogin = function() {
         alert("A preparar ambiente seguro. Por favor, aguarde...");
     };
@@ -134,26 +133,24 @@
 </head>
 <body>
 
-<!-- ECRÃ DE LOGIN - COM AVISO DE ATUALIZAÇÃO -->
 <div id="login-view">
     <div class="card" style="width:100%; max-width:400px; text-align:center; padding:40px; border-radius:32px; border:4px solid var(--border);">
         <h2 style="color:var(--primary); margin-bottom: 5px; font-size: 2.2rem; font-weight: 900; font-style: italic; letter-spacing: -1px;">App Ovos Aline</h2>
-        <!-- TEXTO PARA CONFIRMAR O CACHE -->
-        <p style="color:var(--green); font-size: 0.75rem; font-weight: 900; margin-bottom: 30px; text-transform: uppercase; letter-spacing: 2px;">AppEgg Admin v4.2</p>
+        <p style="color:var(--green); font-size: 0.75rem; font-weight: 900; margin-bottom: 30px; text-transform: uppercase; letter-spacing: 2px;">AppEgg Admin v7.0</p>
         
         <form id="login-form" onsubmit="event.preventDefault(); window.fazerLogin();">
             <div class="field" style="margin-bottom: 15px;">
-                <input type="email" id="login-email" placeholder="E-mail" value="thon@lojista.com.br" style="text-align:center;" required>
+                <input type="email" id="login-email" placeholder="E-mail de Administrador" class="form-input text-center font-bold text-slate-800" required>
             </div>
             <div class="field" style="margin-bottom: 24px;">
-                <input type="password" id="login-pass" placeholder="Palavra-passe" style="text-align:center;" required>
+                <input type="password" id="login-pass" placeholder="Palavra-passe" class="form-input text-center font-bold text-slate-800" required>
             </div>
             <button id="btn-login" type="submit" class="btn btn-primary" style="width:100%; justify-content:center; padding: 16px; font-size: 1rem;">Entrar no Painel</button>
+            <p style="font-size: 0.75rem; color: var(--muted); margin-top: 15px; font-weight: 600;">⚠️ Utilize a conta criada na secção Authentication do Firebase.</p>
         </form>
     </div>
 </div>
 
-<!-- ESTRUTURA PRINCIPAL DO APP -->
 <div id="app-view">
     <header>
       <div class="h-logo"><span>🥚</span> AppEgg</div>
@@ -179,13 +176,11 @@
 
       <div class="content">
           <main id="main-content" class="w-full">
-              <!-- CONTEÚDO RENDERIZADO VIA JAVASCRIPT AQUI -->
           </main>
       </div>
     </div>
 </div>
 
-<!-- MODAL DE PRODUTO -->
 <div class="modal-bg" id="prod-modal">
   <div class="modal-box">
     <div class="modal-head">
@@ -252,15 +247,13 @@
 
 <div class="toast" id="toast"></div>
 
-<!-- LÓGICA JAVASCRIPT & FIREBASE -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getFirestore, collection, onSnapshot, doc, setDoc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { getAuth, signInWithEmailAndPassword, signInWithCustomToken, signInAnonymously, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 // --- CONFIGURAÇÃO FIREBASE FIXA E PADRONIZADA ---
-// Ao usar esta versão fixa garantimos que o Admin está a partilhar exatamente 
-// a mesma sandbox de variáveis que a Loja irá ler em produção.
+// ✅ App ID e Firebase Config padronizados
 const firebaseConfig = {
     apiKey: "AIzaSyD3Otz9-zdZH-E5Feg9IOGWPzVycoe8gro",
     authDomain: "distribuidora-de-ovos-aline.firebaseapp.com",
@@ -273,9 +266,7 @@ const firebaseConfig = {
 const appFB = initializeApp(firebaseConfig);
 const db = getFirestore(appFB);
 const auth = getAuth(appFB);
-
-// PADRONIZAÇÃO DA APP ID (OPÇÃO B - Garante que escreve na coleção certa)
-const appId = 'app-egg-pro-transacional';
+const appId = 'app-egg-pro-transacional'; 
 
 const DEFAULT_PRODUTOS = [
     { nome: 'Ovos Brancos Pequenos', emoji: '🥚', tipo: 'Tamanho P', embalagem: 'Dúzia (12)', preco: 8.90, desc: 'Ovos brancos selecionados, tamanho pequeno.', badge: '', badgeClass: '', foto_url: '', ativo: true },
@@ -303,7 +294,7 @@ window.firebaseUnsubs = [];
 window.isListening = false;
 window.state = { view: 'dashboard' };
 
-// --- FUNÇÕES GLOBAIS BLINDADAS E EXPLÍCITAS ---
+// --- FUNÇÕES GLOBAIS BLINDADAS ---
 
 window.clearAdminListeners = () => {
     window.firebaseUnsubs.forEach(unsub => {
@@ -315,16 +306,9 @@ window.clearAdminListeners = () => {
 
 window.initAuth = async () => {
     try {
-        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-            await signInWithCustomToken(auth, __initial_auth_token).catch(e => console.warn(e));
-        } else {
-            // Tentamos logar de forma silenciosa. Não interfere se falhar.
-            await signInAnonymously(auth).catch(err => {
-                console.warn("Aviso Firebase: Ambiente restrito. Não bloqueante para o Administrador.");
-            });
-        }
+        await setPersistence(auth, browserLocalPersistence);
     } catch (e) {
-        console.error("Erro na autenticação base:", e);
+        console.error("Erro ao configurar persistência de autenticação:", e);
     }
 };
 
@@ -409,14 +393,14 @@ window.buildActiveViewBase = () => {
             <div class="space-y-10 fade-in">
                 <div class="mb-6">
                     <h2 class="text-4xl font-[950] text-slate-900 tracking-tighter uppercase italic mb-1">Configurar PIX</h2>
-                    <p class="text-slate-500 font-bold text-sm">Configure os dados de recebimento PIX que vão aparecer no Checkout.</p>
+                    <p class="text-slate-500 font-bold text-sm">Configure os dados de recebimento PIX que vão aparecer no Checkout da Loja.</p>
                 </div>
                 
                 <div class="bg-white rounded-[40px] p-8 border border-slate-200 shadow-sm">
                     <div class="flex flex-col lg:flex-row justify-between items-center gap-10">
                         <div class="flex-1 w-full">
                             <h3 class="text-2xl font-black uppercase text-slate-800 tracking-tighter mb-2">Chave PIX da Loja</h3>
-                            <p class="text-xs font-bold text-slate-500 mb-8">Estes dados aparecem no momento do Checkout do cliente.</p>
+                            <p class="text-xs font-bold text-slate-500 mb-8">Estes dados aparecerão quando o cliente escolher pagar por PIX.</p>
                             <form onsubmit="event.preventDefault(); window.handleSavePixConfig();" class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div class="field">
                                     <label class="text-[10px] font-black uppercase text-slate-400 ml-2">Tipo de Chave</label>
@@ -448,7 +432,7 @@ window.buildActiveViewBase = () => {
                         <div class="w-full lg:w-72 bg-slate-50 p-8 rounded-[32px] text-center border border-slate-200 flex flex-col items-center">
                             <p class="text-[10px] font-black text-slate-400 uppercase mb-4 tracking-widest">Teste do QR Code (R$ 1,00)</p>
                             <div id="pix-preview-qr" class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 w-[172px] h-[172px] flex items-center justify-center"></div>
-                            <button class="btn btn-ghost btn-sm mt-4" onclick="window.renderPixPreview()">🔄 Gerar Prévia</button>
+                            <button class="btn-ghost btn-sm mt-4" onclick="window.renderPixPreview()">🔄 Gerar Prévia</button>
                         </div>
                     </div>
                 </div>
@@ -460,8 +444,8 @@ window.buildActiveViewBase = () => {
             return `
             <div class="space-y-10 fade-in">
                 <div class="mb-6">
-                    <h2 class="text-4xl font-[950] text-slate-900 tracking-tighter uppercase italic mb-1">Aparência da Loja</h2>
-                    <p class="text-slate-500 font-bold text-sm">Personalize os textos e as configurações base de contato.</p>
+                    <h2 class="text-4xl font-[950] text-slate-900 tracking-tighter uppercase italic mb-1">Dados da Loja</h2>
+                    <p class="text-slate-500 font-bold text-sm">Personalize os textos da loja e o número do WhatsApp de vendas.</p>
                 </div>
                 <div class="bg-white rounded-[40px] p-8 border border-slate-200 shadow-sm">
                     <form onsubmit="event.preventDefault(); window.handleSaveStoreConfig();">
@@ -482,6 +466,10 @@ window.buildActiveViewBase = () => {
                                     <input id="cfg-slogan" type="text" value="${s.slogan || ''}" class="input-egg" placeholder="Ex: Direto da Granja">
                                 </div>
                             </div>
+                            <div class="field md:col-span-2">
+                                <label class="text-[11px] font-black uppercase text-slate-500 ml-2">WhatsApp de Recebimento de Encomendas (Apenas Números c/ DDD)</label>
+                                <input id="cfg-whatsapp" type="text" value="${s.whatsapp || ''}" class="input-egg text-slate-900 font-black" placeholder="Ex: 11985706243">
+                            </div>
                             <div class="md:col-span-2 field">
                                 <label class="text-[11px] font-black uppercase text-slate-500 ml-2">Título Principal (Banner Destaque)</label>
                                 <input id="cfg-heroTitle" type="text" value="${s.heroTitle || ''}" class="input-egg font-bold" placeholder="Ex: Ovos Fresquinhos 🥚">
@@ -489,14 +477,6 @@ window.buildActiveViewBase = () => {
                             <div class="md:col-span-2 field">
                                 <label class="text-[11px] font-black uppercase text-slate-500 ml-2">Subtítulo (Banner Destaque)</label>
                                 <textarea id="cfg-heroDesc" rows="2" class="input-egg py-3" placeholder="Mensagem para os seus clientes...">${s.heroDesc || ''}</textarea>
-                            </div>
-                        </div>
-
-                        <h3 class="text-lg font-black text-slate-800 uppercase mb-4 border-b border-slate-100 pb-2">Contato (Novo)</h3>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
-                            <div class="field md:col-span-2">
-                                <label class="text-[11px] font-black uppercase text-slate-500 ml-2">WhatsApp da Loja (Apenas números c/ DDD)</label>
-                                <input id="cfg-whatsapp" type="text" value="${s.whatsapp || ''}" class="input-egg text-slate-900 font-black" placeholder="Ex: 11985706243">
                             </div>
                         </div>
 
@@ -511,7 +491,7 @@ window.buildActiveViewBase = () => {
             <div class="space-y-10 fade-in">
                 <div class="mb-6">
                     <h2 class="text-4xl font-[950] text-slate-900 tracking-tighter uppercase italic mb-1">Cores do Tema</h2>
-                    <p class="text-slate-500 font-bold text-sm">Personalize as cores principais que a loja vai exibir.</p>
+                    <p class="text-slate-500 font-bold text-sm">Personalize as cores principais da loja.</p>
                 </div>
                 <div class="bg-white rounded-[40px] p-8 border border-slate-200 shadow-sm">
                     <form onsubmit="event.preventDefault(); window.handleSaveAparencia();">
@@ -532,7 +512,7 @@ window.buildActiveViewBase = () => {
                             </div>
                         </div>
                         <div style="margin-top:20px;padding:20px;background:var(--cream);border-radius:16px;border:1px solid var(--border)">
-                          <p style="font-size:.85rem;font-weight:800;color:var(--brown);margin-bottom:12px;text-transform:uppercase;">Temas pré-definidos rápidos:</p>
+                          <p style="font-size:.85rem;font-weight:800;color:var(--brown);margin-bottom:12px;text-transform:uppercase;">Temas rápidos:</p>
                           <div style="display:flex;gap:10px;flex-wrap:wrap">
                             <button type="button" class="btn btn-sm" style="background:linear-gradient(135deg,#be123c,#e11d48);color:#fff" onclick="window.setTheme('#e11d48','#be123c')">❤️ Premium Rose</button>
                             <button type="button" class="btn btn-sm" style="background:linear-gradient(135deg,#D4500A,#E8960C);color:#fff" onclick="window.setTheme('#E8960C','#D4500A')">🥚 Original Laranja</button>
@@ -689,7 +669,6 @@ window.renderPedidos = () => {
         return;
     }
 
-    // A ORDENAÇÃO É FEITA NA MEMÓRIA AQUI PARA NÃO BLOQUEAR A PLATAFORMA COM ÍNDICES
     const sortedPending = pending.sort((a,b) => {
         const tA = a.criadoEm?.seconds || 0;
         const tB = b.criadoEm?.seconds || 0;
@@ -705,7 +684,10 @@ window.renderPedidos = () => {
             ? `${l.dadosCliente?.rua || ''}, ${l.dadosCliente?.num || ''} - ${l.dadosCliente?.bairro || ''} <br><span style="font-size:0.75rem;color:var(--muted);margin-top:4px;display:block;">Comp: ${l.dadosCliente?.comp || 'N/A'}</span>`
             : 'O cliente virá buscar os produtos fisicamente.';
         
-        const itensStr = (l.itens || []).map(i => `<div style="margin-bottom:4px;"><span style="background:var(--cream);color:var(--primary);padding:2px 6px;border-radius:6px;font-weight:900;font-size:0.75rem;margin-right:6px;border:1px solid var(--border);">${i.qtd || i.quantidade}x</span><span style="font-weight:800;font-size:0.85rem;color:var(--brown);">${i.nome || i.produto}</span></div>`).join('');
+        const itensStr = (l.itens || []).map(i => {
+            const quantidade = i.qtd || i.quantidade || 0;
+            return `<div style="margin-bottom:4px;"><span style="background:var(--cream);color:var(--primary);padding:2px 6px;border-radius:6px;font-weight:900;font-size:0.75rem;margin-right:6px;border:1px solid var(--border);">${quantidade}x</span><span style="font-weight:800;font-size:0.85rem;color:var(--brown);">${i.nome || i.produto}</span></div>`;
+        }).join('');
         const pagStr = (l.formaPagamento || 'Não Informado').replace('_', ' ').toUpperCase();
 
         let borderColor = 'var(--border)';
@@ -1042,31 +1024,30 @@ window.selBadge = (el, badge, cls) => {
     document.getElementById('mp-badgeClass').value = cls;
 };
 
+// Autenticação Real sem Bypass:
 window.fazerLogin = async () => {
     const btn = document.getElementById('btn-login');
     const em = document.getElementById('login-email').value.trim();
     const ps = document.getElementById('login-pass').value;
     
-    if (btn) { btn.disabled = true; btn.innerText = "A validar..."; }
+    if (btn) { btn.disabled = true; btn.innerText = "A autenticar na nuvem..."; }
     
-    if (em === 'thon@lojista.com.br' && ps === 'admin123') {
-        localStorage.setItem('admin_bypass', 'true');
-        document.getElementById('login-view').style.display = 'none';
-        document.getElementById('app-view').style.display = 'flex';
-        window.initListeners();
-        window.goTo('dashboard');
-        return;
-    }
-    
-    try { await signInWithEmailAndPassword(auth, em, ps); } 
+    try { 
+        await signInWithEmailAndPassword(auth, em, ps);
+        if (btn) { btn.innerText = "Sucesso!"; }
+    } 
     catch(e) { 
-        alert("Acesso negado. Por favor, verifique os seus dados de acesso."); 
+        console.error("Erro de Autenticação Real:", e);
+        if (e.code === 'auth/invalid-credential' || e.code === 'auth/user-not-found') {
+            alert("Acesso negado. A conta que inseriu não existe ou a palavra-passe está incorreta.\n\nPassos para resolver:\n1. Vá à consola do Firebase.\n2. Aceda a 'Authentication' -> 'Users'.\n3. Clique em 'Add User' e crie a conta: " + em + "\n\nSe não configurar o utilizador, não poderá gerir a loja.");
+        } else {
+            alert("Ocorreu um erro ao tentar entrar. " + e.message); 
+        }
         if(btn) { btn.disabled = false; btn.innerText = "Entrar no Painel"; }
     }
 };
 
 window.fazerLogout = async () => {
-    localStorage.removeItem('admin_bypass');
     window.clearAdminListeners();
     document.getElementById('login-view').style.display = 'flex';
     document.getElementById('app-view').style.display = 'none';
@@ -1100,7 +1081,7 @@ window.initListeners = () => {
     const errHandler = (err) => {
         console.warn("Aviso do Firebase:", err.message);
         if (err.code === 'permission-denied') {
-            window.toast("Sem permissões de leitura totais. O sistema está a usar bypass local.");
+            window.toast("Erro Firebase: Permissão Negada! A sua sessão pode ter expirado.");
         }
     };
 
@@ -1134,7 +1115,12 @@ window.initListeners = () => {
     }, errHandler);
 
     const u4 = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'vendas_logs'), s => {
-        window.logs = s.docs.map(d => ({ id: d.id, ...d.data() }));
+        console.log("📦 Pedidos atualizados em tempo real:", s.docs.length);
+        window.logs = s.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b)=>{
+            const tA = a.criadoEm?.seconds || 0;
+            const tB = b.criadoEm?.seconds || 0;
+            return tB - tA;
+        });
         if (window.state.view === 'pedidos') window.renderPedidos();
         if (window.state.view === 'dashboard') window.renderDashboard();
     }, errHandler);
@@ -1143,17 +1129,24 @@ window.initListeners = () => {
 };
 
 window.boot = async () => {
-    if (localStorage.getItem('admin_bypass') === 'true') {
-        document.getElementById('login-view').style.display = 'none';
-        document.getElementById('app-view').style.display = 'flex';
-        window.initListeners();
-        window.goTo('dashboard');
-        return;
-    }
-
     await window.initAuth();
+    
     const loginBtn = document.getElementById('btn-login');
     if (loginBtn) { loginBtn.disabled = false; loginBtn.innerText = "Entrar no Painel"; }
+    
+    // O onAuthStateChanged é agora a ÚNICA fonte da verdade para transição de ecrã
+    onAuthStateChanged(auth, u => {
+        if (u) {
+            document.getElementById('login-view').style.display = 'none';
+            document.getElementById('app-view').style.display = 'flex';
+            window.initListeners();
+            window.goTo('dashboard');
+        } else {
+            window.clearAdminListeners();
+            document.getElementById('login-view').style.display = 'flex';
+            document.getElementById('app-view').style.display = 'none';
+        }
+    });
 };
 
 window.boot();
