@@ -104,18 +104,18 @@
     <span id="island-text">Carrinho Vazio</span>
 </div>
 
-<!-- LOADER -->
+<!-- CARREGAMENTO (LOADER) -->
 <div id="loader" class="fixed inset-0 bg-[#0F0F0F] z-[9999] flex items-center justify-center transition-opacity duration-700">
     <div class="text-center">
         <div class="text-9xl animate-pulse mb-6">🥚</div>
         <div class="text-white font-black tracking-tighter text-4xl uppercase italic mb-2">AppEgg</div>
-        <div class="text-rose-500 font-bold uppercase tracking-[0.3em] text-[10px]">Premium Standards</div>
+        <div class="text-rose-500 font-bold uppercase tracking-[0.3em] text-[10px]">Padrões de Elite</div>
     </div>
 </div>
 
 <div id="toast-el" class="fixed top-10 left-1/2 -translate-x-1/2 bg-black text-white px-6 py-3 rounded-2xl font-bold text-sm z-[6000] opacity-0 translate-y-[-100px] transition-all duration-500"></div>
 
-<!-- TELA AUTH -->
+<!-- TELA DE AUTENTICAÇÃO -->
 <div id="auth-view" class="hidden min-h-screen flex flex-col items-center justify-center p-6 bg-white">
     <div class="text-center mb-10 animate-[fadeIn_0.8s_ease-out]">
         <div class="text-8xl mb-4 drop-shadow-xl">🥚</div>
@@ -173,12 +173,12 @@
     </div>
 </div>
 
-<!-- APP VIEW -->
+<!-- TELA PRINCIPAL APP -->
 <div id="app-view" class="hidden animate-[fadeIn_0.5s_ease-out]">
     <header class="p-6 md:px-12 flex flex-col gap-5 bg-white border-b border-slate-50 sticky top-0 z-[1000] glass">
         <div class="flex items-center justify-between">
             <div class="flex items-center gap-3 text-left">
-                <div class="w-11 h-11 bg-rose-600 text-white flex items-center justify-center rounded-2xl font-bold shadow-lg">🥚</div>
+                <div class="w-11 h-11 bg-rose-600 text-white flex items-center justify-center rounded-2xl font-bold shadow-lg shadow-rose-200">🥚</div>
                 <div class="flex flex-col">
                   <span class="font-[900] tracking-tighter text-2xl italic uppercase text-rose-600 leading-none">AppEgg</span>
                   <span class="text-[10px] font-bold text-slate-400 uppercase tracking-tight mt-1 italic">Qualidade Premium direto da granja</span>
@@ -186,33 +186,36 @@
             </div>
             <button onclick="window.setView('conta')" class="w-11 h-11 bg-slate-50 rounded-2xl flex items-center justify-center text-xl shadow-sm border border-slate-100 hover:bg-rose-50 transition-all">👤</button>
         </div>
+        
         <div class="relative group">
            <input type="text" id="search-input" oninput="window.handleSearch(this.value)" class="premium-input !py-4 !pl-14 !bg-slate-50 focus:!bg-white border-none shadow-sm text-sm !text-left" placeholder="Pesquisar ovos frescos...">
-           <span class="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300">🔍</span>
+           <span class="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-rose-600 transition-colors">🔍</span>
         </div>
     </header>
 
-    <div id="main-content" class="p-6 max-w-4xl mx-auto pb-32"></div>
+    <div id="main-content" class="p-6 max-w-4xl mx-auto pb-32">
+        <!-- Renderizado via JS -->
+    </div>
 
     <nav class="nav-bottom">
-        <button onclick="window.setView('loja')" id="nav-loja" class="nav-item active uppercase">
+        <button onclick="window.setView('loja')" id="nav-loja" class="nav-item active">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
             Loja
         </button>
-        <button onclick="window.setView('favoritos')" id="nav-favoritos" class="nav-item uppercase">
+        <button onclick="window.setView('favoritos')" id="nav-favoritos" class="nav-item">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
             Favoritos
         </button>
-        <button onclick="window.setView('carrinho')" id="nav-carrinho" class="nav-item uppercase">
+        <button onclick="window.setView('carrinho')" id="nav-carrinho" class="nav-item">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
             Carrinho
             <span id="cart-badge" class="nav-badge hidden">0</span>
         </button>
-        <button onclick="window.setView('pedidos')" id="nav-pedidos" class="nav-item uppercase">
+        <button onclick="window.setView('pedidos')" id="nav-pedidos" class="nav-item">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
             Pedidos
         </button>
-        <button onclick="window.setView('conta')" id="nav-conta" class="nav-item uppercase">
+        <button onclick="window.setView('conta')" id="nav-conta" class="nav-item">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
             Conta
         </button>
@@ -221,22 +224,24 @@
 
 <!-- MODAIS -->
 <div class="mbk" id="product-detail-modal">
-    <div class="modal-content !max-w-[600px]">
+    <div class="modal-content !max-w-[600px] relative">
         <button onclick="window.closeAll()" class="absolute top-8 right-8 w-12 h-12 bg-black/5 rounded-full flex items-center justify-center font-bold text-lg z-10 transition-colors hover:bg-black/10">✕</button>
         <div id="product-detail-content"></div>
     </div>
 </div>
 
 <div class="mbk" id="checkout-modal">
-    <div class="modal-content">
-        <button onclick="window.closeAll()" class="absolute top-6 right-6 w-10 h-10 bg-white/20 text-white rounded-full flex items-center justify-center font-bold text-lg z-10">✕</button>
+    <div class="modal-content relative">
+        <button onclick="window.closeAll()" class="absolute top-6 right-6 w-10 h-10 bg-white/20 text-white rounded-full flex items-center justify-center font-bold text-lg z-10 transition-colors hover:bg-white/30">✕</button>
+        
         <div class="p-10 bg-black text-white text-center">
-            <h3 class="text-2xl font-[900] uppercase italic tracking-tighter">Finalizar Pedido</h3>
+            <div class="text-6xl mb-4">🛍️</div>
+            <h3 class="text-3xl font-[950] uppercase italic tracking-tighter">Finalizar Pedido</h3>
         </div>
         <div class="p-8 space-y-6 text-left">
-            <div class="flex gap-2 bg-slate-100 p-1 rounded-3xl">
-                <button id="check-retirada" onclick="window.setDelivery('retirada')" class="flex-1 py-4 rounded-[20px] font-black text-[11px] bg-white text-rose-600 shadow-sm uppercase">RETIRAR</button>
-                <button id="check-entrega" onclick="window.setDelivery('entrega')" class="flex-1 py-4 rounded-[20px] font-black text-[11px] text-slate-400 uppercase">ENTREGA</button>
+            <div class="flex gap-2 bg-slate-100 p-1.5 rounded-3xl">
+                <button id="check-retirada" onclick="window.setDelivery('retirada')" class="flex-1 py-4 rounded-[20px] font-black text-[11px] tracking-widest transition-all bg-white text-rose-600 shadow-sm uppercase">RETIRAR</button>
+                <button id="check-entrega" onclick="window.setDelivery('entrega')" class="flex-1 py-4 rounded-[20px] font-black text-[11px] tracking-widest transition-all text-slate-400 uppercase">ENTREGA</button>
             </div>
             
             <div id="info-retirada-box" class="bg-slate-50 p-6 rounded-[32px] border border-slate-100 space-y-2">
@@ -249,7 +254,7 @@
                     <p class="font-black text-[10px] uppercase text-rose-600 mb-1 tracking-widest">📍 Endereço de Envio</p>
                     <p id="checkout-addr-display" class="text-base font-extrabold text-slate-800 leading-tight">Carregando...</p>
                 </div>
-                <button onclick="window.toggleNewAddress()" class="w-full text-center text-slate-400 font-black uppercase text-[10px] tracking-tighter hover:text-black">
+                <button onclick="window.toggleNewAddress()" class="w-full text-center text-slate-400 font-black uppercase text-[10px] tracking-[0.2em] hover:text-black">
                     <span id="new-addr-toggle-text">+ Usar endereço diferente para este pedido</span>
                 </button>
                 <div id="new-address-form" class="hidden bg-slate-50 p-6 rounded-[32px] border border-slate-100 space-y-3">
@@ -275,24 +280,26 @@
                 </select>
             </div>
 
-            <button onclick="window.processCheckout()" class="btn-premium w-full py-6 rounded-[32px] text-xl shadow-2xl">
+            <button onclick="window.processCheckout()" class="btn-premium w-full py-8 rounded-[32px] text-xl shadow-2xl">
                 Confirmar Reserva (<span id="checkout-total-btn">R$ 0,00</span>)
             </button>
         </div>
     </div>
 </div>
 
+<!-- MODAL PIX -->
 <div class="mbk" id="pix-modal">
-    <div class="modal-content !max-w-[420px] !rounded-[56px]">
+    <div class="modal-content !max-w-[420px] !rounded-[56px] relative">
         <button onclick="window.closeAll()" class="absolute top-8 right-8 w-12 h-12 bg-black/5 rounded-full flex items-center justify-center font-bold text-lg z-10 transition-colors hover:bg-black/10">✕</button>
+
         <div class="p-10 bg-emerald-500 text-white text-center">
             <h3 class="text-2xl font-black italic uppercase tracking-tighter">Pagamento PIX</h3>
         </div>
         <div class="p-10 text-center space-y-8">
             <div id="qrcode" class="inline-block p-5 bg-white rounded-[40px] border-4 border-slate-50 shadow-sm"></div>
             <div class="bg-slate-50 p-6 rounded-[32px] border-2 border-dashed border-slate-200">
-                <p class="text-[10px] font-black text-slate-400 uppercase mb-3 tracking-widest">Copia e Cola</p>
-                <div id="pix-code" class="font-mono text-[13px] font-bold break-all text-slate-700 leading-relaxed px-4 text-center select-all"></div>
+                <p class="text-[9px] font-black text-slate-400 uppercase mb-3 tracking-widest">Copia e Cola</p>
+                <div id="pix-code" class="font-mono text-[13px] font-bold break-all text-slate-700 leading-relaxed px-4 text-center"></div>
             </div>
             <button class="w-full py-6 bg-black text-white rounded-[24px] font-black uppercase text-[11px] tracking-widest shadow-xl active:scale-95 transition-all" onclick="window.doCopy()">📋 Copiar Código</button>
             <button class="btn-premium w-full py-7 rounded-[32px] !bg-emerald-500 shadow-xl" onclick="window.saveOrderToFirebase()">✅ JÁ PAGUEI / CONCLUIR</button>
@@ -300,6 +307,7 @@
     </div>
 </div>
 
+<!-- SUCESSO -->
 <div id="success-screen" class="hidden fixed inset-0 bg-white z-[5000] flex-col items-center justify-center p-10 text-center animate-[fadeIn_0.5s_ease-out]">
     <div class="text-[10rem] animate-bounce">🎊</div>
     <h2 class="text-5xl font-[950] tracking-tighter text-black uppercase italic leading-none">Confirmado!</h2>
@@ -313,8 +321,8 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getFirestore, collection, onSnapshot, doc, getDoc, updateDoc, setDoc, Timestamp, query, orderBy, serverTimestamp, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, signOut, onAuthStateChanged, sendPasswordResetEmail, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFirestore, collection, onSnapshot, doc, getDoc, updateDoc, setDoc, Timestamp, query, orderBy, serverTimestamp, addDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, signOut, onAuthStateChanged, sendPasswordResetEmail, signInAnonymously, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyD3Otz9-zdZH-E5Feg9IOGWPzVycoe8gro",
@@ -341,7 +349,7 @@ window.state = {
 window.clienteLogado = {};
 window.pix_config = { rawKey:'', nomeRecebedor:'AppEgg', cidade:'SAO PAULO' };
 
-// CÁLCULO DO TOTAL
+// CÁLCULO TOTAL
 window.totalCarrinho = () => {
   return Object.keys(window.state.carrinho).reduce((acc, k) => {
     const p = window.state.produtos.find(x => x.id === k);
@@ -388,6 +396,11 @@ window.setAuthMode = m => {
     const tabL = document.getElementById('tab-login'); const tabR = document.getElementById('tab-register');
     if(tabL) tabL.className = `flex-1 py-4 rounded-xl font-bold text-[12px] tracking-widest transition-all ${isL ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-400'} uppercase`;
     if(tabR) tabR.className = `flex-1 py-4 rounded-xl font-bold text-[12px] tracking-widest transition-all ${isR ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-400'} uppercase`;
+
+    if(isL) {
+        const saved = localStorage.getItem('appegg_email');
+        if(saved) document.getElementById('login-email').value = saved;
+    }
 };
 
 window.fazerLogin = async e => {
@@ -397,7 +410,7 @@ window.fazerLogin = async e => {
     const ps = document.getElementById('login-senha').value;
     const rem = document.getElementById('remember-email').checked;
     
-    btn.disabled = true; btn.innerText = "Acessando...";
+    btn.disabled = true; btn.innerText = "Sincronizando...";
     if(rem) localStorage.setItem('appegg_email', em); else localStorage.removeItem('appegg_email');
     
     try { await signInWithEmailAndPassword(auth, em, ps); }
@@ -583,6 +596,7 @@ window.openProductDetail = id => {
             </div>
             <div class="flex items-center justify-between pt-8 border-t border-slate-100">
                 <div class="text-slate-900 font-[950] text-5xl tracking-tighter italic leading-none">R$ ${window.fmt(p.preco)}</div>
+                
                 <div class="flex flex-col items-center gap-3">
                     <div class="flex items-center gap-4 bg-slate-50 p-2 rounded-2xl border border-slate-100">
                         <button onclick="window.chQty('${p.id}',-1)" class="w-10 h-10 font-black text-2xl text-slate-300">-</button>
@@ -594,7 +608,7 @@ window.openProductDetail = id => {
             </div>
         </div>
     `;
-    document.getElementById('product-detail-modal').classList.add('open');
+    const modal = document.getElementById('product-detail-modal'); modal.style.display='flex'; setTimeout(()=>modal.classList.add('open'), 10);
 };
 
 function renderCarrinho() {
@@ -664,18 +678,16 @@ function renderPedidos() {
         </div>`;
 }
 
-// LÓGICA DE FAVORITOS (VIBRANTE E REALTIME)
+// LÓGICA DE FAVORITOS (ROBUSTA)
 window.toggleFavorito = async (id) => {
     if(!auth.currentUser) return;
     const isFav = window.state.favoritos.includes(id);
-    let novaLista = [];
-    if(isFav) novaLista = window.state.favoritos.filter(f => f !== id);
-    else novaLista = [...window.state.favoritos, id];
-    
+    const favRef = doc(db, 'artifacts', appId, 'users', auth.currentUser.uid, 'favoritos', id);
     try {
-        await setDoc(doc(db, 'artifacts', appId, 'users', auth.currentUser.uid, 'favoritos', 'lista'), { ids: novaLista });
+        if(isFav) await deleteDoc(favRef);
+        else await setDoc(favRef, { id, adicionadoEm: serverTimestamp() });
         window.showMsg(isFav ? "Removido dos favoritos" : "Adicionado aos favoritos ❤️");
-    } catch(e) { window.showMsg("Erro ao salvar favorito."); }
+    } catch(e) { window.showMsg("Erro ao favoritar."); }
 };
 
 // LÓGICA INTERATIVA
@@ -737,7 +749,7 @@ window.closeAll = () => {
     const succ = document.getElementById('success-screen'); if(succ) succ.classList.add('hidden');
 };
 
-// CHECKOUT E ENDEREÇO
+// CHECKOUT
 window.setDelivery = t => {
     window.state.deliveryType = t;
     const cR = document.getElementById('check-retirada'); const cE = document.getElementById('check-entrega');
@@ -779,15 +791,13 @@ window.processCheckout = async () => {
         if(qrEl) { qrEl.innerHTML = ''; new QRCode(qrEl, { text:payload, width:220, height:220 }); }
         const modalP = document.getElementById('pix-modal'); modalP.style.display='flex'; setTimeout(()=>modalP.classList.add('open'), 10);
         document.getElementById('checkout-modal').classList.remove('open');
-    } else { await window.saveOrderToFirebase(); }
+    } else await window.saveOrderToFirebase();
 };
 
 window.saveOrderToFirebase = async () => {
     if (!auth.currentUser) return;
     const hash = '#' + Math.floor(100000+Math.random()*900000);
     const cartKeys = Object.keys(window.state.carrinho);
-    
-    // ✅ CORREÇÃO: Filtro robusto para evitar erros de mapeamento de itens
     const items = cartKeys.map(k => { 
         const p = window.state.produtos.find(x=>x.id===k); 
         return p ? { id:p.id, nome:p.nome, qty:window.state.carrinho[k], preco:p.preco } : null; 
@@ -807,22 +817,14 @@ window.saveOrderToFirebase = async () => {
         }
         
         await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'vendas_logs'), { 
-            clienteId: auth.currentUser.uid, 
-            pedidoID: hash, 
-            valorTotal: window.totalCarrinho(), 
-            itens: items, 
-            dadosCliente: moradaFinal, 
-            status: 'CRIADO', 
-            tipoEntrega: window.state.deliveryType, 
-            formaPagamento: document.getElementById('pagamento-select').value, 
-            criadoEm: serverTimestamp() 
+            clienteId: auth.currentUser.uid, pedidoID: hash, valorTotal: window.totalCarrinho(), itens: items, dadosCliente: moradaFinal, 
+            status: 'CRIADO', tipoEntrega: window.state.deliveryType, formaPagamento: document.getElementById('pagamento-select').value, criadoEm: serverTimestamp() 
         });
         
         window.state.orderHash = hash; 
         document.getElementById('order-num-display').textContent = hash;
         window.closeAll(); 
-        document.getElementById('success-screen').classList.remove('hidden'); 
-        document.getElementById('success-screen').classList.add('flex');
+        const sS = document.getElementById('success-screen'); sS.classList.remove('hidden'); sS.classList.add('flex');
         window.state.carrinho = {}; window.syncCarrinho();
     } catch(e) { window.showMsg("Erro ao processar pedido."); }
 };
@@ -835,14 +837,9 @@ window.sendWhatsApp = () => {
 window.saveProfile = async e => {
     e.preventDefault();
     const d = { 
-        nome: document.getElementById('prof-nome').value.trim(), 
-        cpf: document.getElementById('prof-cpf').value, 
-        tel: document.getElementById('prof-tel').value, 
-        email: document.getElementById('prof-email').value.trim(),
-        cep: document.getElementById('prof-cep').value, 
-        rua: document.getElementById('prof-rua').value.trim(), 
-        num: document.getElementById('prof-num').value.trim(), 
-        bairro: document.getElementById('prof-bairro').value.trim() 
+        nome: document.getElementById('prof-nome').value.trim(), cpf: document.getElementById('prof-cpf').value, tel: document.getElementById('prof-tel').value, 
+        email: document.getElementById('prof-email').value.trim(), cep: document.getElementById('prof-cep').value, rua: document.getElementById('prof-rua').value.trim(), 
+        num: document.getElementById('prof-num').value.trim(), bairro: document.getElementById('prof-bairro').value.trim() 
     };
     try { 
         await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'clientes', auth.currentUser.uid), d, {merge:true}); 
@@ -861,7 +858,7 @@ window.resetTudo = () => { window.state.carrinho = {}; window.setView('loja'); w
 
 window.removeAccents = (s) => (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^\x00-\x7F]/g,'').toUpperCase();
 
-// ✅ NOVO MOTOR PIX (Padrão EMV CRC16 CCITT-FALSE)
+// MOTOR PIX EMV
 window.pixPayload = (key, amount, name, city, txid) => {
     const tlv = (id, v) => id + String(v.length).padStart(2,'0') + v;
     const ma = tlv('00','BR.GOV.BCB.PIX') + tlv('01', key);
@@ -887,13 +884,16 @@ onAuthStateChanged(auth, async u => {
     if(u){
         document.getElementById('auth-view').style.display='none';
         document.getElementById('app-view').style.display='block';
+        window.setView('loja'); // Inicia na loja conforme solicitado
         
         onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'estoque'), s => { 
             window.state.produtos = s.docs.map(d=>({id:d.id, ...d.data()})); window.render(); 
         });
         
-        onSnapshot(query(collection(db, 'artifacts', appId, 'public', 'data', 'vendas_logs'), orderBy('criadoEm', 'desc')), s => {
-            window.state.pedidos = s.docs.map(d=>({id:d.id, ...d.data()})).filter(p => p.clienteId === u.uid);
+        onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'vendas_logs'), s => {
+            window.state.pedidos = s.docs.map(d=>({id:d.id, ...d.data()}))
+                .filter(p => p.clienteId === u.uid)
+                .sort((a, b) => (b.criadoEm?.toMillis?.() || 0) - (a.criadoEm?.toMillis?.() || 0));
             window.render();
         });
 
@@ -901,15 +901,13 @@ onAuthStateChanged(auth, async u => {
             if(s.exists()) window.pix_config = s.data();
         });
 
-        // ✅ CORREÇÃO: Listener de Favoritos com inicialização de array
-        onSnapshot(doc(db, 'artifacts', appId, 'users', u.uid, 'favoritos', 'lista'), s => {
-            window.state.favoritos = s.exists() ? (s.data().ids || []) : [];
+        onSnapshot(collection(db, 'artifacts', appId, 'users', u.uid, 'favoritos'), s => {
+            window.state.favoritos = s.docs.map(d => d.id);
             window.render();
-        }, (err) => console.warn("Erro favoritos:", err));
+        });
         
         const d = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'clientes', u.uid));
         if(d.exists()) window.clienteLogado = d.data();
-        else window.setView('conta'); 
     } else { 
         document.getElementById('auth-view').style.display='flex';
         document.getElementById('app-view').style.display='none';
