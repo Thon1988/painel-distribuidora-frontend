@@ -227,7 +227,7 @@
     <div class="modal-content">
         <div class="p-10 bg-black text-white text-center">
             <div class="text-6xl mb-4">🛍️</div>
-            <h3 class="text-3xl font-[900] uppercase italic tracking-tighter">Finalizar Pedido</h3>
+            <h3 class="text-3xl font-[950] uppercase italic tracking-tighter">Finalizar Pedido</h3>
         </div>
         <div class="p-8 space-y-6 text-left">
             <div class="flex gap-2 bg-slate-100 p-1.5 rounded-3xl">
@@ -263,9 +263,11 @@
             <div class="space-y-2">
                 <p class="font-black text-[10px] uppercase text-slate-400 tracking-widest ml-2">Forma de Pagamento</p>
                 <select id="pagamento-select" class="premium-input !py-4 font-black uppercase text-xs cursor-pointer">
-                    <option value="pix_online">PIX (Pagar Agora)</option>
-                    <option value="cartao_maquina">Cartão na Entrega/Levantamento</option>
-                    <option value="dinheiro">Dinheiro</option>
+                    <option value="pix_online">PIX (Pagar Agora Online)</option>
+                    <option value="pix_entrega">PIX (No Ato da Entrega/Retirada)</option>
+                    <option value="cartao_debito">Cartão de Débito (Máquina)</option>
+                    <option value="cartao_credito">Cartão de Crédito (Máquina)</option>
+                    <option value="dinheiro">Dinheiro em Espécie</option>
                 </select>
             </div>
 
@@ -278,7 +280,9 @@
 
 <!-- MODAL PIX -->
 <div class="mbk" id="pix-modal">
-    <div class="modal-content !max-w-[420px] !rounded-[56px]">
+    <div class="modal-content !max-w-[420px] !rounded-[56px] relative">
+        <button onclick="window.closeAll()" class="absolute top-8 right-8 w-12 h-12 bg-black/5 rounded-full flex items-center justify-center font-bold text-lg z-10 transition-colors hover:bg-black/10">✕</button>
+
         <div class="p-10 bg-emerald-500 text-white text-center">
             <h3 class="text-2xl font-black italic uppercase tracking-tighter">Pagamento PIX</h3>
         </div>
@@ -286,7 +290,7 @@
             <div id="qrcode" class="inline-block p-5 bg-white rounded-[40px] border-4 border-slate-50 shadow-sm"></div>
             <div class="bg-slate-50 p-6 rounded-[32px] border-2 border-dashed border-slate-200">
                 <p class="text-[9px] font-black text-slate-400 uppercase mb-3 tracking-widest">Copia e Cola</p>
-                <div id="pix-code" class="font-mono text-[9px] break-all text-slate-600 leading-tight px-2 text-center"></div>
+                <div id="pix-code" class="font-mono text-[13px] font-bold break-all text-slate-700 leading-relaxed px-4 text-center"></div>
             </div>
             <button class="w-full py-6 bg-black text-white rounded-[24px] font-black uppercase text-[10px] tracking-widest shadow-xl active:scale-95 transition-all" onclick="window.doCopy()">📋 Copiar Código</button>
             <button class="btn-premium w-full py-7 rounded-[32px] !bg-emerald-500 shadow-xl" onclick="window.saveOrderToFirebase()">✅ JÁ PAGUEI / CONCLUIR</button>
@@ -308,7 +312,9 @@
 
 <!-- PERFIL -->
 <div class="mbk" id="profile-modal">
-    <div class="modal-content !rounded-[60px]">
+    <div class="modal-content !rounded-[60px] relative">
+        <button onclick="window.closeAll()" class="absolute top-8 right-8 w-12 h-12 bg-black/5 rounded-full flex items-center justify-center font-bold text-lg z-10 transition-colors hover:bg-black/10">✕</button>
+        
         <div class="p-12 bg-rose-600 text-white text-center">
             <div class="text-7xl mb-4">👤</div>
             <h3 class="text-3xl font-black italic uppercase">Meu Perfil</h3>
@@ -340,7 +346,7 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getFirestore, collection, onSnapshot, doc, getDoc, updateDoc, setDoc, Timestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, collection, onSnapshot, doc, getDoc, updateDoc, setDoc, Timestamp, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, signOut, onAuthStateChanged, sendPasswordResetEmail, signInAnonymously, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 const firebaseConfig = {
@@ -367,9 +373,9 @@ window.state = {
 };
 
 window.clienteLogado = {};
-window.pix_config = { rawKey:'11983454007', nomeRecebedor:'AppEgg', cidade:'SAO PAULO' };
+window.pix_config = { rawKey:'', nomeRecebedor:'AppEgg', cidade:'SAO PAULO' };
 
-// ✅ FUNÇÃO CORRIGIDA: totalCarrinho anexada ao window para acesso global
+// FUNÇÃO totalCarrinho
 window.totalCarrinho = () => {
   return Object.keys(window.state.carrinho).reduce((acc, k) => {
     const p = window.state.produtos.find(x => x.id === k);
@@ -459,7 +465,7 @@ window.fazerCadastro = async e => {
             num: document.getElementById('reg-num').value.trim(), 
             bairro: document.getElementById('reg-bairro').value.trim(), 
             cep: document.getElementById('reg-cep').value.trim(),
-            criadoEm: Timestamp.now() 
+            criadoEm: serverTimestamp() 
         };
         await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'clientes', uc.user.uid), dados);
         window.clienteLogado = dados;
@@ -523,10 +529,10 @@ function renderLoja() {
               <div class="flex flex-col items-center gap-4" onclick="event.stopPropagation()">
                 <div class="flex items-center gap-4 bg-slate-50 p-2 rounded-2xl border border-slate-100">
                    <button onclick="window.chQty('${p.id}',-1)" class="w-10 h-10 font-black text-2xl text-slate-300">-</button>
-                   <span id="qty-${p.id}" class="font-black text-xl w-6 text-center">1</span>
+                   <span id="qty-${p.id}" class="font-black text-xl w-6 text-center">0</span>
                    <button onclick="window.chQty('${p.id}',1)" class="w-10 h-10 font-black text-2xl text-rose-600">+</button>
                 </div>
-                <button onclick="window.addCart('${p.id}', this)" class="btn-premium px-8 py-5 rounded-2xl text-[10px] tracking-widest shadow-2xl uppercase">Reservar</button>
+                <button onclick="window.addCart('${p.id}', this)" class="btn-premium px-8 py-5 rounded-2xl text-[10px] tracking-widest shadow-2xl uppercase">ADICIONAR</button>
               </div>
             </div>
           `).join('') || '<div class="py-20 text-center font-black text-slate-200 uppercase tracking-widest">Nenhum ovo encontrado...</div>'}
@@ -553,7 +559,15 @@ window.openProductDetail = id => {
             </div>
             <div class="flex items-center justify-between pt-8 border-t border-slate-100">
                 <div class="text-slate-900 font-[950] text-5xl tracking-tighter italic leading-none">R$ ${window.fmt(p.preco)}</div>
-                <button onclick="window.addCart('${p.id}', this); window.closeAll()" class="btn-premium px-12 py-7 rounded-[32px] text-lg uppercase">Reservar Agora</button>
+                
+                <div class="flex flex-col items-center gap-2">
+                    <div class="flex items-center gap-4 bg-slate-50 p-2 rounded-2xl border border-slate-100">
+                        <button onclick="window.chQty('${p.id}',-1)" class="w-10 h-10 font-black text-2xl text-slate-300">-</button>
+                        <span id="qty-${p.id}" class="font-black text-xl w-6 text-center">0</span>
+                        <button onclick="window.chQty('${p.id}',1)" class="w-10 h-10 font-black text-2xl text-rose-600">+</button>
+                    </div>
+                    <button onclick="window.addCart('${p.id}', this); window.closeAll()" class="btn-premium px-12 py-7 rounded-[32px] text-lg uppercase">ADICIONAR</button>
+                </div>
             </div>
         </div>
     `;
@@ -631,16 +645,21 @@ function renderPedidos() {
 // LOGICA INTERATIVA
 window.chQty = (id, d) => { 
     const el = document.getElementById('qty-'+id); 
-    if(el) el.textContent = Math.max(1, parseInt(el.textContent) + d); 
+    if(el) el.textContent = Math.max(0, parseInt(el.textContent) + d); 
 };
 
 window.addCart = (id, btn) => { 
     const qEl = document.getElementById('qty-'+id);
-    const q = qEl ? parseInt(qEl.textContent) : 1; 
-    window.state.carrinho[id] = (window.state.carrinho[id] || 0) + q; 
-    if(qEl) qEl.textContent = 1;
-    window.syncCarrinho(); window.fly(btn.closest('.card-depth')?.querySelector('img') || btn); 
-    window.showMsg("✅ Adicionado à cesta!"); 
+    const q = qEl ? parseInt(qEl.textContent) : 0; 
+    
+    if (q > 0) {
+        window.state.carrinho[id] = (window.state.carrinho[id] || 0) + q; 
+        window.syncCarrinho(); 
+        window.fly(btn.closest('.card-depth')?.querySelector('img') || btn); 
+        window.showMsg("✅ Adicionado à cesta!"); 
+    } else {
+        window.showMsg("⚠️ Selecione a quantidade.");
+    }
 };
 
 window.syncCarrinho = () => { 
@@ -704,7 +723,15 @@ window.openCheckout = () => {
 window.processCheckout = async () => {
     const pag = document.getElementById('pagamento-select').value;
     if(pag === 'pix_online') {
-        const payload = window.pixPayload(window.pix_config.rawKey, window.totalCarrinho(), window.pix_config.nomeRecebedor, window.pix_config.cidade, 'APP-EGG');
+        // Formatar chave para telemóvel se necessário (+55)
+        let cleanKey = window.pix_config.rawKey.replace(/\D/g, '');
+        if (cleanKey.length === 11 && !window.pix_config.rawKey.startsWith('+')) {
+            cleanKey = '+55' + cleanKey;
+        } else {
+            cleanKey = window.pix_config.rawKey;
+        }
+
+        const payload = window.pixPayload(cleanKey, window.totalCarrinho(), window.pix_config.nomeRecebedor, window.pix_config.cidade, 'APPEGG');
         document.getElementById('pix-code').textContent = payload;
         const qrEl = document.getElementById('qrcode');
         if(qrEl) { qrEl.innerHTML = ''; new QRCode(qrEl, { text:payload, width:220, height:220 }); }
@@ -742,7 +769,7 @@ window.saveOrderToFirebase = async () => {
             status: 'CRIADO', 
             tipoEntrega: window.state.deliveryType, 
             formaPagamento: document.getElementById('pagamento-select').value, 
-            criadoEm: Timestamp.now() 
+            criadoEm: serverTimestamp() 
         });
         
         window.state.orderHash = hash; 
@@ -793,12 +820,36 @@ window.doCopy = () => {
 window.resetTudo = () => { window.state.carrinho = {}; window.setView('loja'); window.closeAll(); window.syncCarrinho(); };
 
 window.removeAccents = (s) => (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^\x00-\x7F]/g,'').toUpperCase();
+
+// ✅ MOTOR PIX CORRIGIDO (Padrão BCB CCITT-FALSE)
 window.pixPayload = (key, amount, name, city, txid) => {
     const tlv = (id, v) => id + String(v.length).padStart(2,'0') + v;
     const ma = tlv('00','BR.GOV.BCB.PIX') + tlv('01', key);
-    let p = tlv('00','01') + tlv('26', ma) + tlv('52','0000') + tlv('53','986') + tlv('54', Number(amount).toFixed(2)) + tlv('58','BR') + tlv('59', window.removeAccents(name).slice(0,25)) + tlv('60', window.removeAccents(city).slice(0,15)) + tlv('62', tlv('05', window.removeAccents(txid)));
-    const crc16 = s => { let c = 0xFFFF; for (let i=0; i<s.length; i++) { c ^= (s.charCodeAt(i) & 0xFF) << 8; for (let j=0; j<8; j++) c = (c & 0x8000) ? ((c << 1) ^ 0x1021) & 0xFFFF : (c << 1) & 0xFFFF; } return (c & 0xFFFF).toString(16).toUpperCase().padStart(4,'0'); };
-    return p + tlv('63', crc16(p + '6304'));
+    
+    let p = tlv('00','01') + 
+            tlv('26', ma) + 
+            tlv('52','0000') + 
+            tlv('53','986') + 
+            tlv('54', Number(amount).toFixed(2)) + 
+            tlv('58','BR') + 
+            tlv('59', window.removeAccents(name).slice(0,25)) + 
+            tlv('60', window.removeAccents(city).slice(0,15)) + 
+            tlv('62', tlv('05', window.removeAccents(txid)));
+    
+    p += '6304'; // Início do campo CRC
+
+    const crc16 = (data) => {
+        let crc = 0xFFFF;
+        for (let i = 0; i < data.length; i++) {
+            crc ^= data.charCodeAt(i) << 8;
+            for (let j = 0; j < 8; j++) {
+                crc = (crc & 0x8000) ? (crc << 1) ^ 0x1021 : crc << 1;
+            }
+        }
+        return (crc & 0xFFFF).toString(16).toUpperCase().padStart(4, '0');
+    };
+
+    return p + crc16(p);
 };
 
 // BOOT
@@ -816,10 +867,18 @@ onAuthStateChanged(auth, async u => {
             window.state.pedidos = s.docs.map(d=>({id:d.id, ...d.data()})).filter(p => p.clienteId === u.uid);
             window.render();
         });
+
+        // ✅ SINCRONIZAÇÃO EM TEMPO REAL DAS CONFIGURAÇÕES DE PIX
+        onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'pix_config'), s => {
+            if(s.exists()){
+                window.pix_config = s.data();
+                console.log("✅ PIX Sincronizado:", window.pix_config.rawKey);
+            }
+        });
         
         const d = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'clientes', u.uid));
         if(d.exists()) window.clienteLogado = d.data();
-        else window.openProfile(); // Obriga a preencher se for novo
+        else window.openProfile(); 
     } else { 
         document.getElementById('auth-view').style.display='flex';
         document.getElementById('app-view').style.display='none';
