@@ -47,6 +47,8 @@
       transition: var(--transition-premium); box-shadow: 0 15px 35px rgba(0,0,0,0.3);
     }
     #island.expand { padding: 22px 60px; transform: translateX(-50%) scale(1.05); }
+    /* Esconder no celular quando vazio via JS */
+    .island-hidden-mobile { @apply max-md:hidden; }
 
     /* BARRA INFERIOR */
     .nav-bottom {
@@ -95,8 +97,6 @@
     .fly-item { position: fixed; z-index: 9999; pointer-events: none; border-radius: 50%; transition: all 0.8s cubic-bezier(.22,.61,.36,1); }
     .hide-scrollbar::-webkit-scrollbar { display: none; }
     .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
-    
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
   </style>
 </head>
 <body class="no-scrollbar">
@@ -121,8 +121,8 @@
 <div id="auth-view" class="hidden min-h-screen flex flex-col items-center justify-center p-6 bg-white">
     <div class="text-center mb-10 animate-[fadeIn_0.8s_ease-out]">
         <div class="text-8xl mb-4 drop-shadow-xl">🥚</div>
-        <h1 class="text-6xl font-[950] tracking-tighter text-rose-600 uppercase italic">AppEgg</h1>
-        <p class="text-slate-400 font-extrabold uppercase tracking-tight text-[11px] mt-4 max-w-[280px] mx-auto leading-tight italic text-center">
+        <h1 class="text-6xl font-[950] tracking-tighter text-rose-600 uppercase italic leading-none">AppEgg</h1>
+        <p class="text-slate-400 font-extrabold uppercase tracking-tight text-[11px] mt-4 max-w-[280px] mx-auto leading-tight text-center">
           Qualidade Premium direto da granja para a sua mesa
         </p>
     </div>
@@ -134,8 +134,8 @@
         </div>
 
         <form id="form-login" onsubmit="window.fazerLogin(event)" class="space-y-4">
-            <input type="email" id="login-email" class="premium-input !text-center" placeholder="Seu e-mail" required autocomplete="email">
-            <input type="password" id="login-senha" class="premium-input !text-center" placeholder="Sua senha" required autocomplete="current-password">
+            <input type="email" id="login-email" class="premium-input !text-center" placeholder="Seu e-mail" required>
+            <input type="password" id="login-senha" class="premium-input !text-center" placeholder="Sua senha" required>
             <div class="flex items-center justify-center gap-3">
                 <input type="checkbox" id="remember-email" class="w-4 h-4 accent-rose-600 cursor-pointer">
                 <label for="remember-email" class="text-xs font-black text-slate-400 uppercase cursor-pointer">Lembrar acesso</label>
@@ -150,7 +150,7 @@
                 <input type="text" id="reg-cpf" class="w-1/2 premium-input !px-4" placeholder="CPF" oninput="window.maskCPF(event)" maxlength="14" required>
                 <input type="tel" id="reg-tel" class="w-1/2 premium-input !px-4" placeholder="WhatsApp" oninput="window.maskPhone(event)" maxlength="15" required>
             </div>
-            <div class="p-6 bg-slate-50 rounded-[32px] space-y-3 border border-slate-100 text-left">
+            <div class="p-6 bg-slate-50 rounded-[32px] space-y-3 border border-slate-100 text-left text-balance">
                 <p class="text-[10px] font-black text-rose-600 uppercase tracking-widest ml-1">Endereço Principal</p>
                 <div class="flex gap-2">
                     <input type="text" id="reg-cep" class="w-1/3 premium-input !p-4 !text-sm" placeholder="CEP" oninput="window.maskCEP(event, 'reg')" maxlength="9" required>
@@ -161,8 +161,8 @@
                     <input type="text" id="reg-bairro" class="flex-1 premium-input !p-4 !text-sm" placeholder="Bairro" required>
                 </div>
             </div>
-            <input type="email" id="reg-email" class="premium-input" placeholder="E-mail" required autocomplete="email">
-            <input type="password" id="reg-senha" class="premium-input" placeholder="Criar Senha" minlength="6" required autocomplete="new-password">
+            <input type="email" id="reg-email" class="premium-input" placeholder="E-mail" required>
+            <input type="password" id="reg-senha" class="premium-input" placeholder="Criar Senha" minlength="6" required>
             <button type="submit" id="btn-register" class="btn-premium w-full py-6">Criar Perfil Elite</button>
         </form>
 
@@ -180,7 +180,7 @@
     <header class="p-6 md:px-12 flex flex-col gap-5 bg-white border-b border-slate-50 sticky top-0 z-[1000] glass">
         <div class="flex items-center justify-between">
             <div class="flex items-center gap-3 text-left">
-                <div class="w-11 h-11 bg-rose-600 text-white flex items-center justify-center rounded-2xl font-bold shadow-lg shadow-rose-200">🥚</div>
+                <div class="w-11 h-11 bg-rose-600 text-white flex items-center justify-center rounded-2xl font-bold shadow-lg">🥚</div>
                 <div class="flex flex-col">
                   <span class="font-[900] tracking-tighter text-2xl italic uppercase text-rose-600 leading-none">AppEgg</span>
                   <span class="text-[10px] font-bold text-slate-400 uppercase tracking-tight mt-1 italic">Qualidade Premium direto da granja</span>
@@ -191,12 +191,12 @@
         
         <div class="relative group">
            <input type="text" id="search-input" oninput="window.handleSearch(this.value)" class="premium-input !py-4 !pl-14 !bg-slate-50 focus:!bg-white border-none shadow-sm text-sm !text-left" placeholder="Pesquisar ovos frescos...">
-           <span class="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-rose-600 transition-colors">🔍</span>
+           <span class="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300">🔍</span>
         </div>
     </header>
 
     <div id="main-content" class="p-6 max-w-4xl mx-auto pb-32">
-        <!-- Renderizado via JS -->
+        <!-- RenderJS -->
     </div>
 
     <nav class="nav-bottom">
@@ -226,7 +226,7 @@
 
 <!-- MODAIS -->
 <div class="mbk" id="product-detail-modal">
-    <div class="modal-content !max-w-[600px] relative">
+    <div class="modal-content !max-w-[600px]">
         <button onclick="window.closeAll()" class="absolute top-8 right-8 w-12 h-12 bg-black/5 rounded-full flex items-center justify-center font-bold text-lg z-10 transition-colors hover:bg-black/10">✕</button>
         <div id="product-detail-content"></div>
     </div>
@@ -238,12 +238,12 @@
         
         <div class="p-10 bg-black text-white text-center">
             <div class="text-6xl mb-4">🛍️</div>
-            <h3 class="text-3xl font-[950] uppercase italic tracking-tighter">Finalizar Pedido</h3>
+            <h3 class="text-2xl font-[950] uppercase italic tracking-tighter">Finalizar Pedido</h3>
         </div>
         <div class="p-8 space-y-6 text-left">
-            <div class="flex gap-2 bg-slate-100 p-1.5 rounded-3xl">
+            <div class="flex gap-2 bg-slate-100 p-1 rounded-3xl">
                 <button id="check-retirada" onclick="window.setDelivery('retirada')" class="flex-1 py-4 rounded-[20px] font-black text-[11px] tracking-widest transition-all bg-white text-rose-600 shadow-sm uppercase">RETIRAR</button>
-                <button id="check-entrega" onclick="window.setDelivery('entrega')" class="flex-1 py-4 rounded-[20px] font-black text-[11px] tracking-widest transition-all text-slate-400 uppercase">ENTREGA</button>
+                <button id="check-entrega" onclick="window.setDelivery('entrega')" class="flex-1 py-4 rounded-[20px] font-black text-[11px] text-slate-400 uppercase">ENTREGA</button>
             </div>
             
             <div id="info-retirada-box" class="bg-slate-50 p-6 rounded-[32px] border border-slate-100 space-y-2">
@@ -251,12 +251,12 @@
                 <p class="text-sm font-bold text-slate-700 leading-tight">Rua Antônio Freire da Silva, 87<br>Jardim das Camélias, São Paulo - SP</p>
             </div>
 
-            <div id="info-entrega-box" class="hidden space-y-4">
+            <div id="info-entrega-box" class="hidden space-y-4 text-balance">
                 <div class="bg-rose-50/50 p-6 rounded-[32px] border border-rose-100">
                     <p class="font-black text-[10px] uppercase text-rose-600 mb-1 tracking-widest">📍 Endereço de Envio</p>
                     <p id="checkout-addr-display" class="text-base font-extrabold text-slate-800 leading-tight">Carregando...</p>
                 </div>
-                <button onclick="window.toggleNewAddress()" class="w-full text-center text-slate-400 font-black uppercase text-[10px] tracking-[0.2em] hover:text-black">
+                <button onclick="window.toggleNewAddress()" class="w-full text-center text-slate-400 font-black uppercase text-[10px] tracking-tighter hover:text-black">
                     <span id="new-addr-toggle-text">+ Usar endereço diferente para este pedido</span>
                 </button>
                 <div id="new-address-form" class="hidden bg-slate-50 p-6 rounded-[32px] border border-slate-100 space-y-3">
@@ -282,26 +282,24 @@
                 </select>
             </div>
 
-            <button onclick="window.processCheckout()" class="btn-premium w-full py-8 rounded-[32px] text-xl shadow-2xl">
+            <button onclick="window.processCheckout()" class="btn-premium w-full py-6 rounded-[32px] text-xl shadow-2xl font-black">
                 Confirmar Reserva (<span id="checkout-total-btn">R$ 0,00</span>)
             </button>
         </div>
     </div>
 </div>
 
-<!-- MODAL PIX -->
 <div class="mbk" id="pix-modal">
-    <div class="modal-content !max-w-[420px] !rounded-[56px] relative">
+    <div class="modal-content !max-w-[420px] !rounded-[56px]">
         <button onclick="window.closeAll()" class="absolute top-8 right-8 w-12 h-12 bg-black/5 rounded-full flex items-center justify-center font-bold text-lg z-10 transition-colors hover:bg-black/10">✕</button>
-
         <div class="p-10 bg-emerald-500 text-white text-center">
             <h3 class="text-2xl font-black italic uppercase tracking-tighter">Pagamento PIX</h3>
         </div>
         <div class="p-10 text-center space-y-8">
             <div id="qrcode" class="inline-block p-5 bg-white rounded-[40px] border-4 border-slate-50 shadow-sm"></div>
             <div class="bg-slate-50 p-6 rounded-[32px] border-2 border-dashed border-slate-200">
-                <p class="text-[9px] font-black text-slate-400 uppercase mb-3 tracking-widest">Copia e Cola</p>
-                <div id="pix-code" class="font-mono text-[13px] font-bold break-all text-slate-700 leading-relaxed px-4 text-center"></div>
+                <p class="text-[10px] font-black text-slate-400 uppercase mb-3 tracking-widest">Copia e Cola</p>
+                <div id="pix-code" class="font-mono text-[13px] font-bold break-all text-slate-700 leading-relaxed px-4 text-center select-all"></div>
             </div>
             <button class="w-full py-6 bg-black text-white rounded-[24px] font-black uppercase text-[11px] tracking-widest shadow-xl active:scale-95 transition-all" onclick="window.doCopy()">📋 Copiar Código</button>
             <button class="btn-premium w-full py-7 rounded-[32px] !bg-emerald-500 shadow-xl" onclick="window.saveOrderToFirebase()">✅ JÁ PAGUEI / CONCLUIR</button>
@@ -309,24 +307,22 @@
     </div>
 </div>
 
-<!-- SUCESSO -->
 <div id="success-screen" class="hidden fixed inset-0 bg-white z-[5000] flex-col items-center justify-center p-10 text-center animate-[fadeIn_0.5s_ease-out]">
     <div class="text-[10rem] animate-bounce">🎊</div>
     <h2 class="text-5xl font-[950] tracking-tighter text-black uppercase italic leading-none">Confirmado!</h2>
-    <p class="text-slate-400 font-bold text-lg mt-6 uppercase tracking-tight">Sua encomenda premium foi recebida.</p>
+    <p class="text-slate-400 font-bold text-lg mt-6 uppercase tracking-tight text-balance">Sua encomenda premium foi recebida.</p>
     <div class="bg-green-50 text-[#00C853] px-10 py-6 rounded-[40px] text-4xl font-black my-10 tracking-widest shadow-inner" id="order-num-display">#000000</div>
     <div class="w-full max-w-md space-y-5">
         <button class="btn-premium w-full py-8 rounded-[48px] bg-rose-600 text-xl shadow-2xl" onclick="window.sendWhatsApp()">📲 ENVIAR COMPROVANTE</button>
-        <button onclick="window.resetTudo()" class="btn-premium w-full py-6 rounded-[32px] bg-black text-white font-black text-[11px] tracking-[0.3em] uppercase italic">Voltar à Loja</button>
+        <button onclick="window.resetTudo()" class="btn-premium w-full py-6 rounded-[32px] bg-black text-white font-black text-[11px] tracking-[0.3em] uppercase italic text-balance leading-none">Voltar à Loja</button>
     </div>
 </div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getFirestore, collection, onSnapshot, doc, getDoc, updateDoc, setDoc, Timestamp, query, orderBy, serverTimestamp, addDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, signOut, onAuthStateChanged, sendPasswordResetEmail, signInAnonymously, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, signOut, onAuthStateChanged, sendPasswordResetEmail, signInAnonymously, signInWithCustomToken, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
-// ✅ CONFIGURAÇÃO FIREBASE IDÊNTICA AO ADMIN
 const firebaseConfig = {
     apiKey: "AIzaSyD3Otz9-zdZH-E5Feg9IOGWPzVycoe8gro",
     authDomain: "distribuidora-de-ovos-aline.firebaseapp.com",
@@ -339,11 +335,9 @@ const firebaseConfig = {
 const appFB = initializeApp(firebaseConfig);
 const db = getFirestore(appFB);
 const auth = getAuth(appFB);
-
-// ✅ APP ID FIXO E SINCRONIZADO COM ADMIN
 const appId = 'app-egg-pro-transacional';
 
-setPersistence(auth, browserLocalPersistence).catch(e => console.warn("Persistência:", e));
+setPersistence(auth, browserLocalPersistence).catch(e => console.warn(e));
 
 window.state = {
     user: null, view: 'loja', produtos: [], pedidos: [], carrinho: {}, favoritos: [],
@@ -352,7 +346,42 @@ window.state = {
 };
 
 window.clienteLogado = {};
-window.pix_config = { rawKey:'11985706243', nomeRecebedor:'AppEgg', cidade:'SAO PAULO' };
+window.pix_config = { rawKey:'', nomeRecebedor:'AppEgg', cidade:'SAO PAULO' };
+
+// ✅ SISTEMA DE FAVORITOS HÍBRIDO
+window.loadFavoritosFromLocal = () => {
+    if(!auth.currentUser) return [];
+    const key = `appegg_favs_${auth.currentUser.uid}`;
+    const saved = localStorage.getItem(key);
+    return saved ? JSON.parse(saved) : [];
+};
+
+window.saveFavoritosToLocal = (favs) => {
+    if(!auth.currentUser) return;
+    const key = `appegg_favs_${auth.currentUser.uid}`;
+    localStorage.setItem(key, JSON.stringify(favs));
+};
+
+window.toggleFavorito = async (id) => {
+    if(!auth.currentUser) {
+        window.showMsg("⚠️ Faça login para favoritar");
+        return;
+    }
+    const isFav = window.state.favoritos.includes(id);
+    if(isFav) {
+        window.state.favoritos = window.state.favoritos.filter(f => f !== id);
+        window.showMsg("Removido dos favoritos");
+    } else {
+        window.state.favoritos.push(id);
+        window.showMsg("Adicionado aos favoritos ❤️");
+    }
+    window.saveFavoritosToLocal(window.state.favoritos);
+    window.render();
+    try {
+        const favDoc = doc(db, 'artifacts', appId, 'public', 'data', 'clientes', auth.currentUser.uid);
+        await setDoc(favDoc, { favoritos: window.state.favoritos, atualizadoEm: serverTimestamp() }, { merge: true });
+    } catch(e) { console.warn("Sync cloud falhou, usando local."); }
+};
 
 // CÁLCULO TOTAL
 window.totalCarrinho = () => {
@@ -372,25 +401,10 @@ window.showMsg = (msg) => {
 
 window.fmt = n => Number(n || 0).toFixed(2).replace('.',',');
 
-window.maskCPF = e => { 
-    let v = e.target.value.replace(/\D/g, ""); 
-    v = v.replace(/(\d{3})(\d)/, "$1.$2"); 
-    v = v.replace(/(\d{3})(\d)/, "$1.$2"); 
-    v = v.replace(/(\d{3})(\d{1,2})$/, "$1-$2"); 
-    e.target.value = v; 
-};
-
-window.maskPhone = e => { 
-    let v = e.target.value.replace(/\D/g, ""); 
-    v = v.replace(/^(\d{2})(\d)/g, "($1) $2"); 
-    v = v.replace(/(\d)(\d{4})$/, "$1-$2"); 
-    e.target.value = v; 
-};
-
+window.maskCPF = e => { let v = e.target.value.replace(/\D/g, ""); v = v.replace(/(\d{3})(\d)/, "$1.$2"); v = v.replace(/(\d{3})(\d)/, "$1.$2"); v = v.replace(/(\d{3})(\d{1,2})$/, "$1-$2"); e.target.value = v; };
+window.maskPhone = e => { let v = e.target.value.replace(/\D/g, ""); v = v.replace(/^(\d{2})(\d)/g, "($1) $2"); v = v.replace(/(\d)(\d{4})$/, "$1-$2"); e.target.value = v; };
 window.maskCEP = (e, prefix) => { 
-  let v = e.target.value.replace(/\D/g, ""); 
-  v = v.replace(/^(\d{5})(\d)/, "$1-$2"); 
-  e.target.value = v;
+  let v = e.target.value.replace(/\D/g, ""); v = v.replace(/^(\d{5})(\d)/, "$1-$2"); e.target.value = v;
   if (v.replace(/\D/g, "").length === 8) window.buscaCep(v.replace(/\D/g, ""), prefix);
 };
 
@@ -399,39 +413,23 @@ window.buscaCep = async (cep, prefix) => {
         const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
         const d = await res.json();
         if (!d.erro) {
-            const r = document.getElementById(`${prefix}-rua`); 
-            const b = document.getElementById(`${prefix}-bairro`);
-            if(r) r.value = d.logradouro; 
-            if(b) b.value = d.bairro;
+            const r = document.getElementById(`${prefix}-rua`); const b = document.getElementById(`${prefix}-bairro`);
+            if(r) r.value = d.logradouro; if(b) b.value = d.bairro;
         }
-    } catch (e) {
-        console.warn("Erro ao buscar CEP:", e);
-    }
+    } catch (e) {}
 };
 
-// AUTH
+// CONTROLE AUTH
 window.setAuthMode = m => {
     const isL = m==='login'; const isR = m==='register'; const isF = m==='forgot';
-    const formL = document.getElementById('form-login'); 
-    const formR = document.getElementById('form-register'); 
-    const formF = document.getElementById('form-forgot');
-    
+    const formL = document.getElementById('form-login'); const formR = document.getElementById('form-register'); const formF = document.getElementById('form-forgot');
     if(formL) formL.style.display = isL ? 'block' : 'none';
     if(formR) formR.style.display = isR ? 'block' : 'none';
     if(formF) formF.style.display = isF ? 'block' : 'none';
     
-    const tabL = document.getElementById('tab-login'); 
-    const tabR = document.getElementById('tab-register');
+    const tabL = document.getElementById('tab-login'); const tabR = document.getElementById('tab-register');
     if(tabL) tabL.className = `flex-1 py-4 rounded-xl font-bold text-[12px] tracking-widest transition-all ${isL ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-400'} uppercase`;
     if(tabR) tabR.className = `flex-1 py-4 rounded-xl font-bold text-[12px] tracking-widest transition-all ${isR ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-400'} uppercase`;
-
-    if(isL) {
-        const saved = localStorage.getItem('appegg_email');
-        if(saved) {
-            const emailInput = document.getElementById('login-email');
-            if(emailInput) emailInput.value = saved;
-        }
-    }
 };
 
 window.fazerLogin = async e => {
@@ -439,85 +437,39 @@ window.fazerLogin = async e => {
     const btn = document.getElementById('btn-login'); 
     const em = document.getElementById('login-email').value.trim();
     const ps = document.getElementById('login-senha').value;
-    const rem = document.getElementById('remember-email').checked;
-    
     btn.disabled = true; btn.innerText = "Sincronizando...";
-    if(rem) localStorage.setItem('appegg_email', em); 
-    else localStorage.removeItem('appegg_email');
-    
-    try { 
-        await signInWithEmailAndPassword(auth, em, ps);
-        console.log("✅ Login bem-sucedido!");
-    } catch(err){ 
-        console.error("❌ Erro no login:", err.code);
-        window.showMsg("Dados incorretos. Verifique e-mail e senha."); 
-        btn.disabled = false; btn.innerText = "Acessar Loja"; 
-    }
+    try { await signInWithEmailAndPassword(auth, em, ps); }
+    catch(err){ window.showMsg("Dados incorretos. Verifique e-mail e senha."); btn.disabled = false; btn.innerText = "Acessar Loja"; }
 };
 
 window.fazerCadastro = async e => {
     e.preventDefault();
-    const btn = document.getElementById('btn-register'); 
-    btn.disabled = true;
-    
+    const btn = document.getElementById('btn-register'); btn.disabled = true;
     try {
         const em = document.getElementById('reg-email').value.trim(); 
         const senha = document.getElementById('reg-senha').value;
         const uc = await createUserWithEmailAndPassword(auth, em, senha); 
         const nome = document.getElementById('reg-nome').value.trim();
-        
         await updateProfile(uc.user, { displayName: nome });
-        
-        const dados = { 
-            nome, 
-            cpf: document.getElementById('reg-cpf').value, 
-            tel: document.getElementById('reg-tel').value, 
-            email: em, 
-            rua: document.getElementById('reg-rua').value.trim(), 
-            num: document.getElementById('reg-num').value.trim(), 
-            bairro: document.getElementById('reg-bairro').value.trim(), 
-            cep: document.getElementById('reg-cep').value.trim(),
-            criadoEm: serverTimestamp() 
-        };
-        
+        const dados = { nome, cpf: document.getElementById('reg-cpf').value, tel: document.getElementById('reg-tel').value, email: em, rua: document.getElementById('reg-rua').value.trim(), num: document.getElementById('reg-num').value.trim(), bairro: document.getElementById('reg-bairro').value.trim(), cep: document.getElementById('reg-cep').value.trim(), criadoEm: serverTimestamp(), favoritos: [] };
         await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'clientes', uc.user.uid), dados);
         window.clienteLogado = dados;
-        console.log("✅ Cadastro bem-sucedido!");
-        
-    } catch(err) { 
-        console.error("❌ Erro no cadastro:", err.code);
-        window.showMsg("Falha ao criar conta. E-mail já cadastrado?"); 
-        btn.disabled = false; 
-    }
+    } catch(err) { window.showMsg("Erro no cadastro."); btn.disabled = false; }
 };
 
 window.solicitarRecuperacao = async e => {
     e.preventDefault();
     const em = document.getElementById('forgot-email').value.trim();
-    try { 
-        await sendPasswordResetEmail(auth, em); 
-        window.showMsg("📧 Link enviado! Verifique sua caixa de entrada."); 
-        window.setAuthMode('login'); 
-    } catch(e) { 
-        console.error("❌ Erro recuperação:", e);
-        window.showMsg("E-mail não localizado."); 
-    }
+    try { await sendPasswordResetEmail(auth, em); window.showMsg("📧 Link enviado!"); window.setAuthMode('login'); } catch(e) { window.showMsg("E-mail não localizado."); }
 };
 
-window.fazerLogout = () => { 
-    if(confirm("Deseja mesmo sair?")) {
-        signOut(auth).then(() => {
-            console.log("🚪 Logout efetuado");
-        });
-    }
-};
+window.fazerLogout = () => { if(confirm("Deseja mesmo sair?")) signOut(auth).then(()=>location.reload()); };
 
 // NAVEGAÇÃO
 window.setView = v => {
     window.state.view = v;
     document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-    const b = document.getElementById('nav-' + v); 
-    if(b) b.classList.add('active');
+    const b = document.getElementById('nav-' + v); if(b) b.classList.add('active');
     window.render();
 };
 
@@ -530,52 +482,51 @@ window.render = () => {
     if(window.state.view === 'conta') cont.innerHTML = renderConta();
 };
 
-window.handleSearch = val => { 
-    window.state.searchTerm = val.toLowerCase(); 
-    window.render(); 
-};
+window.handleSearch = val => { window.state.searchTerm = val.toLowerCase(); window.render(); };
 
+// ✅ REDESENHO DO CARD PARA MOBILE: CONTROLOS ABAIXO DA FOTO
 function renderProductCard(p) {
     const isFav = window.state.favoritos.includes(p.id);
     return `
-      <div onclick="window.openProductDetail('${p.id}')" class="card-depth p-8 flex items-center gap-6 cursor-pointer relative overflow-hidden group">
-        <div class="w-28 h-28 bg-[#F5F5F7] rounded-[28px] overflow-hidden flex items-center justify-center border border-slate-50 flex-shrink-0 relative">
-          ${p.foto_url ? `<img src="${p.foto_url}" class="w-full h-full object-cover transition-transform group-hover:scale-110">` : '<span class="text-4xl">🥚</span>'}
-          <button onclick="event.stopPropagation(); window.toggleFavorito('${p.id}')" class="fav-btn absolute top-2 left-2 w-8 h-8 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center shadow-sm">
-            <span class="text-sm">${isFav ? '❤️' : '🤍'}</span>
-          </button>
+      <div onclick="window.openProductDetail('${p.id}')" class="card-depth p-4 flex items-start gap-5 cursor-pointer relative overflow-hidden group text-balance">
+        <!-- Coluna da Esquerda: Foto + Controlos Abaixo -->
+        <div class="flex flex-col items-center gap-3 flex-shrink-0">
+          <div class="w-24 h-24 bg-[#F5F5F7] rounded-[24px] overflow-hidden flex items-center justify-center border border-slate-50 relative">
+            ${p.foto_url ? `<img src="${p.foto_url}" class="w-full h-full object-cover transition-transform group-hover:scale-110">` : '<span class="text-4xl">🥚</span>'}
+            <button onclick="event.stopPropagation(); window.toggleFavorito('${p.id}')" class="fav-btn absolute top-1.5 left-1.5 w-7 h-7 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center shadow-sm">
+              <span class="text-sm">${isFav ? '❤️' : '🤍'}</span>
+            </button>
+          </div>
+          
+          <!-- Controlos de Compra Abaixo da Foto -->
+          <div class="flex flex-col items-center gap-2" onclick="event.stopPropagation()">
+            <div class="flex items-center gap-3 bg-slate-50 p-1.5 rounded-xl border border-slate-100">
+               <button onclick="window.chQty('${p.id}',-1)" class="w-7 h-7 font-black text-xl text-slate-300">-</button>
+               <span id="qty-${p.id}" class="font-black text-sm w-4 text-center">0</span>
+               <button onclick="window.chQty('${p.id}',1)" class="w-7 h-7 font-black text-xl text-rose-600">+</button>
+            </div>
+            <button onclick="window.addCart('${p.id}', this)" class="btn-premium px-4 py-2.5 w-full rounded-xl text-[9px] tracking-widest shadow-md uppercase font-black leading-none">Adicionar</button>
+          </div>
         </div>
-        <div class="flex-1 text-left">
-          <h3 class="font-[800] text-slate-900 uppercase text-xs mb-1 tracking-tight">${p.nome}</h3>
-          <p class="text-slate-400 font-bold text-[10px] uppercase italic">${p.embalagem || 'Unidade'}</p>
-          <div class="flex items-center gap-3 mt-3">
+
+        <!-- Coluna da Direita: Informações do Produto -->
+        <div class="flex-1 py-1">
+          <h3 class="font-[800] text-slate-900 uppercase text-xs mb-1 tracking-tight leading-snug">${p.nome || 'Produto'}</h3>
+          <p class="text-slate-400 font-bold text-[9px] uppercase italic leading-none">${p.embalagem || 'Unidade'}</p>
+          <div class="mt-4">
               <p class="text-rose-600 font-[950] text-3xl tracking-tighter italic leading-none">R$ ${window.fmt(p.preco)}</p>
           </div>
-        </div>
-        <div class="flex flex-col items-center gap-3" onclick="event.stopPropagation()">
-          <div class="flex items-center gap-3 bg-slate-50 p-1.5 rounded-xl border border-slate-100">
-             <button onclick="window.chQty('${p.id}',-1)" class="w-8 h-8 font-black text-xl text-slate-300">-</button>
-             <span id="qty-${p.id}" class="font-black text-lg w-5 text-center">0</span>
-             <button onclick="window.chQty('${p.id}',1)" class="w-8 h-8 font-black text-xl text-rose-600">+</button>
-          </div>
-          <button onclick="window.addCart('${p.id}', this)" class="btn-premium px-6 py-4 rounded-xl text-[10px] tracking-widest shadow-xl uppercase font-black">Adicionar</button>
         </div>
       </div>
     `;
 }
 
 function renderLoja() {
-    const filtered = window.state.produtos.filter(p => 
-        p.nome.toLowerCase().includes(window.state.searchTerm) && p.ativo !== false
-    );
-    
+    const filtered = window.state.produtos.filter(p => (p.nome || "").toLowerCase().includes(window.state.searchTerm) && p.ativo !== false);
     return `
       <div class="animate-[fadeIn_0.5s_ease-out] text-left">
         <h2 class="text-3xl font-[950] tracking-tighter uppercase italic text-rose-600 mb-8">Nossos Ovos</h2>
-        <div class="grid grid-cols-1 gap-6">
-            ${filtered.map(p => renderProductCard(p)).join('') || 
-              '<div class="py-20 text-center font-black text-slate-200 uppercase">Nenhum produto...</div>'}
-        </div>
+        <div class="grid grid-cols-1 gap-6">${filtered.map(p => renderProductCard(p)).join('') || '<div class="py-20 text-center font-black text-slate-200 uppercase">Sem produtos...</div>'}</div>
       </div>
     `;
 }
@@ -585,10 +536,7 @@ function renderFavoritos() {
     return `
       <div class="animate-[fadeIn_0.5s_ease-out] text-left">
         <h2 class="text-3xl font-[950] tracking-tighter uppercase italic text-rose-600 mb-8">Favoritos ❤️</h2>
-        <div class="grid grid-cols-1 gap-6">
-            ${filtered.map(p => renderProductCard(p)).join('') || 
-              '<div class="py-32 text-center flex flex-col items-center gap-4 grayscale opacity-30"><span class="text-6xl">❤️</span><p class="font-black text-slate-400 uppercase italic">Você ainda não favoritou nada</p></div>'}
-        </div>
+        <div class="grid grid-cols-1 gap-6">${filtered.map(p => renderProductCard(p)).join('') || '<div class="py-32 text-center flex flex-col items-center gap-4 grayscale opacity-30"><span class="text-6xl">❤️</span><p class="font-black text-slate-400 uppercase italic text-center">Nada favoritado ainda</p></div>'}</div>
       </div>
     `;
 }
@@ -596,12 +544,12 @@ function renderFavoritos() {
 function renderConta() {
     const c = window.clienteLogado;
     return `
-      <div class="animate-[fadeIn_0.5s_ease-out] text-left space-y-10">
+      <div class="animate-[fadeIn_0.5s_ease-out] text-left space-y-8">
         <div class="flex items-center gap-6">
-            <div class="w-20 h-20 bg-rose-600 text-white flex items-center justify-center rounded-[28px] text-3xl shadow-xl shadow-rose-200">👤</div>
+            <div class="w-20 h-20 bg-rose-600 text-white flex items-center justify-center rounded-[28px] text-3xl shadow-xl">👤</div>
             <div>
-                <h2 class="text-3xl font-[950] tracking-tighter uppercase italic text-rose-600">Meu Perfil</h2>
-                <p class="text-slate-400 font-bold text-xs uppercase tracking-widest">${c.email || ''}</p>
+                <h2 class="text-3xl font-[950] tracking-tighter uppercase italic text-rose-600 leading-none">Meu Perfil</h2>
+                <p class="text-slate-400 font-bold text-xs uppercase tracking-widest leading-none mt-2">${c.email || ''}</p>
             </div>
         </div>
         
@@ -624,7 +572,7 @@ function renderConta() {
                 <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">E-mail de Contato</label>
                 <input type="email" id="prof-email" class="premium-input" value="${c.email || ''}" required>
             </div>
-            <div class="bg-white p-8 rounded-[40px] premium-shadow border border-slate-50 text-left">
+            <div class="bg-white p-8 rounded-[40px] premium-shadow border border-slate-50 text-left text-balance leading-relaxed">
                 <p class="text-[11px] font-black text-rose-600 uppercase tracking-widest ml-2 mb-4">Endereço de Entrega</p>
                 <div class="flex gap-2">
                     <input type="text" id="prof-cep" class="w-1/3 premium-input !p-4 !text-sm" value="${c.cep || ''}" oninput="window.maskCEP(event, 'prof')" maxlength="9" required>
@@ -636,7 +584,7 @@ function renderConta() {
                 </div>
             </div>
             <button type="submit" class="btn-premium w-full py-7 rounded-[32px] shadow-2xl">Salvar Alterações</button>
-            <button type="button" onclick="window.fazerLogout()" class="btn-premium w-full py-5 !bg-black !text-white rounded-[32px] font-black uppercase text-[10px] tracking-[0.3em] mt-4 shadow-xl">Sair da Conta</button>
+            <button type="button" onclick="window.fazerLogout()" class="btn-premium w-full py-5 !bg-black !text-white rounded-[32px] font-black uppercase text-[10px] tracking-[0.3em] mt-4 shadow-xl leading-none">Sair da Conta</button>
         </form>
       </div>
     `;
@@ -645,55 +593,45 @@ function renderConta() {
 window.openProductDetail = id => {
     const p = window.state.produtos.find(x => x.id === id);
     if(!p) return;
-    
     document.getElementById('product-detail-content').innerHTML = `
         <div class="p-10 space-y-8 text-left animate-[slideUp_0.4s_ease-out]">
             <div class="w-full aspect-square bg-[#F5F5F7] rounded-[48px] overflow-hidden flex items-center justify-center premium-shadow border border-slate-50">
                 ${p.foto_url ? `<img src="${p.foto_url}" class="w-full h-full object-cover">` : '<span class="text-9xl">🥚</span>'}
             </div>
-            <div class="space-y-4">
+            <div class="space-y-4 text-balance">
                 <h2 class="text-4xl font-[950] italic uppercase tracking-tighter text-rose-600 leading-tight">${p.nome}</h2>
                 <div class="flex items-center gap-3">
                     <span class="bg-rose-50 text-rose-600 px-4 py-2 rounded-full font-black text-[10px] uppercase tracking-widest">${p.embalagem || 'Unidade'}</span>
                     <span class="bg-slate-100 text-slate-400 px-4 py-2 rounded-full font-black text-[10px] uppercase tracking-widest">${p.categoria || 'Geral'}</span>
                 </div>
-                <p class="text-slate-500 font-medium text-lg leading-relaxed">${p.desc || 'Ovos frescos de qualidade premium selecionados rigorosamente para a sua mesa.'}</p>
+                <p class="text-slate-500 font-medium text-lg leading-relaxed">${p.desc || 'Ovos frescos selecionados para sua mesa.'}</p>
             </div>
             <div class="flex items-center justify-between pt-8 border-t border-slate-100">
                 <div class="text-slate-900 font-[950] text-5xl tracking-tighter italic leading-none">R$ ${window.fmt(p.preco)}</div>
-                
                 <div class="flex flex-col items-center gap-3">
                     <div class="flex items-center gap-4 bg-slate-50 p-2 rounded-2xl border border-slate-100">
                         <button onclick="window.chQty('${p.id}',-1)" class="w-10 h-10 font-black text-2xl text-slate-300">-</button>
                         <span id="qty-det-${p.id}" class="font-black text-xl w-6 text-center">0</span>
                         <button onclick="window.chQty('${p.id}',1)" class="w-10 h-10 font-black text-2xl text-rose-600">+</button>
                     </div>
-                    <button onclick="window.addCartDet('${p.id}', this); window.closeAll()" class="btn-premium px-12 py-7 rounded-[32px] text-lg uppercase font-black">Adicionar</button>
+                    <button onclick="window.addCartDet('${p.id}', this); window.closeAll()" class="btn-premium px-12 py-7 rounded-[32px] text-lg uppercase font-black leading-none shadow-xl">Adicionar</button>
                 </div>
             </div>
         </div>
     `;
-    
-    const modal = document.getElementById('product-detail-modal'); 
-    modal.style.display='flex'; 
-    setTimeout(()=>modal.classList.add('open'), 10);
+    const modal = document.getElementById('product-detail-modal'); modal.style.display='flex'; setTimeout(()=>modal.classList.add('open'), 10);
 };
 
 function renderCarrinho() {
-    let t = 0; 
-    const keys = Object.keys(window.state.carrinho);
-    
+    let t = 0; const keys = Object.keys(window.state.carrinho);
     const items = keys.map(k => {
-        const p = window.state.produtos.find(x => x.id === k); 
-        if(!p) return '';
+        const p = window.state.produtos.find(x => x.id === k); if(!p) return '';
         const qty = window.state.carrinho[k];
-        const sub = p.preco * qty; 
-        t += sub;
-        
+        const sub = p.preco * qty; t += sub;
         return `
         <div class="bg-white p-8 rounded-[40px] premium-shadow border border-slate-50 flex items-center gap-6 animate-[fadeIn_0.4s_ease-out]">
             <div class="flex-1 text-left">
-                <h4 class="font-black text-slate-900 uppercase text-xs mb-4 tracking-widest">${p.nome}</h4>
+                <h4 class="font-black text-slate-900 uppercase text-xs mb-4 tracking-widest leading-none">${p.nome}</h4>
                 <div class="flex items-center gap-6">
                     <button onclick="window.changeCartQty('${k}', -1)" class="w-12 h-12 rounded-[20px] bg-slate-50 font-bold text-rose-500">-</button>
                     <span class="font-black text-2xl">${qty}</span>
@@ -702,7 +640,7 @@ function renderCarrinho() {
             </div>
             <div class="text-right">
                 <div class="font-black text-slate-950 text-2xl italic tracking-tighter leading-none">R$ ${window.fmt(sub)}</div>
-                <button onclick="window.remCart('${k}')" class="text-[11px] font-black text-slate-300 uppercase mt-4 hover:text-rose-500 transition-colors">Remover</button>
+                <button onclick="window.remCart('${k}')" class="text-[11px] font-black text-slate-300 uppercase mt-4 hover:text-rose-500 transition-colors leading-none">Remover</button>
             </div>
         </div>`;
     }).join('');
@@ -710,18 +648,16 @@ function renderCarrinho() {
     return `
         <div class="space-y-8 text-left animate-[fadeIn_0.5s_ease-out]">
             <h2 class="text-4xl font-[950] italic uppercase tracking-tighter text-rose-600">Meu Carrinho</h2>
-            <div class="space-y-4">
-                ${items || '<div class="text-center py-24 text-slate-200 font-black uppercase italic tracking-[0.2em]">Seu carrinho está vazio</div>'}
-            </div>
+            <div class="space-y-4">${items || '<div class="text-center py-24 text-slate-200 font-black uppercase italic tracking-[0.2em]">Seu carrinho está vazio</div>'}</div>
             ${keys.length > 0 ? `
                 <div class="bg-black p-8 rounded-[40px] text-white space-y-8 shadow-2xl">
                     <div class="flex justify-between items-end">
                        <div class="flex flex-col">
-                           <span class="text-white/30 font-black uppercase text-[11px] tracking-widest">Total Geral</span>
+                           <span class="text-white/30 font-black uppercase text-[11px] tracking-widest leading-none">Total Geral</span>
                        </div>
                        <span class="text-4xl font-[950] tracking-tighter italic text-rose-600 leading-none">R$ ${window.fmt(t)}</span>
                     </div>
-                    <button onclick="window.openCheckout()" class="btn-premium w-full py-6 rounded-[32px] text-xl italic uppercase tracking-widest shadow-2xl shadow-rose-900/50 font-black">Fechar Pedido</button>
+                    <button onclick="window.openCheckout()" class="btn-premium w-full py-6 rounded-[32px] text-xl italic uppercase tracking-widest shadow-2xl shadow-rose-900/50 font-black leading-none">Fechar Pedido</button>
                 </div>
             ` : ''}
         </div>`;
@@ -732,60 +668,26 @@ function renderPedidos() {
         <div class="space-y-12 text-left animate-[fadeIn_0.5s_ease-out]">
             <h2 class="text-4xl font-[950] italic uppercase tracking-tighter text-rose-600">Histórico</h2>
             <div class="space-y-8">
-                ${window.state.pedidos.map(p => {
-                    // ✅ COMPATIBILIDADE: aceita qtd, quantidade e qty
-                    const itensStr = (p.itens||[]).map(i => {
-                        const quantidade = i.qtd || i.quantidade || i.qty || 0;
-                        const nomeProduto = i.nome || 'Produto';
-                        return `<span class="text-slate-900 font-black">${quantidade}x</span> ${nomeProduto}`;
-                    }).join(' • ') || 'Sem itens';
-                    
-                    return `
+                ${window.state.pedidos.map(p => `
                     <div class="bg-white p-10 rounded-[56px] premium-shadow border-t-[16px] border-rose-600 relative overflow-hidden">
                         <div class="flex justify-between items-start mb-6">
-                            <div class="text-left">
-                                <h4 class="font-black uppercase text-slate-900 text-xl tracking-tighter">${p.pedidoID || '#ID'}</h4>
+                            <div class="text-left text-balance">
+                                <h4 class="font-black uppercase text-slate-900 text-xl tracking-tighter leading-none">${p.pedidoID || '#ID'}</h4>
                                 <div class="mt-2 flex items-center gap-2">
                                     <span class="status-dot ${p.status === 'FINALIZADO' ? 'bg-green-500' : 'bg-rose-500'} animate-pulse"></span>
-                                    <p class="text-[12px] font-black text-slate-400 uppercase tracking-widest">${p.status || 'PENDENTE'}</p>
+                                    <p class="text-[12px] font-black text-slate-400 uppercase tracking-widest leading-none">${p.status || 'PENDENTE'}</p>
                                 </div>
                             </div>
-                            <div class="font-black text-3xl tracking-tighter italic text-slate-900 leading-none">R$ ${window.fmt(p.valorTotal)}</div>
+                            <div class="font-black text-3xl tracking-tighter italic text-slate-900 leading-none text-right">R$ ${window.fmt(p.valorTotal)}</div>
                         </div>
                         <div class="text-[12px] font-bold text-slate-400 bg-slate-50 p-6 rounded-[32px] text-left leading-relaxed">
-                            ${itensStr}
+                            ${(p.itens||[]).map(i => `<span class="text-slate-900 font-black">${i.qty || i.quantidade || 0}x</span> ${i.nome}`).join(' • ')}
                         </div>
                     </div>
-                    `;
-                }).join('') || '<div class="text-center py-24 text-slate-200 font-black uppercase italic tracking-widest">Sem pedidos efetuados.</div>'}
+                `).join('') || '<div class="text-center py-24 text-slate-200 font-black uppercase italic tracking-widest text-balance">Sem pedidos efetuados.</div>'}
             </div>
         </div>`;
 }
-
-// ✅ LÓGICA DE FAVORITOS ROBUSTA
-window.toggleFavorito = async (id) => {
-    if(!auth.currentUser) {
-        window.showMsg("⚠️ Faça login para favoritar");
-        return;
-    }
-    
-    const isFav = window.state.favoritos.includes(id);
-    const favRef = doc(db, 'artifacts', appId, 'users', auth.currentUser.uid, 'favoritos', id);
-    
-    try {
-        if(isFav) {
-            await deleteDoc(favRef);
-            console.log("💔 Removido dos favoritos:", id);
-        } else {
-            await setDoc(favRef, { id, adicionadoEm: serverTimestamp() });
-            console.log("❤️ Adicionado aos favoritos:", id);
-        }
-        window.showMsg(isFav ? "Removido dos favoritos" : "Adicionado aos favoritos ❤️");
-    } catch(e) { 
-        console.error("❌ Erro ao favoritar:", e);
-        window.showMsg("Erro ao favoritar."); 
-    }
-};
 
 // LÓGICA INTERATIVA
 window.chQty = (id, d) => { 
@@ -798,59 +700,46 @@ window.chQty = (id, d) => {
 window.addCart = (id, btn) => { 
     const qEl = document.getElementById('qty-'+id);
     const q = qEl ? parseInt(qEl.textContent) : 0; 
-    
     if (q > 0) {
         window.state.carrinho[id] = (window.state.carrinho[id] || 0) + q; 
         window.syncCarrinho(); 
         window.fly(btn.closest('.card-depth')?.querySelector('img') || btn); 
         window.showMsg("✅ Adicionado ao carrinho!"); 
-        if(qEl) qEl.textContent = 0;
-    } else {
-        window.showMsg("⚠️ Selecione a quantidade.");
-    }
+    } else window.showMsg("⚠️ Selecione a quantidade.");
 };
 
 window.addCartDet = (id, btn) => { 
     const qEl = document.getElementById('qty-det-'+id);
     const q = qEl ? parseInt(qEl.textContent) : 0; 
-    
     if (q > 0) {
         window.state.carrinho[id] = (window.state.carrinho[id] || 0) + q; 
         window.syncCarrinho(); 
         window.showMsg("✅ Adicionado ao carrinho!"); 
-    } else {
-        window.showMsg("⚠️ Selecione a quantidade.");
-    }
+    } else window.showMsg("⚠️ Selecione a quantidade.");
 };
 
 window.syncCarrinho = () => { 
     const tot = Object.values(window.state.carrinho).reduce((a,b)=>a+b, 0);
     const b = document.getElementById('cart-badge'); 
-    if(b) { 
-        if(tot > 0){ 
-            b.textContent = tot; 
-            b.classList.remove('hidden'); 
-        } else { 
-            b.classList.add('hidden'); 
-        } 
+    if(b) { if(tot > 0){ b.textContent = tot; b.classList.remove('hidden'); } else { b.classList.add('hidden'); } }
+    const island = document.getElementById('island'); const txt = document.getElementById('island-text');
+    if(island && txt) {
+        if(tot > 0) {
+            island.classList.remove('hidden');
+            island.classList.add('flex');
+            island.classList.add('expand');
+            txt.textContent = `${tot} Itens no Carrinho`;
+            setTimeout(()=>island.classList.remove('expand'), 800);
+        } else {
+            // ✅ REGRA: Retirar o "Carrinho Vazio" da visualização do celular
+            island.classList.add('max-md:hidden');
+            txt.textContent = 'Carrinho Vazio';
+        }
     }
-    
-    const island = document.getElementById('island'); 
-    const txt = document.getElementById('island-text');
-    if(island && txt) { 
-        island.classList.add('expand'); 
-        txt.textContent = tot > 0 ? `${tot} Itens no Carrinho` : 'Carrinho Vazio'; 
-        setTimeout(()=>island.classList.remove('expand'), 800); 
-    }
-    
     window.render();
 };
 
-window.remCart = id => { 
-    delete window.state.carrinho[id]; 
-    window.syncCarrinho(); 
-};
-
+window.remCart = id => { delete window.state.carrinho[id]; window.syncCarrinho(); };
 window.changeCartQty = (id, d) => { 
     window.state.carrinho[id] += d; 
     if(window.state.carrinho[id] <= 0) delete window.state.carrinho[id]; 
@@ -858,67 +747,36 @@ window.changeCartQty = (id, d) => {
 };
 
 window.fly = (el) => {
-    if(!el) return;
-    const r = el.getBoundingClientRect(); 
-    const island = document.getElementById('island');
-    if(!island) return;
-    const target = island.getBoundingClientRect();
-    
-    const clone = el.cloneNode(true); 
-    clone.className = 'fly-item';
-    clone.style.top = r.top+'px'; 
-    clone.style.left = r.left+'px'; 
-    clone.style.width = r.width+'px'; 
-    clone.style.height = r.height+'px';
+    const r = el.getBoundingClientRect(); const target = document.getElementById('island').getBoundingClientRect();
+    const clone = el.cloneNode(true); clone.className = 'fly-item';
+    clone.style.top = r.top+'px'; clone.style.left = r.left+'px'; clone.style.width = r.width+'px'; clone.style.height = r.height+'px';
     document.body.appendChild(clone);
-    
-    setTimeout(() => { 
-        clone.style.top = target.top+'px'; 
-        clone.style.left = target.left+'px'; 
-        clone.style.width = '20px'; 
-        clone.style.height = '20px'; 
-        clone.style.opacity = '0'; 
-    }, 50);
-    
+    setTimeout(() => { clone.style.top = target.top+'px'; clone.style.left = target.left+'px'; clone.style.width = '20px'; clone.style.height = '20px'; clone.style.opacity = '0'; }, 50);
     setTimeout(() => clone.remove(), 850);
 };
 
 window.closeAll = () => { 
-    document.querySelectorAll('.mbk').forEach(el => { 
-        el.classList.remove('open'); 
-        setTimeout(()=>el.style.display='none', 300); 
-    }); 
-    const succ = document.getElementById('success-screen'); 
-    if(succ) succ.classList.add('hidden');
+    document.querySelectorAll('.mbk').forEach(el => { el.classList.remove('open'); setTimeout(()=>el.style.display='none', 300); }); 
+    const succ = document.getElementById('success-screen'); if(succ) succ.classList.add('hidden');
 };
 
 // CHECKOUT
 window.setDelivery = t => {
     window.state.deliveryType = t;
-    const cR = document.getElementById('check-retirada'); 
-    const cE = document.getElementById('check-entrega');
-    if(cR) cR.className = `flex-1 py-4 rounded-[20px] font-black text-[11px] tracking-widest transition-all ${t==='retirada'?'bg-white text-rose-600 shadow-sm':'text-slate-400'} uppercase`;
-    if(cE) cE.className = `flex-1 py-4 rounded-[20px] font-black text-[11px] tracking-widest transition-all ${t==='entrega'?'bg-white text-rose-600 shadow-sm':'text-slate-400'} uppercase`;
-    
-    const iR = document.getElementById('info-retirada-box'); 
-    const iE = document.getElementById('info-entrega-box');
+    const cR = document.getElementById('check-retirada'); const cE = document.getElementById('check-entrega');
+    if(cR) cR.className = `flex-1 py-4 rounded-xl font-black text-[11px] tracking-widest transition-all ${t==='retirada'?'bg-white text-rose-600 shadow-sm':'text-slate-400'} uppercase`;
+    if(cE) cE.className = `flex-1 py-4 rounded-xl font-black text-[11px] tracking-widest transition-all ${t==='entrega'?'bg-white text-rose-600 shadow-sm':'text-slate-400'} uppercase`;
+    const iR = document.getElementById('info-retirada-box'); const iE = document.getElementById('info-entrega-box');
     if(iR) iR.style.display = t==='retirada' ? 'block' : 'none';
     if(iE) iE.style.display = t==='entrega' ? 'block' : 'none';
 };
 
 window.toggleNewAddress = () => {
     window.state.usingNewAddress = !window.state.usingNewAddress;
-    const form = document.getElementById('new-address-form'); 
-    const toggleText = document.getElementById('new-addr-toggle-text');
-    
+    const form = document.getElementById('new-address-form'); const toggleText = document.getElementById('new-addr-toggle-text');
     if(form && toggleText) { 
-        if(window.state.usingNewAddress){ 
-            form.classList.remove('hidden'); 
-            toggleText.textContent = "- Usar endereço do perfil"; 
-        } else { 
-            form.classList.add('hidden'); 
-            toggleText.textContent = "+ Usar endereço diferente para este pedido"; 
-        } 
+        if(window.state.usingNewAddress){ form.classList.remove('hidden'); toggleText.textContent = "- Usar endereço do perfil"; } 
+        else { form.classList.add('hidden'); toggleText.textContent = "+ Usar endereço diferente para este pedido"; } 
     }
 };
 
@@ -926,190 +784,95 @@ window.openCheckout = () => {
     const c = window.clienteLogado; 
     const addrDisplay = document.getElementById('checkout-addr-display');
     if(addrDisplay) addrDisplay.textContent = `${c.rua||''}, ${c.num||''} - ${c.bairro||''}`;
-    
-    const totalBtn = document.getElementById('checkout-total-btn');
-    if(totalBtn) totalBtn.textContent = 'R$ ' + window.fmt(window.totalCarrinho());
-    
+    document.getElementById('checkout-total-btn').textContent = 'R$ ' + window.fmt(window.totalCarrinho());
+    document.getElementById('checkout-total-val').textContent = 'R$ ' + window.fmt(window.totalCarrinho());
     window.setDelivery('retirada'); 
-    const modal = document.getElementById('checkout-modal'); 
-    modal.style.display='flex'; 
-    setTimeout(()=>modal.classList.add('open'), 10);
+    const modal = document.getElementById('checkout-modal'); modal.style.display='flex'; setTimeout(()=>modal.classList.add('open'), 10);
 };
 
 window.processCheckout = async () => {
     const pag = document.getElementById('pagamento-select').value;
-    
     if(pag === 'pix_online') {
         let cleanKey = (window.pix_config.rawKey || "").replace(/\D/g, '');
-        if (cleanKey.length === 11 && !window.pix_config.rawKey.startsWith('+')) {
-            cleanKey = '+55' + cleanKey;
-        } else {
-            cleanKey = window.pix_config.rawKey;
-        }
+        if (cleanKey.length === 11 && !window.pix_config.rawKey.startsWith('+')) cleanKey = '+55' + cleanKey;
+        else cleanKey = window.pix_config.rawKey;
 
-        const payload = window.pixPayload(
-            cleanKey, 
-            window.totalCarrinho(), 
-            window.pix_config.nomeRecebedor, 
-            window.pix_config.cidade, 
-            'APPEGG'
-        );
-        
+        const payload = window.pixPayload(cleanKey, window.totalCarrinho(), window.pix_config.nomeRecebedor, window.pix_config.cidade, 'APPEGG');
         document.getElementById('pix-code').textContent = payload;
         const qrEl = document.getElementById('qrcode');
-        if(qrEl) { 
-            qrEl.innerHTML = ''; 
-            new QRCode(qrEl, { text:payload, width:220, height:220 }); 
-        }
-        
-        const modalP = document.getElementById('pix-modal'); 
-        modalP.style.display='flex'; 
-        setTimeout(()=>modalP.classList.add('open'), 10);
-        
+        if(qrEl) { qrEl.innerHTML = ''; new QRCode(qrEl, { text:payload, width:220, height:220 }); }
+        const modalP = document.getElementById('pix-modal'); modalP.style.display='flex'; setTimeout(()=>modalP.classList.add('open'), 10);
         document.getElementById('checkout-modal').classList.remove('open');
-    } else {
-        await window.saveOrderToFirebase();
-    }
+    } else await window.saveOrderToFirebase();
 };
 
-// ✅ SALVAR PEDIDO - ESTRUTURA PADRONIZADA COM ADMIN (qtd)
 window.saveOrderToFirebase = async () => {
-    if (!auth.currentUser) {
-        window.showMsg("⚠️ Faça login para finalizar pedido");
-        return;
-    }
-    
+    if (!auth.currentUser) return;
     const hash = '#' + Math.floor(100000+Math.random()*900000);
     const cartKeys = Object.keys(window.state.carrinho);
-    
-    // ✅ ESTRUTURA PADRONIZADA: sempre usa 'qtd'
     const items = cartKeys.map(k => { 
         const p = window.state.produtos.find(x=>x.id===k); 
-        return p ? { 
-            id: p.id, 
-            nome: p.nome, 
-            qtd: window.state.carrinho[k],  // ✅ PADRONIZADO COMO 'qtd'
-            preco: p.preco 
-        } : null; 
+        return p ? { id:p.id, nome:p.nome, qty:window.state.carrinho[k], preco:p.preco } : null; 
     }).filter(it => it !== null);
     
     try {
         const perfil = window.clienteLogado;
         let moradaFinal = { ...perfil };
-        
         if(window.state.deliveryType === 'entrega' && window.state.usingNewAddress) {
             moradaFinal = { 
-                rua: document.getElementById('new-rua').value, 
-                num: document.getElementById('new-num').value, 
-                bairro: document.getElementById('new-bairro').value, 
-                cep: document.getElementById('new-cep').value, 
-                nome: perfil.nome, 
-                tel: perfil.tel 
+                rua: document.getElementById('new-rua').value, num: document.getElementById('new-num').value, 
+                bairro: document.getElementById('new-bairro').value, cep: document.getElementById('new-cep').value, 
+                nome: perfil.nome, tel: perfil.tel 
             };
         }
         
-        console.log("💾 Salvando pedido no Firebase...");
-        console.log("📦 Dados do pedido:", {
-            clienteId: auth.currentUser.uid,
-            pedidoID: hash,
-            valorTotal: window.totalCarrinho(),
-            itens: items,
-            tipoEntrega: window.state.deliveryType
-        });
-        
         await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'vendas_logs'), { 
-            clienteId: auth.currentUser.uid, 
-            pedidoID: hash, 
-            valorTotal: window.totalCarrinho(), 
-            itens: items, 
-            dadosCliente: moradaFinal, 
-            status: 'CRIADO', 
-            tipoEntrega: window.state.deliveryType, 
-            formaPagamento: document.getElementById('pagamento-select').value, 
-            criadoEm: serverTimestamp() 
+            clienteId: auth.currentUser.uid, pedidoID: hash, valorTotal: window.totalCarrinho(), itens: items, dadosCliente: moradaFinal, 
+            status: 'CRIADO', tipoEntrega: window.state.deliveryType, formaPagamento: document.getElementById('pagamento-select').value, criadoEm: serverTimestamp() 
         });
-        
-        console.log("✅ Pedido salvo com sucesso!");
         
         window.state.orderHash = hash; 
         document.getElementById('order-num-display').textContent = hash;
-        
         window.closeAll(); 
-        const sS = document.getElementById('success-screen'); 
-        sS.classList.remove('hidden'); 
-        sS.classList.add('flex');
-        
-        window.state.carrinho = {}; 
-        window.syncCarrinho();
-        
-    } catch(e) { 
-        console.error("❌ Erro ao processar pedido:", e);
-        window.showMsg("Erro ao processar pedido."); 
-    }
+        const sS = document.getElementById('success-screen'); sS.classList.remove('hidden'); sS.classList.add('flex');
+        window.state.carrinho = {}; window.syncCarrinho();
+    } catch(e) { window.showMsg("Erro ao processar pedido."); }
 };
 
 window.sendWhatsApp = () => {
-    const c = window.clienteLogado;
-    const text = `Olá! Acabei de fazer o pedido *${window.state.orderHash}* na AppEgg.\n*Cliente:* ${c.nome}\n*Total:* R$ ${window.fmt(window.totalCarrinho())}`;
+    const text = `Olá! Fiz o pedido *${window.state.orderHash}* na AppEgg.\n*Cliente:* ${window.clienteLogado.nome}\n*Total:* R$ ${window.fmt(window.totalCarrinho())}`;
     window.open(`https://wa.me/5511985706243?text=${encodeURIComponent(text)}`, '_blank');
 };
 
 window.saveProfile = async e => {
     e.preventDefault();
-    
     const d = { 
-        nome: document.getElementById('prof-nome').value.trim(), 
-        cpf: document.getElementById('prof-cpf').value, 
-        tel: document.getElementById('prof-tel').value, 
-        email: document.getElementById('prof-email').value.trim(), 
-        cep: document.getElementById('prof-cep').value, 
-        rua: document.getElementById('prof-rua').value.trim(), 
-        num: document.getElementById('prof-num').value.trim(), 
-        bairro: document.getElementById('prof-bairro').value.trim() 
+        nome: document.getElementById('prof-nome').value.trim(), cpf: document.getElementById('prof-cpf').value, tel: document.getElementById('prof-tel').value, 
+        email: document.getElementById('prof-email').value.trim(), cep: document.getElementById('prof-cep').value, rua: document.getElementById('prof-rua').value.trim(), 
+        num: document.getElementById('prof-num').value.trim(), bairro: document.getElementById('prof-bairro').value.trim() 
     };
-    
     try { 
         await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'clientes', auth.currentUser.uid), d, {merge:true}); 
-        window.clienteLogado = d; 
-        window.showMsg("✅ Perfil Atualizado!"); 
-        console.log("✅ Perfil salvo:", d);
-    } catch(err) { 
-        console.error("❌ Erro ao salvar perfil:", err);
-        window.showMsg("Erro ao salvar."); 
-    }
+        window.clienteLogado = d; window.showMsg("✅ Perfil Atualizado!"); 
+    } catch(err) { window.showMsg("Erro ao salvar."); }
 };
 
 window.doCopy = () => {
     const code = document.getElementById('pix-code').textContent;
-    const el = document.createElement('textarea'); 
-    el.value = code;
-    document.body.appendChild(el); 
-    el.select(); 
-    document.execCommand('copy'); 
-    document.body.removeChild(el);
+    const el = document.createElement('textarea'); el.value = code;
+    document.body.appendChild(el); el.select(); document.execCommand('copy'); document.body.removeChild(el);
     window.showMsg("📋 Código PIX Copiado!");
 };
 
-window.resetTudo = () => { 
-    window.state.carrinho = {}; 
-    window.setView('loja'); 
-    window.closeAll(); 
-    window.syncCarrinho(); 
-};
+window.resetTudo = () => { window.state.carrinho = {}; window.setView('loja'); window.closeAll(); window.syncCarrinho(); };
 
 window.removeAccents = (s) => (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^\x00-\x7F]/g,'').toUpperCase();
 
-// ✅ MOTOR PIX EMV
 window.pixPayload = (key, amount, name, city, txid) => {
     const tlv = (id, v) => id + String(v.length).padStart(2,'0') + v;
     const ma = tlv('00','BR.GOV.BCB.PIX') + tlv('01', key);
-    let p = tlv('00','01') + tlv('26', ma) + tlv('52','0000') + tlv('53','986') + 
-            tlv('54', Number(amount).toFixed(2)) + tlv('58','BR') + 
-            tlv('59', window.removeAccents(name).slice(0,25)) + 
-            tlv('60', window.removeAccents(city).slice(0,15)) + 
-            tlv('62', tlv('05', window.removeAccents(txid)));
+    let p = tlv('00','01') + tlv('26', ma) + tlv('52','0000') + tlv('53','986') + tlv('54', Number(amount).toFixed(2)) + tlv('58','BR') + tlv('59', window.removeAccents(name).slice(0,25)) + tlv('60', window.removeAccents(city).slice(0,15)) + tlv('62', tlv('05', window.removeAccents(txid)));
     p += '6304'; 
-    
     const crc16 = (data) => {
         let crc = 0xFFFF;
         for (let i = 0; i < data.length; i++) {
@@ -1121,70 +884,50 @@ window.pixPayload = (key, amount, name, city, txid) => {
         }
         return (crc & 0xFFFF).toString(16).toUpperCase().padStart(4, '0');
     };
-    
     return p + crc16(p);
 };
 
-// ✅ BOOT
+// BOOT
 onAuthStateChanged(auth, async u => {
     const loader = document.getElementById('loader');
-    
     if(u){
-        console.log("✅ Usuário autenticado:", u.email);
-        
         document.getElementById('auth-view').style.display='none';
         document.getElementById('app-view').style.display='block';
         window.setView('loja');
         
-        // ✅ LISTENER: ESTOQUE
         onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'estoque'), s => { 
-            console.log("📊 Estoque atualizado:", s.docs.length);
-            window.state.produtos = s.docs.map(d=>({id:d.id, ...d.data()})); 
-            window.render(); 
+            window.state.produtos = s.docs.map(d=>({id:d.id, ...d.data()})); window.render(); 
         });
         
-        // ✅ LISTENER: VENDAS_LOGS (apenas do usuário)
         onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'vendas_logs'), s => {
-            console.log("📦 Pedidos atualizados:", s.docs.length);
             window.state.pedidos = s.docs.map(d=>({id:d.id, ...d.data()}))
                 .filter(p => p.clienteId === u.uid)
                 .sort((a, b) => (b.criadoEm?.toMillis?.() || 0) - (a.criadoEm?.toMillis?.() || 0));
             window.render();
         });
 
-        // ✅ LISTENER: PIX CONFIG
         onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'pix_config'), s => {
-            console.log("💚 PIX config atualizado");
             if(s.exists()) window.pix_config = s.data();
         });
 
-        // ✅ LISTENER: FAVORITOS
-        onSnapshot(collection(db, 'artifacts', appId, 'users', u.uid, 'favoritos'), s => {
-            console.log("❤️ Favoritos atualizados:", s.docs.length);
-            window.state.favoritos = s.docs.map(d => d.id);
-            window.render();
+        window.state.favoritos = window.loadFavoritosFromLocal();
+        onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'clientes', u.uid), s => {
+            if(s.exists()){
+                const d = s.data();
+                window.clienteLogado = d;
+                if(d.favoritos){
+                    window.state.favoritos = d.favoritos;
+                    window.saveFavoritosToLocal(d.favoritos);
+                }
+                window.render();
+            } else window.setView('conta');
         });
-        
-        // ✅ CARREGAR DADOS DO CLIENTE
-        const d = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'clientes', u.uid));
-        if(d.exists()) {
-            window.clienteLogado = d.data();
-            console.log("✅ Dados do cliente carregados:", window.clienteLogado);
-        }
-        
     } else { 
-        console.log("🚫 Usuário não autenticado");
         document.getElementById('auth-view').style.display='flex';
         document.getElementById('app-view').style.display='none';
         window.setAuthMode('login'); 
     }
-    
-    if(loader) {
-        setTimeout(() => { 
-            loader.style.opacity = '0'; 
-            setTimeout(()=>loader.style.display='none', 700); 
-        }, 1500);
-    }
+    if(loader) setTimeout(() => { loader.style.opacity = '0'; setTimeout(()=>loader.style.display='none', 700); }, 1500);
 });
 </script>
 </body>
