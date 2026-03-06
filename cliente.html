@@ -11,18 +11,19 @@
   <meta name="theme-color" content="#e11d48" />
   <meta name="description" content="Distribuidora de Ovos Aline - Qualidade direta da granja" />
   
-  <!-- PWA MANIFEST (Encodado em Base64 para manter o ficheiro único) -->
+  <!-- PWA MANIFEST -->
   <link rel="manifest" href="data:application/manifest+json;base64,ewogICJuYW1lIjogIkRpc3RyaWJ1aWRvcmEgZGUgT3ZvcyBBbGluZSIsCiAgInNob3J0X25hbWUiOiAiQXBwRWdnIiwKICAic3RhcnRfdXJsIjogIi4iLAogICJkaXNwbGF5IjogInN0YW5kYWxvbmUiLAogICJiYWNrZ3JvdW5kX2NvbG9yIjogIiNGNUY1RjciLAogICJ0aGVtZV9jb2xvciI6ICIjZTExZDQ4IiwKICAiaWNvbnMiOiBbCiAgICB7CiAgICAgICJzcmMiOiAiaHR0cHM6Ly9lbW9qaWNkbi5kZXYvbm90by1lbW9qaS91bmljb2RlLzFlNTAwLnBuZyIsCiAgICAgICJzaXplcyI6ICI1MTJ4NTEyIiwKICAgICAgInR5cGUiOiAiaW1hZ2UvcG5nIiwKICAgICAgInB1cnBvc2UiOiAiYW55IG1hc2thYmxlIgogICAgfQogIF0KfQ==" />
 
-  <!-- ICONES DE DISPOSITIVO -->
+  <!-- ICONES -->
   <link rel="apple-touch-icon" href="https://emojicdn.dev/noto-emoji/unicode/1e500.png" />
 
   <title id="page-title">Distribuidora de Ovos Aline</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
   
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
     
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     
@@ -45,7 +46,6 @@
       -webkit-font-smoothing: antialiased;
       padding-bottom: 120px; 
       overflow-x: hidden;
-      /* Prevenção de seleção para simular comportamento nativo */
       user-select: none;
       -webkit-tap-highlight-color: transparent;
     }
@@ -65,7 +65,6 @@
       display: none; 
     }
     #island.expand { padding: 22px 60px; transform: translateX(-50%) scale(1.05); }
-    .island-hidden-mobile { @apply max-md:hidden; }
 
     /* BARRA INFERIOR IOS STYLE */
     .nav-bottom {
@@ -84,6 +83,22 @@
       height: 18px; display: flex; align-items: center; justify-content: center; 
       border-radius: 10px; font-weight: 900; border: 2px solid white; pointer-events: none;
     }
+
+    /* WHATSAPP FLOAT */
+    .wpp-float {
+        position: fixed; bottom: 110px; right: 20px;
+        width: 60px; height: 60px; background: #25D366;
+        border-radius: 50%; display: flex; align-items: center; justify-content: center;
+        color: white; box-shadow: 0 10px 30px rgba(37, 211, 102, 0.4);
+        z-index: 3500; transition: var(--transition-premium);
+        animation: pulseWpp 2s infinite;
+    }
+    @keyframes pulseWpp {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.1); }
+        100% { transform: scale(1); }
+    }
+    .wpp-float:active { transform: scale(0.9); }
 
     /* INPUTS E COMPONENTES */
     .premium-input {
@@ -118,17 +133,34 @@
     .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
 
     header { padding-top: max(1.5rem, env(safe-area-inset-top)); }
+
+    /* MENU RÁPIDO */
+    .quick-menu-item {
+        display: flex; flex-direction: column; align-items: center; gap: 8px;
+        min-width: 80px; transition: var(--transition-premium);
+    }
+    .quick-menu-icon {
+        width: 54px; height: 54px; border-radius: 18px; 
+        display: flex; align-items: center; justify-content: center;
+        background: white; border: 1.5px solid var(--border);
+        color: var(--primary); shadow: 0 4px 10px rgba(0,0,0,0.02);
+    }
+    .quick-menu-item:active { transform: scale(0.9); }
   </style>
 </head>
 <body class="no-scrollbar">
 
-<!-- ILHA DINÂMICA (Geralmente oculta) -->
 <div id="island">
     <span id="island-icon">🛒</span>
     <span id="island-text"></span>
 </div>
 
-<!-- LOADER INICIAL -->
+<!-- BOTÃO WHATSAPP (Dinamizado por JS) -->
+<a href="#" target="_blank" class="wpp-float hidden" id="whatsapp-btn">
+    <i data-lucide="message-circle" class="w-8 h-8"></i>
+</a>
+
+<!-- CARREGAMENTO (LOADER) -->
 <div id="loader" class="fixed inset-0 bg-[#0F0F0F] z-[9999] flex items-center justify-center transition-opacity duration-700">
     <div class="text-center">
         <div class="text-9xl animate-pulse mb-6">🥚</div>
@@ -137,15 +169,14 @@
     </div>
 </div>
 
-<!-- SISTEMA DE NOTIFICAÇÕES (TOAST) -->
 <div id="toast-el" class="fixed top-10 left-1/2 -translate-x-1/2 bg-black text-white px-6 py-3 rounded-2xl font-bold text-sm z-[6000] opacity-0 translate-y-[-100px] transition-all duration-500"></div>
 
 <!-- TELA DE AUTENTICAÇÃO -->
-<div id="auth-view" class="hidden min-h-screen flex flex-col items-center justify-center p-6 bg-white">
+<div id="auth-view" class="hidden min-h-screen flex flex-col items-center justify-center p-6 bg-white text-balance text-center">
     <div class="text-center mb-10 animate-[fadeIn_0.8s_ease-out]">
         <div class="text-8xl mb-4 drop-shadow-xl">🥚</div>
-        <h1 class="text-4xl font-[950] tracking-tighter text-rose-600 uppercase italic leading-none text-balance">Distribuidora de Ovos Aline</h1>
-        <p class="text-slate-400 font-extrabold uppercase tracking-tight text-[11px] mt-4 max-w-[280px] mx-auto leading-tight text-center text-balance">
+        <h1 class="text-4xl font-[950] tracking-tighter text-rose-600 uppercase italic leading-none">Distribuidora de Ovos Aline</h1>
+        <p class="text-slate-400 font-extrabold uppercase tracking-tight text-[11px] mt-4 max-w-[280px] mx-auto leading-tight">
           Qualidade direta da granja para a sua mesa
         </p>
     </div>
@@ -167,13 +198,13 @@
             <center><button type="button" onclick="window.setAuthMode('forgot')" class="text-rose-600 font-black text-xs mt-6 uppercase hover:underline">Esqueci a senha</button></center>
         </form>
 
-        <form id="form-register" onsubmit="window.fazerCadastro(event)" class="hidden space-y-4">
+        <form id="form-register" onsubmit="window.fazerCadastro(event)" class="hidden space-y-4 text-left">
             <input type="text" id="reg-nome" class="premium-input" placeholder="Nome Completo" required>
             <div class="flex gap-3">
                 <input type="text" id="reg-cpf" class="w-1/2 premium-input !px-4" placeholder="CPF" oninput="window.maskCPF(event)" maxlength="14" required>
                 <input type="tel" id="reg-tel" class="w-1/2 premium-input !px-4" placeholder="WhatsApp" oninput="window.maskPhone(event)" maxlength="15" required>
             </div>
-            <div class="p-6 bg-slate-50 rounded-[32px] space-y-3 border border-slate-100 text-left text-balance">
+            <div class="p-6 bg-slate-50 rounded-[32px] space-y-3 border border-slate-100">
                 <p class="text-[10px] font-black text-rose-600 uppercase tracking-widest ml-1">Endereço Principal</p>
                 <div class="flex gap-2">
                     <input type="text" id="reg-cep" class="w-1/3 premium-input !p-4 !text-sm" placeholder="CEP" oninput="window.maskCEP(event, 'reg')" maxlength="9" required>
@@ -198,7 +229,7 @@
     </div>
 </div>
 
-<!-- TELA PRINCIPAL DA APLICAÇÃO -->
+<!-- TELA PRINCIPAL APP -->
 <div id="app-view" class="hidden animate-[fadeIn_0.5s_ease-out]">
     <header class="p-6 md:px-12 flex flex-col gap-5 bg-white border-b border-slate-50 sticky top-0 z-[1000] glass">
         <div class="flex items-center justify-between">
@@ -209,7 +240,6 @@
                   <span class="text-[10px] font-bold text-slate-400 uppercase tracking-tight mt-1 italic">Direto da Granja</span>
                 </div>
             </div>
-            <button onclick="window.setView('conta')" class="w-11 h-11 bg-slate-50 rounded-2xl flex items-center justify-center text-xl shadow-sm border border-slate-100 hover:bg-rose-50 transition-all">👤</button>
         </div>
         
         <div class="relative group">
@@ -225,24 +255,24 @@
     <!-- NAVEGAÇÃO INFERIOR -->
     <nav class="nav-bottom">
         <button onclick="window.setView('loja')" id="nav-loja" class="nav-item active">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+            <i data-lucide="home" class="w-6 h-6"></i>
             Loja
         </button>
         <button onclick="window.setView('favoritos')" id="nav-favoritos" class="nav-item">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+            <i data-lucide="heart" class="w-6 h-6"></i>
             Favoritos
         </button>
         <button onclick="window.setView('carrinho')" id="nav-carrinho" class="nav-item">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
+            <i data-lucide="shopping-bag" class="w-6 h-6"></i>
             Carrinho
             <span id="cart-badge" class="nav-badge hidden">0</span>
         </button>
         <button onclick="window.setView('pedidos')" id="nav-pedidos" class="nav-item">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+            <i data-lucide="list" class="w-6 h-6"></i>
             Pedidos
         </button>
         <button onclick="window.setView('conta')" id="nav-conta" class="nav-item">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <i data-lucide="user" class="w-6 h-6"></i>
             Conta
         </button>
     </nav>
@@ -275,7 +305,7 @@
                 <p class="text-sm font-bold text-slate-700 leading-tight">Rua Antônio Freire da Silva, 87<br>Jardim das Camélias, São Paulo - SP</p>
             </div>
 
-            <div id="info-entrega-box" class="hidden space-y-4">
+            <div id="info-entrega-box" class="hidden space-y-4 text-balance">
                 <div class="bg-rose-50/50 p-6 rounded-[32px] border border-rose-100">
                     <p class="font-black text-[10px] uppercase text-rose-600 mb-1 tracking-widest">📍 Endereço de Envio</p>
                     <p id="checkout-addr-display" class="text-base font-extrabold text-slate-800 leading-tight"></p>
@@ -284,11 +314,11 @@
                     <span id="new-addr-toggle-text">+ Usar endereço diferente</span>
                 </button>
                 <div id="new-address-form" class="hidden bg-slate-50 p-6 rounded-[32px] border border-slate-100 space-y-3">
-                    <div class="flex gap-2">
+                    <div class="flex gap-2 text-left">
                         <input type="text" id="new-cep" class="w-1/3 premium-input !p-4 !text-sm" placeholder="CEP" oninput="window.maskCEP(event, 'new')" maxlength="9">
                         <input type="text" id="new-rua" class="flex-1 premium-input !p-4 !text-sm" placeholder="Rua">
                     </div>
-                    <div class="flex gap-2">
+                    <div class="flex gap-2 text-left">
                         <input type="text" id="new-num" class="w-1/4 premium-input !p-4 !text-sm" placeholder="Nº">
                         <input type="text" id="new-bairro" class="flex-1 premium-input !p-4 !text-sm" placeholder="Bairro">
                     </div>
@@ -333,7 +363,7 @@
 
 <div id="success-screen" class="hidden fixed inset-0 bg-white z-[5000] flex-col items-center justify-center p-10 text-center animate-[fadeIn_0.5s_ease-out]">
     <div class="text-[10rem] animate-bounce">🎊</div>
-    <h2 class="text-5xl font-[950] tracking-tighter text-black uppercase italic leading-none text-balance">Pedido Confirmado!</h2>
+    <h2 class="text-5xl font-[950] tracking-tighter text-black uppercase italic leading-none text-balance">Distribuidora Aline: Pedido Confirmado!</h2>
     <p class="text-slate-400 font-bold text-lg mt-6 uppercase tracking-tight text-balance">Recebemos sua encomenda fresquinha.</p>
     <div class="bg-green-50 text-[#00C853] px-10 py-6 rounded-[40px] text-4xl font-black my-10 tracking-widest shadow-inner" id="order-num-display">#000000</div>
     <div class="w-full max-w-md space-y-5">
@@ -366,11 +396,30 @@ setPersistence(auth, browserLocalPersistence).catch(e => console.warn(e));
 window.state = {
     user: null, view: 'loja', produtos: [], pedidos: [], carrinho: {}, favoritos: [],
     deliveryType: 'retirada', orderHash: '', usingNewAddress: false,
-    searchTerm: '', category: 'Todos'
+    searchTerm: '', category: 'Todos', whatsappNumber: ''
 };
 
 window.clienteLogado = {};
 window.pix_config = { rawKey:'', nomeRecebedor:'AppEgg', cidade:'SAO PAULO' };
+window.deferredPrompt = null;
+
+// ✅ SISTEMA DE INSTALAÇÃO PWA
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  window.deferredPrompt = e;
+  window.render(); // Re-renderiza para mostrar o botão se disponível
+});
+
+window.instalarApp = async () => {
+    if (window.deferredPrompt) {
+        window.deferredPrompt.prompt();
+        const { outcome } = await window.deferredPrompt.userChoice;
+        if (outcome === 'accepted') window.deferredPrompt = null;
+        window.render();
+    } else {
+        window.showMsg("Abra o menu do navegador e selecione 'Instalar' ou 'Adicionar ao ecrã inicial'.");
+    }
+};
 
 // ✅ SISTEMA DE FAVORITOS HÍBRIDO
 window.loadFavoritosFromLocal = () => {
@@ -504,6 +553,10 @@ window.render = () => {
     if(window.state.view === 'carrinho') cont.innerHTML = renderCarrinho();
     if(window.state.view === 'pedidos') cont.innerHTML = renderPedidos();
     if(window.state.view === 'conta') cont.innerHTML = renderConta();
+    if(window.state.view === 'promocoes') cont.innerHTML = renderPromocoes();
+    if(window.state.view === 'fidelidade') cont.innerHTML = renderFidelidade();
+    if(window.state.view === 'cupons') cont.innerHTML = renderCupons();
+    lucide.createIcons();
 };
 
 window.handleSearch = val => { window.state.searchTerm = val.toLowerCase(); window.render(); };
@@ -546,8 +599,85 @@ function renderLoja() {
     const filtered = window.state.produtos.filter(p => (p.nome || "").toLowerCase().includes(window.state.searchTerm) && p.ativo !== false);
     return `
       <div class="animate-[fadeIn_0.5s_ease-out] text-left">
+        <!-- MENU RÁPIDO -->
+        <div class="flex gap-4 overflow-x-auto pb-8 hide-scrollbar">
+            <div onclick="window.setView('promocoes')" class="quick-menu-item">
+                <div class="quick-menu-icon"><i data-lucide="tag"></i></div>
+                <span class="text-[10px] font-black uppercase text-slate-500">Promoções</span>
+            </div>
+            <div onclick="window.setView('fidelidade')" class="quick-menu-item">
+                <div class="quick-menu-icon"><i data-lucide="award"></i></div>
+                <span class="text-[10px] font-black uppercase text-slate-500">Fidelidade</span>
+            </div>
+            <div onclick="window.setView('cupons')" class="quick-menu-item">
+                <div class="quick-menu-icon"><i data-lucide="ticket"></i></div>
+                <span class="text-[10px] font-black uppercase text-slate-500">Cupons</span>
+            </div>
+            <div onclick="window.instalarApp()" class="quick-menu-item">
+                <div class="quick-menu-icon"><i data-lucide="download"></i></div>
+                <span class="text-[10px] font-black uppercase text-slate-500">Baixar App</span>
+            </div>
+        </div>
+
         <h2 class="text-3xl font-[950] tracking-tighter uppercase italic text-rose-600 mb-8 text-balance leading-tight">Distribuidora Aline</h2>
         <div class="grid grid-cols-1 gap-6">${filtered.map(p => renderProductCard(p)).join('') || '<div class="py-20 text-center font-black text-slate-200 uppercase">Sem produtos...</div>'}</div>
+      </div>
+    `;
+}
+
+function renderPromocoes() {
+    return `
+      <div class="animate-[fadeIn_0.5s_ease-out] text-left">
+        <button onclick="window.setView('loja')" class="mb-6 flex items-center gap-2 text-rose-600 font-black uppercase text-[10px] tracking-widest"><i data-lucide="arrow-left" class="w-4 h-4"></i> Voltar</button>
+        <h2 class="text-3xl font-[950] tracking-tighter uppercase italic text-rose-600 mb-8">Promoções 🏷️</h2>
+        <div class="bg-rose-600 p-8 rounded-[40px] text-white mb-8 premium-shadow">
+            <h3 class="text-2xl font-black uppercase italic leading-none">Preço de Custo</h3>
+            <p class="text-sm font-bold opacity-80 mt-2">Aproveite as ofertas do dia direto do produtor.</p>
+        </div>
+        <div class="grid grid-cols-1 gap-6">
+            ${window.state.produtos.slice(0, 3).map(p => renderProductCard(p)).join('')}
+        </div>
+      </div>
+    `;
+}
+
+function renderFidelidade() {
+    return `
+      <div class="animate-[fadeIn_0.5s_ease-out] text-left">
+        <button onclick="window.setView('loja')" class="mb-6 flex items-center gap-2 text-rose-600 font-black uppercase text-[10px] tracking-widest"><i data-lucide="arrow-left" class="w-4 h-4"></i> Voltar</button>
+        <h2 class="text-3xl font-[950] tracking-tighter uppercase italic text-rose-600 mb-8">Fidelidade 💎</h2>
+        <div class="bg-slate-900 p-10 rounded-[48px] text-white premium-shadow relative overflow-hidden text-balance">
+            <div class="relative z-10">
+                <span class="text-[10px] font-black uppercase tracking-[0.3em] opacity-40">Saldo de Pontos</span>
+                <div class="text-6xl font-[950] italic tracking-tighter mt-2">1.250</div>
+                <p class="text-sm font-bold text-slate-400 mt-4 text-balance">Faltam apenas 250 pontos para resgatar uma dúzia de ovos vermelhos!</p>
+            </div>
+            <i data-lucide="award" class="absolute -right-10 -bottom-10 w-48 h-48 opacity-10 text-rose-600"></i>
+        </div>
+      </div>
+    `;
+}
+
+function renderCupons() {
+    return `
+      <div class="animate-[fadeIn_0.5s_ease-out] text-left">
+        <button onclick="window.setView('loja')" class="mb-6 flex items-center gap-2 text-rose-600 font-black uppercase text-[10px] tracking-widest"><i data-lucide="arrow-left" class="w-4 h-4"></i> Voltar</button>
+        <h2 class="text-3xl font-[950] tracking-tighter uppercase italic text-rose-600 mb-8">Meus Cupons 🎟️</h2>
+        <div class="space-y-4">
+            <div class="bg-white p-6 rounded-[32px] border-2 border-dashed border-rose-200 flex justify-between items-center">
+                <div>
+                    <h4 class="font-black text-rose-600 text-lg leading-none">PRIMEIRA</h4>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase mt-1">R$ 5,00 de desconto</p>
+                </div>
+                <button onclick="navigator.clipboard.writeText('PRIMEIRA'); window.showMsg('Copiado!')" class="bg-rose-50 text-rose-600 px-4 py-2 rounded-xl font-black text-[10px] uppercase">Copiar</button>
+            </div>
+            <div class="bg-white p-6 rounded-[32px] border-2 border-dashed border-slate-200 flex justify-between items-center opacity-60">
+                <div>
+                    <h4 class="font-black text-slate-900 text-lg leading-none">OVOS10</h4>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase mt-1">10% de desconto (Esgotado)</p>
+                </div>
+            </div>
+        </div>
       </div>
     `;
 }
@@ -574,17 +704,17 @@ function renderConta() {
             </div>
         </div>
         
-        <form id="form-profile-view" onsubmit="window.saveProfile(event)" class="space-y-4">
+        <form onsubmit="window.saveProfile(event)" class="space-y-4">
             <div class="space-y-1">
                 <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Nome Completo</label>
                 <input type="text" id="prof-nome" class="premium-input" value="${c.nome || ''}" required>
             </div>
             <div class="flex gap-3">
-                <div class="w-1/2 space-y-1">
+                <div class="w-1/2 space-y-1 text-left">
                     <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">CPF</label>
                     <input type="text" id="prof-cpf" class="premium-input" value="${c.cpf || ''}" oninput="window.maskCPF(event)" maxlength="14" required>
                 </div>
-                <div class="w-1/2 space-y-1">
+                <div class="w-1/2 space-y-1 text-left">
                     <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">WhatsApp</label>
                     <input type="tel" id="prof-tel" class="premium-input" value="${c.tel || ''}" oninput="window.maskPhone(event)" maxlength="15" required>
                 </div>
@@ -605,6 +735,7 @@ function renderConta() {
                 </div>
             </div>
             <button type="submit" class="btn-premium w-full py-7 rounded-[32px] shadow-2xl">Salvar Alterações</button>
+            <button type="button" onclick="window.instalarApp()" class="w-full mt-4 flex items-center justify-center gap-2 text-rose-600 font-black uppercase text-[10px] tracking-widest"><i data-lucide="download" class="w-4 h-4"></i> Instalar Aplicação</button>
             <button type="button" onclick="window.fazerLogout()" class="btn-premium w-full py-5 !bg-black !text-white rounded-[32px] font-black uppercase text-[10px] tracking-[0.3em] mt-4 shadow-xl leading-none">Sair da Conta</button>
         </form>
       </div>
@@ -651,7 +782,7 @@ function renderCarrinho() {
         const sub = p.preco * qty; t += sub;
         return `
         <div class="bg-white p-8 rounded-[40px] premium-shadow border border-slate-50 flex items-center gap-6 animate-[fadeIn_0.4s_ease-out]">
-            <div class="flex-1 text-left">
+            <div class="flex-1 text-left text-balance">
                 <h4 class="font-black text-slate-900 uppercase text-xs mb-4 tracking-widest leading-none">${p.nome}</h4>
                 <div class="flex items-center gap-6">
                     <button onclick="window.changeCartQty('${k}', -1)" class="w-12 h-12 rounded-[20px] bg-slate-50 font-bold text-rose-500">-</button>
@@ -669,7 +800,7 @@ function renderCarrinho() {
     return `
         <div class="space-y-8 text-left animate-[fadeIn_0.5s_ease-out]">
             <h2 class="text-4xl font-[950] italic uppercase tracking-tighter text-rose-600">Meu Carrinho</h2>
-            <div class="space-y-4 text-balance leading-relaxed">${items || '<div class="text-center py-24 text-slate-200 font-black uppercase italic tracking-[0.2em]">Seu carrinho está vazio</div>'}</div>
+            <div class="space-y-4 text-balance leading-relaxed text-center">${items || '<div class="text-center py-24 text-slate-200 font-black uppercase italic tracking-[0.2em]">Seu carrinho está vazio</div>'}</div>
             ${keys.length > 0 ? `
                 <div class="bg-black p-8 rounded-[40px] text-white space-y-8 shadow-2xl">
                     <div class="flex justify-between items-end">
@@ -711,34 +842,6 @@ function renderPedidos() {
 }
 
 // LÓGICA INTERATIVA
-window.chQty = (id, d) => { 
-    const elLoja = document.getElementById('qty-'+id); 
-    const elDet = document.getElementById('qty-det-'+id);
-    if(elLoja) elLoja.textContent = Math.max(0, parseInt(elLoja.textContent) + d); 
-    if(elDet) elDet.textContent = Math.max(0, parseInt(elDet.textContent) + d); 
-};
-
-window.addCart = (id, btn) => { 
-    const qEl = document.getElementById('qty-'+id);
-    const q = qEl ? parseInt(qEl.textContent) : 0; 
-    if (q > 0) {
-        window.state.carrinho[id] = (window.state.carrinho[id] || 0) + q; 
-        window.syncCarrinho(); 
-        window.fly(btn.closest('.card-depth')?.querySelector('img') || btn); 
-        window.showMsg("✅ Adicionado ao carrinho!"); 
-    } else window.showMsg("⚠️ Selecione a quantidade.");
-};
-
-window.addCartDet = (id, btn) => { 
-    const qEl = document.getElementById('qty-det-'+id);
-    const q = qEl ? parseInt(qEl.textContent) : 0; 
-    if (q > 0) {
-        window.state.carrinho[id] = (window.state.carrinho[id] || 0) + q; 
-        window.syncCarrinho(); 
-        window.showMsg("✅ Adicionado ao carrinho!"); 
-    } else window.showMsg("⚠️ Adicione a quantidade.");
-};
-
 window.syncCarrinho = () => { 
     const tot = Object.values(window.state.carrinho).reduce((a,b)=>a+b, 0);
     const b = document.getElementById('cart-badge'); 
@@ -747,8 +850,7 @@ window.syncCarrinho = () => {
     if(island && txt) {
         if(tot > 0) {
             island.style.display = 'flex';
-            island.classList.remove('hidden');
-            island.classList.remove('max-md:hidden');
+            island.classList.remove('hidden', 'max-md:hidden');
             island.classList.add('expand');
             txt.textContent = `${tot} Itens no Carrinho`;
             setTimeout(()=>island.classList.remove('expand'), 800);
@@ -776,36 +878,21 @@ window.fly = (el) => {
     setTimeout(() => clone.remove(), 850);
 };
 
-window.closeAll = () => { 
-    document.querySelectorAll('.mbk').forEach(el => { el.classList.remove('open'); setTimeout(()=>el.style.display='none', 300); }); 
-    const succ = document.getElementById('success-screen'); if(succ) succ.classList.add('hidden');
-};
+window.closeAll = () => { document.querySelectorAll('.mbk').forEach(el => { el.classList.remove('open'); setTimeout(()=>el.style.display='none', 300); }); };
 
-// CHECKOUT
 window.setDelivery = t => {
     window.state.deliveryType = t;
     const cR = document.getElementById('check-retirada'); const cE = document.getElementById('check-entrega');
-    if(cR) cR.className = `flex-1 py-4 rounded-xl font-black text-[11px] tracking-widest transition-all ${t==='retirada'?'bg-white text-rose-600 shadow-sm':'text-slate-400'} uppercase`;
-    if(cE) cE.className = `flex-1 py-4 rounded-xl font-black text-[11px] tracking-widest transition-all ${t==='entrega'?'bg-white text-rose-600 shadow-sm':'text-slate-400'} uppercase`;
+    if(cR) cR.className = `flex-1 py-4 rounded-xl font-black text-[11px] uppercase ${t==='retirada'?'bg-white text-rose-600 shadow-sm':'text-slate-400'}`;
+    if(cE) cE.className = `flex-1 py-4 rounded-xl font-black text-[11px] uppercase ${t==='entrega'?'bg-white text-rose-600 shadow-sm':'text-slate-400'}`;
     const label = document.getElementById('checkout-addr-display');
     if(t==='retirada') label.innerHTML = "Rua Antônio Freire da Silva, 87<br>Jardim das Camélias, São Paulo - SP"; 
     else label.innerHTML = `${window.clienteLogado.rua||''}, ${window.clienteLogado.num||''} - ${window.clienteLogado.bairro||''}`;
 };
 
-window.toggleNewAddress = () => {
-    window.state.usingNewAddress = !window.state.usingNewAddress;
-    const form = document.getElementById('new-address-form'); const toggleText = document.getElementById('new-addr-toggle-text');
-    if(form && toggleText) { 
-        if(window.state.usingNewAddress){ form.classList.remove('hidden'); toggleText.textContent = "- Usar endereço do perfil"; } 
-        else { form.classList.add('hidden'); toggleText.textContent = "+ Usar endereço diferente"; } 
-    }
-};
-
 window.openCheckout = () => {
-    const c = window.clienteLogado; 
-    const subtotal = window.totalCarrinho();
-    document.getElementById('checkout-total-btn').textContent = 'R$ ' + window.fmt(subtotal);
-    document.getElementById('checkout-total-val').textContent = 'R$ ' + window.fmt(subtotal);
+    document.getElementById('checkout-total-btn').textContent = 'R$ ' + window.fmt(window.totalCarrinho());
+    document.getElementById('checkout-total-val').textContent = 'R$ ' + window.fmt(window.totalCarrinho());
     window.setDelivery('retirada'); 
     const modal = document.getElementById('checkout-modal'); modal.style.display='flex'; setTimeout(()=>modal.classList.add('open'), 10);
 };
@@ -814,7 +901,7 @@ window.processCheckout = async () => {
     const pag = document.getElementById('pagamento-select').value;
     if(pag === 'pix_online') {
         let cleanKey = (window.pix_config.rawKey || "").replace(/\D/g, '');
-        if (ck.length === 11 && !window.pix_config.rawKey.startsWith('+')) ck = '+55' + ck;
+        if (cleanKey.length === 11 && !window.pix_config.rawKey.startsWith('+')) cleanKey = '+55' + cleanKey;
         const payload = window.pixPayload(cleanKey, window.totalCarrinho(), window.pix_config.nomeRecebedor, window.pix_config.cidade, 'APPEGG');
         document.getElementById('pix-code').textContent = payload;
         const qrEl = document.getElementById('qrcode');
@@ -826,21 +913,20 @@ window.processCheckout = async () => {
 
 window.saveOrderToFirebase = async () => {
     if (!auth.currentUser) return;
-    const hash = '#' + Math.floor(100000+Math.random()*900000);
+    const h = '#' + Math.floor(100000+Math.random()*900000);
     const cartKeys = Object.keys(window.state.carrinho);
     const items = cartKeys.map(k => { 
         const p = window.state.produtos.find(x=>x.id===k); 
         return p ? { id:p.id, nome:p.nome, qty:window.state.carrinho[k], preco:p.preco } : null; 
     }).filter(it => it !== null);
-    
     try {
         const pf = window.clienteLogado;
         let finalAddr = { ...pf };
         if(window.state.deliveryType === 'entrega' && window.state.usingNewAddress) {
             finalAddr = { rua: document.getElementById('new-rua').value, num: document.getElementById('new-num').value, bairro: document.getElementById('new-bairro').value, cep: document.getElementById('new-cep').value, nome: pf.nome, tel: pf.tel };
         }
-        await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'vendas_logs'), { clienteId: auth.currentUser.uid, pedidoID: hash, valorTotal: window.totalCarrinho(), itens: items, dadosCliente: finalAddr, status: 'CRIADO', tipoEntrega: window.state.deliveryType, formaPagamento: document.getElementById('pagamento-select').value, criadoEm: serverTimestamp() });
-        window.state.orderHash = hash; document.getElementById('order-num-display').textContent = hash; window.closeAll(); 
+        await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'vendas_logs'), { clienteId: auth.currentUser.uid, pedidoID: h, valorTotal: window.totalCarrinho(), itens: items, dadosCliente: finalAddr, status: 'CRIADO', tipoEntrega: window.state.deliveryType, formaPagamento: document.getElementById('pagamento-select').value, criadoEm: serverTimestamp() });
+        window.state.orderHash = h; document.getElementById('order-num-display').textContent = h; window.closeAll(); 
         const sS = document.getElementById('success-screen'); sS.classList.remove('hidden'); sS.classList.add('flex');
         window.state.carrinho = {}; window.syncCarrinho();
     } catch(e) { window.showMsg("Erro no pedido."); }
@@ -848,7 +934,7 @@ window.saveOrderToFirebase = async () => {
 
 window.sendWhatsApp = () => {
     const text = `Olá! Fiz o pedido *${window.state.orderHash}* na Distribuidora Aline.\n*Cliente:* ${window.clienteLogado.nome}\n*Total:* R$ ${window.fmt(window.totalCarrinho())}`;
-    window.open(`https://wa.me/5511985706243?text=${encodeURIComponent(text)}`, '_blank');
+    window.open(`https://wa.me/${window.state.whatsappNumber.replace(/\D/g, '') || '5511985706243'}?text=${encodeURIComponent(text)}`, '_blank');
 };
 
 window.saveProfile = async e => {
@@ -861,12 +947,11 @@ window.saveProfile = async e => {
 window.doCopy = () => { const el = document.createElement('textarea'); el.value = document.getElementById('pix-code').textContent; document.body.appendChild(el); el.select(); document.execCommand('copy'); document.body.removeChild(el); window.showMsg("📋 Código PIX Copiado!"); };
 window.resetTudo = () => { window.state.carrinho = {}; window.setView('loja'); window.closeAll(); window.syncCarrinho(); };
 window.removeAccents = (s) => (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^\x00-\x7F]/g,'').toUpperCase();
-
 window.pixPayload = (key, amount, name, city, txid) => {
     const tlv = (id, v) => id + String(v.length).padStart(2,'0') + v;
     const ma = tlv('00','BR.GOV.BCB.PIX') + tlv('01', key);
     let p = tlv('00','01') + tlv('26', ma) + tlv('52','0000') + tlv('53','986') + tlv('54', Number(amount).toFixed(2)) + tlv('58','BR') + tlv('59', window.removeAccents(name).slice(0,25)) + tlv('60', window.removeAccents(city).slice(0,15)) + tlv('62', tlv('05', window.removeAccents(txid))) + '6304';
-    const crc16 = (d) => { let c = 0xFFFF; for (let i = 0; i < d.length; i++) { c ^= (d.charCodeAt(i) & 0xFF) << 8; for (let j = 0; j < 8; j++) { if (crc & 0x8000) c = (c << 1) ^ 0x1021; else c <<= 1; } } return (c & 0xFFFF).toString(16).toUpperCase().padStart(4, '0'); };
+    const crc16 = (d) => { let c = 0xFFFF; for (let i = 0; i < d.length; i++) { c ^= (d.charCodeAt(i) & 0xFF) << 8; for (let j = 0; j < 8; j++) { if (c & 0x8000) c = (c << 1) ^ 0x1021; else c <<= 1; } } return (c & 0xFFFF).toString(16).toUpperCase().padStart(4, '0'); };
     return p + crc16(p);
 };
 
@@ -879,7 +964,22 @@ onAuthStateChanged(auth, async u => {
         window.setView('loja');
         onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'estoque'), s => { window.state.produtos = s.docs.map(d=>({id:d.id, ...d.data()})); window.render(); });
         onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'vendas_logs'), s => { window.state.pedidos = s.docs.map(d=>({id:d.id, ...d.data()})).filter(p => p.clienteId === u.uid).sort((a, b) => (b.criadoEm?.toMillis?.() || 0) - (a.criadoEm?.toMillis?.() || 0)); window.render(); });
-        onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'pix_config'), s => { if(s.exists()) window.pix_config = s.data(); });
+        
+        // Listener de Configurações (WhatsApp e PIX)
+        onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'pix_config'), s => { 
+            if(s.exists()){
+                window.pix_config = s.data();
+                // ✅ Captura o número do WhatsApp dinamicamente
+                const wNum = s.data().whatsapp || s.data().tel_contato || '5511985706243';
+                window.state.whatsappNumber = wNum;
+                const wBtn = document.getElementById('whatsapp-btn');
+                if(wBtn) {
+                    wBtn.href = `https://wa.me/${wNum.replace(/\D/g, '')}`;
+                    wBtn.classList.remove('hidden');
+                }
+            }
+        });
+
         window.state.favoritos = window.loadFavoritosFromLocal();
         onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'clientes', u.uid), s => {
             if(s.exists()){
