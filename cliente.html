@@ -2,7 +2,21 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  
+  <!-- PWA META TAGS -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="AppEgg" />
+  <meta name="theme-color" content="#e11d48" />
+  <meta name="description" content="Distribuidora de Ovos Aline - Qualidade direta da granja" />
+  
+  <!-- PWA MANIFEST (Encodado em Base64 para manter o ficheiro único) -->
+  <link rel="manifest" href="data:application/manifest+json;base64,ewogICJuYW1lIjogIkRpc3RyaWJ1aWRvcmEgZGUgT3ZvcyBBbGluZSIsCiAgInNob3J0X25hbWUiOiAiQXBwRWdnIiwKICAic3RhcnRfdXJsIjogIi4iLAogICJkaXNwbGF5IjogInN0YW5kYWxvbmUiLAogICJiYWNrZ3JvdW5kX2NvbG9yIjogIiNGNUY1RjciLAogICJ0aGVtZV9jb2xvciI6ICIjZTExZDQ4IiwKICAiaWNvbnMiOiBbCiAgICB7CiAgICAgICJzcmMiOiAiaHR0cHM6Ly9lbW9qaWNkbi5kZXYvbm90by1lbW9qaS91bmljb2RlLzFlNTAwLnBuZyIsCiAgICAgICJzaXplcyI6ICI1MTJ4NTEyIiwKICAgICAgInR5cGUiOiAiaW1hZ2UvcG5nIiwKICAgICAgInB1cnBvc2UiOiAiYW55IG1hc2thYmxlIgogICAgfQogIF0KfQ==" />
+
+  <!-- ICONES DE DISPOSITIVO -->
+  <link rel="apple-touch-icon" href="https://emojicdn.dev/noto-emoji/unicode/1e500.png" />
+
   <title id="page-title">Distribuidora de Ovos Aline</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
@@ -31,9 +45,12 @@
       -webkit-font-smoothing: antialiased;
       padding-bottom: 120px; 
       overflow-x: hidden;
+      /* Prevenção de seleção para simular comportamento nativo */
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
     }
 
-    /* Utilitários Visuais */
+    /* Utilitários Visuais Apple Style */
     .premium-shadow { box-shadow: 0 10px 40px rgba(0,0,0,0.04); }
     .card-depth { border-radius: 32px; border: 1.5px solid var(--border); transition: var(--transition-premium); background: white; }
     .card-depth:hover { transform: translateY(-4px); border-color: var(--primary); box-shadow: 0 25px 50px rgba(225, 29, 72, 0.08); }
@@ -45,16 +62,18 @@
       border-radius: 40px; z-index: 5000; font-weight: 700; font-size: 13px;
       display: flex; align-items: center; gap: 10px;
       transition: var(--transition-premium); box-shadow: 0 15px 35px rgba(0,0,0,0.3);
-      display: none; /* Inicia oculto */
+      display: none; 
     }
     #island.expand { padding: 22px 60px; transform: translateX(-50%) scale(1.05); }
+    .island-hidden-mobile { @apply max-md:hidden; }
 
-    /* BARRA INFERIOR */
+    /* BARRA INFERIOR IOS STYLE */
     .nav-bottom {
       position: fixed; bottom: 0; left: 0; right: 0;
       background: rgba(255,255,255,0.9); backdrop-filter: blur(25px);
       display: flex; justify-content: space-around; padding: 15px 5px 35px;
       z-index: 4000; border-top: 1.5px solid var(--border);
+      padding-bottom: max(35px, env(safe-area-inset-bottom));
     }
     .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; color: #94a3b8; font-size: 11px; font-weight: 800; transition: 0.3s; background: transparent; border: none; cursor: pointer; position: relative; }
     .nav-item.active { color: var(--primary); }
@@ -66,11 +85,12 @@
       border-radius: 10px; font-weight: 900; border: 2px solid white; pointer-events: none;
     }
 
-    /* INPUTS E BOTÕES */
+    /* INPUTS E COMPONENTES */
     .premium-input {
       width: 100%; padding: 18px 24px; border-radius: 20px;
       border: 2px solid var(--border); font-weight: 700;
       transition: all 0.2s; background: #f8fafc; outline: none; font-size: 14px;
+      user-select: text;
     }
     .premium-input:focus { border-color: var(--primary); background: white; box-shadow: 0 0 0 5px var(--primary-glow); }
 
@@ -96,16 +116,19 @@
     .fly-item { position: fixed; z-index: 9999; pointer-events: none; border-radius: 50%; transition: all 0.8s cubic-bezier(.22,.61,.36,1); }
     .hide-scrollbar::-webkit-scrollbar { display: none; }
     .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+
+    header { padding-top: max(1.5rem, env(safe-area-inset-top)); }
   </style>
 </head>
 <body class="no-scrollbar">
 
+<!-- ILHA DINÂMICA (Geralmente oculta) -->
 <div id="island">
     <span id="island-icon">🛒</span>
     <span id="island-text"></span>
 </div>
 
-<!-- CARREGAMENTO (LOADER) -->
+<!-- LOADER INICIAL -->
 <div id="loader" class="fixed inset-0 bg-[#0F0F0F] z-[9999] flex items-center justify-center transition-opacity duration-700">
     <div class="text-center">
         <div class="text-9xl animate-pulse mb-6">🥚</div>
@@ -114,6 +137,7 @@
     </div>
 </div>
 
+<!-- SISTEMA DE NOTIFICAÇÕES (TOAST) -->
 <div id="toast-el" class="fixed top-10 left-1/2 -translate-x-1/2 bg-black text-white px-6 py-3 rounded-2xl font-bold text-sm z-[6000] opacity-0 translate-y-[-100px] transition-all duration-500"></div>
 
 <!-- TELA DE AUTENTICAÇÃO -->
@@ -121,7 +145,7 @@
     <div class="text-center mb-10 animate-[fadeIn_0.8s_ease-out]">
         <div class="text-8xl mb-4 drop-shadow-xl">🥚</div>
         <h1 class="text-4xl font-[950] tracking-tighter text-rose-600 uppercase italic leading-none text-balance">Distribuidora de Ovos Aline</h1>
-        <p class="text-slate-400 font-extrabold uppercase tracking-tight text-[11px] mt-4 max-w-[280px] mx-auto leading-tight text-center">
+        <p class="text-slate-400 font-extrabold uppercase tracking-tight text-[11px] mt-4 max-w-[280px] mx-auto leading-tight text-center text-balance">
           Qualidade direta da granja para a sua mesa
         </p>
     </div>
@@ -166,7 +190,7 @@
         </form>
 
         <form id="form-forgot" onsubmit="window.solicitarRecuperacao(event)" class="hidden space-y-6">
-            <p class="text-center text-slate-400 font-bold text-sm uppercase">Receba o link seguro no e-mail.</p>
+            <p class="text-center text-slate-400 font-bold text-sm uppercase text-balance">Recupere o seu acesso via e-mail.</p>
             <input type="email" id="forgot-email" class="premium-input !text-center" placeholder="E-mail cadastrado" required>
             <button type="submit" class="btn-premium w-full py-6 rounded-[32px] shadow-xl uppercase">Enviar Link</button>
             <center><button type="button" onclick="window.setAuthMode('login')" class="text-slate-400 font-black text-xs uppercase mt-4">Voltar</button></center>
@@ -174,7 +198,7 @@
     </div>
 </div>
 
-<!-- TELA PRINCIPAL APP -->
+<!-- TELA PRINCIPAL DA APLICAÇÃO -->
 <div id="app-view" class="hidden animate-[fadeIn_0.5s_ease-out]">
     <header class="p-6 md:px-12 flex flex-col gap-5 bg-white border-b border-slate-50 sticky top-0 z-[1000] glass">
         <div class="flex items-center justify-between">
@@ -195,9 +219,10 @@
     </header>
 
     <div id="main-content" class="p-6 max-w-4xl mx-auto pb-32">
-        <!-- RenderJS -->
+        <!-- Conteúdo renderizado via JS -->
     </div>
 
+    <!-- NAVEGAÇÃO INFERIOR -->
     <nav class="nav-bottom">
         <button onclick="window.setView('loja')" id="nav-loja" class="nav-item active">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
@@ -245,7 +270,7 @@
                 <button id="check-entrega" onclick="window.setDelivery('entrega')" class="flex-1 py-4 rounded-[20px] font-black text-[11px] text-slate-400 uppercase">ENTREGA</button>
             </div>
             
-            <div id="info-retirada-box" class="bg-slate-50 p-6 rounded-[32px] border border-slate-100 space-y-2">
+            <div id="info-retirada-box" class="bg-slate-50 p-6 rounded-[32px] border border-slate-100 space-y-2 text-balance">
                 <p class="font-black text-[10px] uppercase text-slate-400 tracking-widest">📍 Ponto de Retirada</p>
                 <p class="text-sm font-bold text-slate-700 leading-tight">Rua Antônio Freire da Silva, 87<br>Jardim das Camélias, São Paulo - SP</p>
             </div>
@@ -308,7 +333,7 @@
 
 <div id="success-screen" class="hidden fixed inset-0 bg-white z-[5000] flex-col items-center justify-center p-10 text-center animate-[fadeIn_0.5s_ease-out]">
     <div class="text-[10rem] animate-bounce">🎊</div>
-    <h2 class="text-5xl font-[950] tracking-tighter text-black uppercase italic leading-none text-balance">Distribuidora Aline: Pedido Confirmado!</h2>
+    <h2 class="text-5xl font-[950] tracking-tighter text-black uppercase italic leading-none text-balance">Pedido Confirmado!</h2>
     <p class="text-slate-400 font-bold text-lg mt-6 uppercase tracking-tight text-balance">Recebemos sua encomenda fresquinha.</p>
     <div class="bg-green-50 text-[#00C853] px-10 py-6 rounded-[40px] text-4xl font-black my-10 tracking-widest shadow-inner" id="order-num-display">#000000</div>
     <div class="w-full max-w-md space-y-5">
@@ -436,9 +461,9 @@ window.fazerLogin = async e => {
     const btn = document.getElementById('btn-login'); 
     const em = document.getElementById('login-email').value.trim();
     const ps = document.getElementById('login-senha').value;
-    btn.disabled = true; btn.innerText = "Acessando...";
+    btn.disabled = true;
     try { await signInWithEmailAndPassword(auth, em, ps); }
-    catch(err){ window.showMsg("Dados incorretos."); btn.disabled = false; btn.innerText = "Acessar Loja"; }
+    catch(err){ window.showMsg("Dados incorretos."); btn.disabled = false; }
 };
 
 window.fazerCadastro = async e => {
@@ -548,7 +573,8 @@ function renderConta() {
                 <p class="text-slate-400 font-bold text-xs uppercase tracking-widest leading-none mt-2 text-balance">${c.email || ''}</p>
             </div>
         </div>
-        <form onsubmit="window.saveProfile(event)" class="space-y-4">
+        
+        <form id="form-profile-view" onsubmit="window.saveProfile(event)" class="space-y-4">
             <div class="space-y-1">
                 <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Nome Completo</label>
                 <input type="text" id="prof-nome" class="premium-input" value="${c.nome || ''}" required>
@@ -720,14 +746,14 @@ window.syncCarrinho = () => {
     const island = document.getElementById('island'); const txt = document.getElementById('island-text');
     if(island && txt) {
         if(tot > 0) {
-            island.style.display = 'flex'; // Garante visibilidade
+            island.style.display = 'flex';
             island.classList.remove('hidden');
             island.classList.remove('max-md:hidden');
             island.classList.add('expand');
             txt.textContent = `${tot} Itens no Carrinho`;
             setTimeout(()=>island.classList.remove('expand'), 800);
         } else {
-            island.style.display = 'none'; // ✅ REGRA: Oculta totalmente quando vazio
+            island.style.display = 'none'; 
             txt.textContent = '';
         }
     }
@@ -777,8 +803,9 @@ window.toggleNewAddress = () => {
 
 window.openCheckout = () => {
     const c = window.clienteLogado; 
-    document.getElementById('checkout-total-btn').textContent = 'R$ ' + window.fmt(window.totalCarrinho());
-    document.getElementById('checkout-total-val').textContent = 'R$ ' + window.fmt(window.totalCarrinho());
+    const subtotal = window.totalCarrinho();
+    document.getElementById('checkout-total-btn').textContent = 'R$ ' + window.fmt(subtotal);
+    document.getElementById('checkout-total-val').textContent = 'R$ ' + window.fmt(subtotal);
     window.setDelivery('retirada'); 
     const modal = document.getElementById('checkout-modal'); modal.style.display='flex'; setTimeout(()=>modal.classList.add('open'), 10);
 };
@@ -787,9 +814,7 @@ window.processCheckout = async () => {
     const pag = document.getElementById('pagamento-select').value;
     if(pag === 'pix_online') {
         let cleanKey = (window.pix_config.rawKey || "").replace(/\D/g, '');
-        if (cleanKey.length === 11 && !window.pix_config.rawKey.startsWith('+')) cleanKey = '+55' + cleanKey;
-        else cleanKey = window.pix_config.rawKey;
-
+        if (ck.length === 11 && !window.pix_config.rawKey.startsWith('+')) ck = '+55' + ck;
         const payload = window.pixPayload(cleanKey, window.totalCarrinho(), window.pix_config.nomeRecebedor, window.pix_config.cidade, 'APPEGG');
         document.getElementById('pix-code').textContent = payload;
         const qrEl = document.getElementById('qrcode');
@@ -841,7 +866,7 @@ window.pixPayload = (key, amount, name, city, txid) => {
     const tlv = (id, v) => id + String(v.length).padStart(2,'0') + v;
     const ma = tlv('00','BR.GOV.BCB.PIX') + tlv('01', key);
     let p = tlv('00','01') + tlv('26', ma) + tlv('52','0000') + tlv('53','986') + tlv('54', Number(amount).toFixed(2)) + tlv('58','BR') + tlv('59', window.removeAccents(name).slice(0,25)) + tlv('60', window.removeAccents(city).slice(0,15)) + tlv('62', tlv('05', window.removeAccents(txid))) + '6304';
-    const crc16 = (d) => { let c = 0xFFFF; for (let i = 0; i < d.length; i++) { c ^= (d.charCodeAt(i) & 0xFF) << 8; for (let j = 0; j < 8; j++) { if (c & 0x8000) c = (c << 1) ^ 0x1021; else c <<= 1; } } return (c & 0xFFFF).toString(16).toUpperCase().padStart(4, '0'); };
+    const crc16 = (d) => { let c = 0xFFFF; for (let i = 0; i < d.length; i++) { c ^= (d.charCodeAt(i) & 0xFF) << 8; for (let j = 0; j < 8; j++) { if (crc & 0x8000) c = (c << 1) ^ 0x1021; else c <<= 1; } } return (c & 0xFFFF).toString(16).toUpperCase().padStart(4, '0'); };
     return p + crc16(p);
 };
 
