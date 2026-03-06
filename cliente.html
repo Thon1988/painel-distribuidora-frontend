@@ -45,9 +45,9 @@
       border-radius: 40px; z-index: 5000; font-weight: 700; font-size: 13px;
       display: flex; align-items: center; gap: 10px;
       transition: var(--transition-premium); box-shadow: 0 15px 35px rgba(0,0,0,0.3);
+      display: none; /* Inicia oculto */
     }
     #island.expand { padding: 22px 60px; transform: translateX(-50%) scale(1.05); }
-    .island-hidden-mobile { @apply max-md:hidden; }
 
     /* BARRA INFERIOR */
     .nav-bottom {
@@ -102,7 +102,7 @@
 
 <div id="island">
     <span id="island-icon">🛒</span>
-    <span id="island-text">Carregando...</span>
+    <span id="island-text"></span>
 </div>
 
 <!-- CARREGAMENTO (LOADER) -->
@@ -120,7 +120,7 @@
 <div id="auth-view" class="hidden min-h-screen flex flex-col items-center justify-center p-6 bg-white">
     <div class="text-center mb-10 animate-[fadeIn_0.8s_ease-out]">
         <div class="text-8xl mb-4 drop-shadow-xl">🥚</div>
-        <h1 class="text-4xl font-[950] tracking-tighter text-rose-600 uppercase italic leading-none">Distribuidora de Ovos Aline</h1>
+        <h1 class="text-4xl font-[950] tracking-tighter text-rose-600 uppercase italic leading-none text-balance">Distribuidora de Ovos Aline</h1>
         <p class="text-slate-400 font-extrabold uppercase tracking-tight text-[11px] mt-4 max-w-[280px] mx-auto leading-tight text-center">
           Qualidade direta da granja para a sua mesa
         </p>
@@ -139,7 +139,7 @@
                 <input type="checkbox" id="remember-email" class="w-4 h-4 accent-rose-600 cursor-pointer">
                 <label for="remember-email" class="text-xs font-black text-slate-400 uppercase cursor-pointer">Lembrar acesso</label>
             </div>
-            <button type="submit" id="btn-login" class="btn-premium w-full py-6 text-lg shadow-2xl uppercase">Acessar Loja</button>
+            <button type="submit" id="btn-login" class="btn-premium w-full py-6 text-lg shadow-2xl uppercase">Entrar na Loja</button>
             <center><button type="button" onclick="window.setAuthMode('forgot')" class="text-rose-600 font-black text-xs mt-6 uppercase hover:underline">Esqueci a senha</button></center>
         </form>
 
@@ -162,13 +162,13 @@
             </div>
             <input type="email" id="reg-email" class="premium-input" placeholder="E-mail" required>
             <input type="password" id="reg-senha" class="premium-input" placeholder="Criar Senha" minlength="6" required>
-            <button type="submit" id="btn-register" class="btn-premium w-full py-6">Criar Perfil</button>
+            <button type="submit" id="btn-register" class="btn-premium w-full py-6 shadow-xl uppercase">Criar Perfil</button>
         </form>
 
         <form id="form-forgot" onsubmit="window.solicitarRecuperacao(event)" class="hidden space-y-6">
             <p class="text-center text-slate-400 font-bold text-sm uppercase">Receba o link seguro no e-mail.</p>
             <input type="email" id="forgot-email" class="premium-input !text-center" placeholder="E-mail cadastrado" required>
-            <button type="submit" class="btn-premium w-full py-6 rounded-[32px]">Enviar Link</button>
+            <button type="submit" class="btn-premium w-full py-6 rounded-[32px] shadow-xl uppercase">Enviar Link</button>
             <center><button type="button" onclick="window.setAuthMode('login')" class="text-slate-400 font-black text-xs uppercase mt-4">Voltar</button></center>
         </form>
     </div>
@@ -232,12 +232,12 @@
 </div>
 
 <div class="mbk" id="checkout-modal">
-    <div class="modal-content relative">
+    <div class="modal-content relative text-balance">
         <button onclick="window.closeAll()" class="absolute top-6 right-6 w-10 h-10 bg-white/20 text-white rounded-full flex items-center justify-center font-bold text-lg z-10 transition-colors hover:bg-white/30">✕</button>
         
         <div class="p-10 bg-black text-white text-center">
             <div class="text-6xl mb-4">🛍️</div>
-            <h3 class="text-2xl font-[950] uppercase italic tracking-tighter text-balance leading-none">Finalizar Pedido</h3>
+            <h3 class="text-2xl font-[950] uppercase italic tracking-tighter leading-none">Finalizar Pedido</h3>
         </div>
         <div class="p-8 space-y-6 text-left">
             <div class="flex gap-2 bg-slate-100 p-1 rounded-3xl">
@@ -250,7 +250,7 @@
                 <p class="text-sm font-bold text-slate-700 leading-tight">Rua Antônio Freire da Silva, 87<br>Jardim das Camélias, São Paulo - SP</p>
             </div>
 
-            <div id="info-entrega-box" class="hidden space-y-4 text-balance">
+            <div id="info-entrega-box" class="hidden space-y-4">
                 <div class="bg-rose-50/50 p-6 rounded-[32px] border border-rose-100">
                     <p class="font-black text-[10px] uppercase text-rose-600 mb-1 tracking-widest">📍 Endereço de Envio</p>
                     <p id="checkout-addr-display" class="text-base font-extrabold text-slate-800 leading-tight"></p>
@@ -289,7 +289,7 @@
 </div>
 
 <div class="mbk" id="pix-modal">
-    <div class="modal-content !max-w-[420px] !rounded-[56px]">
+    <div class="modal-content !max-w-[420px] !rounded-[56px] text-balance">
         <button onclick="window.closeAll()" class="absolute top-8 right-8 w-12 h-12 bg-black/5 rounded-full flex items-center justify-center font-bold text-lg z-10 transition-colors hover:bg-black/10">✕</button>
         <div class="p-10 bg-emerald-500 text-white text-center">
             <h3 class="text-2xl font-black italic uppercase tracking-tighter">Pagamento PIX</h3>
@@ -301,7 +301,7 @@
                 <div id="pix-code" class="font-mono text-[13px] font-bold break-all text-slate-700 leading-relaxed px-4 text-center select-all"></div>
             </div>
             <button class="w-full py-6 bg-black text-white rounded-[24px] font-black uppercase text-[11px] tracking-widest shadow-xl active:scale-95 transition-all" onclick="window.doCopy()">📋 Copiar Código</button>
-            <button class="btn-premium w-full py-7 rounded-[32px] !bg-emerald-500 shadow-xl" onclick="window.saveOrderToFirebase()">✅ JÁ PAGUEI / CONCLUIR</button>
+            <button class="btn-premium w-full py-7 rounded-[32px] !bg-emerald-500 shadow-xl uppercase font-black" onclick="window.saveOrderToFirebase()">✅ JÁ PAGUEI / CONCLUIR</button>
         </div>
     </div>
 </div>
@@ -483,12 +483,11 @@ window.render = () => {
 
 window.handleSearch = val => { window.state.searchTerm = val.toLowerCase(); window.render(); };
 
-// ✅ REDESENHO DO CARD PARA MOBILE: CONTROLOS ABAIXO DA FOTO
+// RENDERIZAR CARD DO PRODUTO
 function renderProductCard(p) {
     const isFav = window.state.favoritos.includes(p.id);
     return `
       <div onclick="window.openProductDetail('${p.id}')" class="card-depth p-4 flex items-start gap-5 cursor-pointer relative overflow-hidden group text-balance">
-        <!-- Coluna da Esquerda: Foto + Controlos Abaixo -->
         <div class="flex flex-col items-center gap-3 flex-shrink-0">
           <div class="w-24 h-24 bg-[#F5F5F7] rounded-[24px] overflow-hidden flex items-center justify-center border border-slate-50 relative">
             ${p.foto_url ? `<img src="${p.foto_url}" class="w-full h-full object-cover transition-transform group-hover:scale-110">` : '<span class="text-4xl">🥚</span>'}
@@ -497,7 +496,6 @@ function renderProductCard(p) {
             </button>
           </div>
           
-          <!-- Controlos de Compra Abaixo da Foto -->
           <div class="flex flex-col items-center gap-2" onclick="event.stopPropagation()">
             <div class="flex items-center gap-3 bg-slate-50 p-1.5 rounded-xl border border-slate-100">
                <button onclick="window.chQty('${p.id}',-1)" class="w-7 h-7 font-black text-xl text-slate-300">-</button>
@@ -508,7 +506,6 @@ function renderProductCard(p) {
           </div>
         </div>
 
-        <!-- Coluna da Direita: Informações do Produto -->
         <div class="flex-1 py-1">
           <h3 class="font-[800] text-slate-900 uppercase text-xs mb-1 tracking-tight leading-snug">${p.nome || 'Produto'}</h3>
           <p class="text-slate-400 font-bold text-[9px] uppercase italic leading-none">${p.embalagem || 'Unidade'}</p>
@@ -548,11 +545,10 @@ function renderConta() {
             <div class="w-20 h-20 bg-rose-600 text-white flex items-center justify-center rounded-[28px] text-3xl shadow-xl">👤</div>
             <div>
                 <h2 class="text-2xl font-[950] tracking-tighter uppercase italic text-rose-600 leading-none">${c.nome || 'Meu Perfil'}</h2>
-                <p class="text-slate-400 font-bold text-xs uppercase tracking-widest leading-none mt-2">${c.email || ''}</p>
+                <p class="text-slate-400 font-bold text-xs uppercase tracking-widest leading-none mt-2 text-balance">${c.email || ''}</p>
             </div>
         </div>
-        
-        <form id="form-profile-view" onsubmit="window.saveProfile(event)" class="space-y-4">
+        <form onsubmit="window.saveProfile(event)" class="space-y-4">
             <div class="space-y-1">
                 <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Nome Completo</label>
                 <input type="text" id="prof-nome" class="premium-input" value="${c.nome || ''}" required>
@@ -603,7 +599,7 @@ window.openProductDetail = id => {
                     <span class="bg-rose-50 text-rose-600 px-4 py-2 rounded-full font-black text-[10px] uppercase tracking-widest">${p.embalagem || 'Unidade'}</span>
                     <span class="bg-slate-100 text-slate-400 px-4 py-2 rounded-full font-black text-[10px] uppercase tracking-widest">${p.categoria || 'Geral'}</span>
                 </div>
-                <p class="text-slate-500 font-medium text-lg leading-relaxed text-balance">${p.desc || 'Ovos frescos selecionados para sua mesa.'}</p>
+                <p class="text-slate-500 font-medium text-lg leading-relaxed">${p.desc || 'Ovos frescos selecionados para sua mesa.'}</p>
             </div>
             <div class="flex items-center justify-between pt-8 border-t border-slate-100">
                 <div class="text-slate-900 font-[950] text-5xl tracking-tighter italic leading-none">R$ ${window.fmt(p.preco)}</div>
@@ -647,7 +643,7 @@ function renderCarrinho() {
     return `
         <div class="space-y-8 text-left animate-[fadeIn_0.5s_ease-out]">
             <h2 class="text-4xl font-[950] italic uppercase tracking-tighter text-rose-600">Meu Carrinho</h2>
-            <div class="space-y-4">${items || '<div class="text-center py-24 text-slate-200 font-black uppercase italic tracking-[0.2em]">Seu carrinho está vazio</div>'}</div>
+            <div class="space-y-4 text-balance leading-relaxed">${items || '<div class="text-center py-24 text-slate-200 font-black uppercase italic tracking-[0.2em]">Seu carrinho está vazio</div>'}</div>
             ${keys.length > 0 ? `
                 <div class="bg-black p-8 rounded-[40px] text-white space-y-8 shadow-2xl">
                     <div class="flex justify-between items-end">
@@ -683,7 +679,7 @@ function renderPedidos() {
                             ${(p.itens||[]).map(i => `<span class="text-slate-900 font-black">${i.qty || i.quantidade || 0}x</span> ${i.nome}`).join(' • ')}
                         </div>
                     </div>
-                `).join('') || '<div class="text-center py-24 text-slate-200 font-black uppercase italic tracking-widest text-balance">Sem pedidos efetuados.</div>'}
+                `).join('') || '<div class="text-center py-24 text-slate-200 font-black uppercase italic tracking-widest text-balance leading-relaxed">Sem pedidos efetuados.</div>'}
             </div>
         </div>`;
 }
@@ -724,15 +720,15 @@ window.syncCarrinho = () => {
     const island = document.getElementById('island'); const txt = document.getElementById('island-text');
     if(island && txt) {
         if(tot > 0) {
+            island.style.display = 'flex'; // Garante visibilidade
             island.classList.remove('hidden');
             island.classList.remove('max-md:hidden');
-            island.classList.add('flex');
             island.classList.add('expand');
             txt.textContent = `${tot} Itens no Carrinho`;
             setTimeout(()=>island.classList.remove('expand'), 800);
         } else {
-            island.classList.add('max-md:hidden');
-            txt.textContent = 'Carrinho Vazio';
+            island.style.display = 'none'; // ✅ REGRA: Oculta totalmente quando vazio
+            txt.textContent = '';
         }
     }
     window.render();
@@ -765,9 +761,9 @@ window.setDelivery = t => {
     const cR = document.getElementById('check-retirada'); const cE = document.getElementById('check-entrega');
     if(cR) cR.className = `flex-1 py-4 rounded-xl font-black text-[11px] tracking-widest transition-all ${t==='retirada'?'bg-white text-rose-600 shadow-sm':'text-slate-400'} uppercase`;
     if(cE) cE.className = `flex-1 py-4 rounded-xl font-black text-[11px] tracking-widest transition-all ${t==='entrega'?'bg-white text-rose-600 shadow-sm':'text-slate-400'} uppercase`;
-    const iR = document.getElementById('info-retirada-box'); const iE = document.getElementById('info-entrega-box');
-    if(iR) iR.style.display = t==='retirada' ? 'block' : 'none';
-    if(iE) iE.style.display = t==='entrega' ? 'block' : 'none';
+    const label = document.getElementById('checkout-addr-display');
+    if(t==='retirada') label.innerHTML = "Rua Antônio Freire da Silva, 87<br>Jardim das Camélias, São Paulo - SP"; 
+    else label.innerHTML = `${window.clienteLogado.rua||''}, ${window.clienteLogado.num||''} - ${window.clienteLogado.bairro||''}`;
 };
 
 window.toggleNewAddress = () => {
@@ -775,14 +771,12 @@ window.toggleNewAddress = () => {
     const form = document.getElementById('new-address-form'); const toggleText = document.getElementById('new-addr-toggle-text');
     if(form && toggleText) { 
         if(window.state.usingNewAddress){ form.classList.remove('hidden'); toggleText.textContent = "- Usar endereço do perfil"; } 
-        else { form.classList.add('hidden'); toggleText.textContent = "+ Usar endereço diferente para este pedido"; } 
+        else { form.classList.add('hidden'); toggleText.textContent = "+ Usar endereço diferente"; } 
     }
 };
 
 window.openCheckout = () => {
     const c = window.clienteLogado; 
-    const addrDisplay = document.getElementById('checkout-addr-display');
-    if(addrDisplay) addrDisplay.textContent = `${c.rua||''}, ${c.num||''} - ${c.bairro||''}`;
     document.getElementById('checkout-total-btn').textContent = 'R$ ' + window.fmt(window.totalCarrinho());
     document.getElementById('checkout-total-val').textContent = 'R$ ' + window.fmt(window.totalCarrinho());
     window.setDelivery('retirada'); 
@@ -815,27 +809,16 @@ window.saveOrderToFirebase = async () => {
     }).filter(it => it !== null);
     
     try {
-        const perfil = window.clienteLogado;
-        let moradaFinal = { ...perfil };
+        const pf = window.clienteLogado;
+        let finalAddr = { ...pf };
         if(window.state.deliveryType === 'entrega' && window.state.usingNewAddress) {
-            moradaFinal = { 
-                rua: document.getElementById('new-rua').value, num: document.getElementById('new-num').value, 
-                bairro: document.getElementById('new-bairro').value, cep: document.getElementById('new-cep').value, 
-                nome: perfil.nome, tel: perfil.tel 
-            };
+            finalAddr = { rua: document.getElementById('new-rua').value, num: document.getElementById('new-num').value, bairro: document.getElementById('new-bairro').value, cep: document.getElementById('new-cep').value, nome: pf.nome, tel: pf.tel };
         }
-        
-        await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'vendas_logs'), { 
-            clienteId: auth.currentUser.uid, pedidoID: hash, valorTotal: window.totalCarrinho(), itens: items, dadosCliente: moradaFinal, 
-            status: 'CRIADO', tipoEntrega: window.state.deliveryType, formaPagamento: document.getElementById('pagamento-select').value, criadoEm: serverTimestamp() 
-        });
-        
-        window.state.orderHash = hash; 
-        document.getElementById('order-num-display').textContent = hash;
-        window.closeAll(); 
+        await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'vendas_logs'), { clienteId: auth.currentUser.uid, pedidoID: hash, valorTotal: window.totalCarrinho(), itens: items, dadosCliente: finalAddr, status: 'CRIADO', tipoEntrega: window.state.deliveryType, formaPagamento: document.getElementById('pagamento-select').value, criadoEm: serverTimestamp() });
+        window.state.orderHash = hash; document.getElementById('order-num-display').textContent = hash; window.closeAll(); 
         const sS = document.getElementById('success-screen'); sS.classList.remove('hidden'); sS.classList.add('flex');
         window.state.carrinho = {}; window.syncCarrinho();
-    } catch(e) { window.showMsg("Erro ao processar pedido."); }
+    } catch(e) { window.showMsg("Erro no pedido."); }
 };
 
 window.sendWhatsApp = () => {
@@ -845,44 +828,20 @@ window.sendWhatsApp = () => {
 
 window.saveProfile = async e => {
     e.preventDefault();
-    const d = { 
-        nome: document.getElementById('prof-nome').value.trim(), cpf: document.getElementById('prof-cpf').value, tel: document.getElementById('prof-tel').value, 
-        email: document.getElementById('prof-email').value.trim(), cep: document.getElementById('prof-cep').value, rua: document.getElementById('prof-rua').value.trim(), 
-        num: document.getElementById('prof-num').value.trim(), bairro: document.getElementById('prof-bairro').value.trim() 
-    };
-    try { 
-        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'clientes', auth.currentUser.uid), d, {merge:true}); 
-        window.clienteLogado = d; window.showMsg("✅ Perfil Atualizado!"); 
-    } catch(err) { window.showMsg("Erro ao salvar."); }
+    const d = { nome: document.getElementById('prof-nome').value.trim(), cpf: document.getElementById('prof-cpf').value, tel: document.getElementById('prof-tel').value, email: document.getElementById('prof-email').value.trim(), cep: document.getElementById('prof-cep').value, rua: document.getElementById('prof-rua').value.trim(), num: document.getElementById('prof-num').value.trim(), bairro: document.getElementById('prof-bairro').value.trim() };
+    try { await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'clientes', auth.currentUser.uid), d, {merge:true}); window.clienteLogado = d; window.showMsg("✅ Perfil Atualizado!"); } 
+    catch(err) { window.showMsg("Erro."); }
 };
 
-window.doCopy = () => {
-    const code = document.getElementById('pix-code').textContent;
-    const el = document.createElement('textarea'); el.value = code;
-    document.body.appendChild(el); el.select(); document.execCommand('copy'); document.body.removeChild(el);
-    window.showMsg("📋 Código PIX Copiado!");
-};
-
+window.doCopy = () => { const el = document.createElement('textarea'); el.value = document.getElementById('pix-code').textContent; document.body.appendChild(el); el.select(); document.execCommand('copy'); document.body.removeChild(el); window.showMsg("📋 Código PIX Copiado!"); };
 window.resetTudo = () => { window.state.carrinho = {}; window.setView('loja'); window.closeAll(); window.syncCarrinho(); };
-
 window.removeAccents = (s) => (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^\x00-\x7F]/g,'').toUpperCase();
 
 window.pixPayload = (key, amount, name, city, txid) => {
     const tlv = (id, v) => id + String(v.length).padStart(2,'0') + v;
     const ma = tlv('00','BR.GOV.BCB.PIX') + tlv('01', key);
-    let p = tlv('00','01') + tlv('26', ma) + tlv('52','0000') + tlv('53','986') + tlv('54', Number(amount).toFixed(2)) + tlv('58','BR') + tlv('59', window.removeAccents(name).slice(0,25)) + tlv('60', window.removeAccents(city).slice(0,15)) + tlv('62', tlv('05', window.removeAccents(txid)));
-    p += '6304'; 
-    const crc16 = (data) => {
-        let crc = 0xFFFF;
-        for (let i = 0; i < data.length; i++) {
-            crc ^= data.charCodeAt(i) << 8;
-            for (let j = 0; j < 8; j++) {
-                if (crc & 0x8000) crc = (crc << 1) ^ 0x1021;
-                else crc <<= 1;
-            }
-        }
-        return (crc & 0xFFFF).toString(16).toUpperCase().padStart(4, '0');
-    };
+    let p = tlv('00','01') + tlv('26', ma) + tlv('52','0000') + tlv('53','986') + tlv('54', Number(amount).toFixed(2)) + tlv('58','BR') + tlv('59', window.removeAccents(name).slice(0,25)) + tlv('60', window.removeAccents(city).slice(0,15)) + tlv('62', tlv('05', window.removeAccents(txid))) + '6304';
+    const crc16 = (d) => { let c = 0xFFFF; for (let i = 0; i < d.length; i++) { c ^= (d.charCodeAt(i) & 0xFF) << 8; for (let j = 0; j < 8; j++) { if (c & 0x8000) c = (c << 1) ^ 0x1021; else c <<= 1; } } return (c & 0xFFFF).toString(16).toUpperCase().padStart(4, '0'); };
     return p + crc16(p);
 };
 
@@ -893,39 +852,18 @@ onAuthStateChanged(auth, async u => {
         document.getElementById('auth-view').style.display='none';
         document.getElementById('app-view').style.display='block';
         window.setView('loja');
-        
-        onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'estoque'), s => { 
-            window.state.produtos = s.docs.map(d=>({id:d.id, ...d.data()})); window.render(); 
-        });
-        
-        onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'vendas_logs'), s => {
-            window.state.pedidos = s.docs.map(d=>({id:d.id, ...d.data()}))
-                .filter(p => p.clienteId === u.uid)
-                .sort((a, b) => (b.criadoEm?.toMillis?.() || 0) - (a.criadoEm?.toMillis?.() || 0));
-            window.render();
-        });
-
-        onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'pix_config'), s => {
-            if(s.exists()) window.pix_config = s.data();
-        });
-
+        onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'estoque'), s => { window.state.produtos = s.docs.map(d=>({id:d.id, ...d.data()})); window.render(); });
+        onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'vendas_logs'), s => { window.state.pedidos = s.docs.map(d=>({id:d.id, ...d.data()})).filter(p => p.clienteId === u.uid).sort((a, b) => (b.criadoEm?.toMillis?.() || 0) - (a.criadoEm?.toMillis?.() || 0)); window.render(); });
+        onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'pix_config'), s => { if(s.exists()) window.pix_config = s.data(); });
         window.state.favoritos = window.loadFavoritosFromLocal();
         onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'clientes', u.uid), s => {
             if(s.exists()){
-                const d = s.data();
-                window.clienteLogado = d;
-                if(d.favoritos){
-                    window.state.favoritos = d.favoritos;
-                    window.saveFavoritosToLocal(d.favoritos);
-                }
+                const d = s.data(); window.clienteLogado = d;
+                if(d.favoritos){ window.state.favoritos = d.favoritos; window.saveFavoritosToLocal(d.favoritos); }
                 window.render();
             } else window.setView('conta');
         });
-    } else { 
-        document.getElementById('auth-view').style.display='flex';
-        document.getElementById('app-view').style.display='none';
-        window.setAuthMode('login'); 
-    }
+    } else { document.getElementById('auth-view').style.display='flex'; document.getElementById('app-view').style.display='none'; window.setAuthMode('login'); }
     if(loader) setTimeout(() => { loader.style.opacity = '0'; setTimeout(()=>loader.style.display='none', 700); }, 1500);
 });
 </script>
