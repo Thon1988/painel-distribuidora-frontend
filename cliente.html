@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title id="page-title">AppEgg | Experiência Premium</title>
+  <title id="page-title">Distribuidora de Ovos Aline</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   
@@ -13,10 +13,10 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     
     :root {
-      --primary: #e11d48; /* Vermelho Rose Premium */
+      --primary: #e11d48; 
       --primary-dark: #be123c;
       --primary-glow: rgba(225, 29, 72, 0.15);
-      --bg: #F5F5F7; /* Branco Gelo Estilo Apple */
+      --bg: #F5F5F7; 
       --dark: #0F0F0F;
       --text-muted: #64748b;
       --border: #f1f5f9;
@@ -47,7 +47,6 @@
       transition: var(--transition-premium); box-shadow: 0 15px 35px rgba(0,0,0,0.3);
     }
     #island.expand { padding: 22px 60px; transform: translateX(-50%) scale(1.05); }
-    /* Esconder no celular quando vazio via JS */
     .island-hidden-mobile { @apply max-md:hidden; }
 
     /* BARRA INFERIOR */
@@ -103,15 +102,15 @@
 
 <div id="island">
     <span id="island-icon">🛒</span>
-    <span id="island-text">Carrinho Vazio</span>
+    <span id="island-text">Carregando...</span>
 </div>
 
 <!-- CARREGAMENTO (LOADER) -->
 <div id="loader" class="fixed inset-0 bg-[#0F0F0F] z-[9999] flex items-center justify-center transition-opacity duration-700">
     <div class="text-center">
         <div class="text-9xl animate-pulse mb-6">🥚</div>
-        <div class="text-white font-black tracking-tighter text-4xl uppercase italic mb-2">AppEgg</div>
-        <div class="text-rose-500 font-bold uppercase tracking-[0.3em] text-[10px]">Padrões de Elite</div>
+        <div class="text-white font-black tracking-tighter text-3xl uppercase italic mb-2">Ovos Aline</div>
+        <div class="text-rose-500 font-bold uppercase tracking-[0.3em] text-[10px]">Distribuidora</div>
     </div>
 </div>
 
@@ -121,9 +120,9 @@
 <div id="auth-view" class="hidden min-h-screen flex flex-col items-center justify-center p-6 bg-white">
     <div class="text-center mb-10 animate-[fadeIn_0.8s_ease-out]">
         <div class="text-8xl mb-4 drop-shadow-xl">🥚</div>
-        <h1 class="text-6xl font-[950] tracking-tighter text-rose-600 uppercase italic leading-none">AppEgg</h1>
+        <h1 class="text-4xl font-[950] tracking-tighter text-rose-600 uppercase italic leading-none">Distribuidora de Ovos Aline</h1>
         <p class="text-slate-400 font-extrabold uppercase tracking-tight text-[11px] mt-4 max-w-[280px] mx-auto leading-tight text-center">
-          Qualidade Premium direto da granja para a sua mesa
+          Qualidade direta da granja para a sua mesa
         </p>
     </div>
 
@@ -140,7 +139,7 @@
                 <input type="checkbox" id="remember-email" class="w-4 h-4 accent-rose-600 cursor-pointer">
                 <label for="remember-email" class="text-xs font-black text-slate-400 uppercase cursor-pointer">Lembrar acesso</label>
             </div>
-            <button type="submit" id="btn-login" class="btn-premium w-full py-6 text-lg shadow-2xl">Acessar Loja</button>
+            <button type="submit" id="btn-login" class="btn-premium w-full py-6 text-lg shadow-2xl uppercase">Acessar Loja</button>
             <center><button type="button" onclick="window.setAuthMode('forgot')" class="text-rose-600 font-black text-xs mt-6 uppercase hover:underline">Esqueci a senha</button></center>
         </form>
 
@@ -163,7 +162,7 @@
             </div>
             <input type="email" id="reg-email" class="premium-input" placeholder="E-mail" required>
             <input type="password" id="reg-senha" class="premium-input" placeholder="Criar Senha" minlength="6" required>
-            <button type="submit" id="btn-register" class="btn-premium w-full py-6">Criar Perfil Elite</button>
+            <button type="submit" id="btn-register" class="btn-premium w-full py-6">Criar Perfil</button>
         </form>
 
         <form id="form-forgot" onsubmit="window.solicitarRecuperacao(event)" class="hidden space-y-6">
@@ -182,8 +181,8 @@
             <div class="flex items-center gap-3 text-left">
                 <div class="w-11 h-11 bg-rose-600 text-white flex items-center justify-center rounded-2xl font-bold shadow-lg">🥚</div>
                 <div class="flex flex-col">
-                  <span class="font-[900] tracking-tighter text-2xl italic uppercase text-rose-600 leading-none">AppEgg</span>
-                  <span class="text-[10px] font-bold text-slate-400 uppercase tracking-tight mt-1 italic">Qualidade Premium direto da granja</span>
+                  <span class="font-[900] tracking-tighter text-xl italic uppercase text-rose-600 leading-none">Ovos Aline</span>
+                  <span class="text-[10px] font-bold text-slate-400 uppercase tracking-tight mt-1 italic">Direto da Granja</span>
                 </div>
             </div>
             <button onclick="window.setView('conta')" class="w-11 h-11 bg-slate-50 rounded-2xl flex items-center justify-center text-xl shadow-sm border border-slate-100 hover:bg-rose-50 transition-all">👤</button>
@@ -238,7 +237,7 @@
         
         <div class="p-10 bg-black text-white text-center">
             <div class="text-6xl mb-4">🛍️</div>
-            <h3 class="text-2xl font-[950] uppercase italic tracking-tighter">Finalizar Pedido</h3>
+            <h3 class="text-2xl font-[950] uppercase italic tracking-tighter text-balance leading-none">Finalizar Pedido</h3>
         </div>
         <div class="p-8 space-y-6 text-left">
             <div class="flex gap-2 bg-slate-100 p-1 rounded-3xl">
@@ -254,10 +253,10 @@
             <div id="info-entrega-box" class="hidden space-y-4 text-balance">
                 <div class="bg-rose-50/50 p-6 rounded-[32px] border border-rose-100">
                     <p class="font-black text-[10px] uppercase text-rose-600 mb-1 tracking-widest">📍 Endereço de Envio</p>
-                    <p id="checkout-addr-display" class="text-base font-extrabold text-slate-800 leading-tight">Carregando...</p>
+                    <p id="checkout-addr-display" class="text-base font-extrabold text-slate-800 leading-tight"></p>
                 </div>
                 <button onclick="window.toggleNewAddress()" class="w-full text-center text-slate-400 font-black uppercase text-[10px] tracking-tighter hover:text-black">
-                    <span id="new-addr-toggle-text">+ Usar endereço diferente para este pedido</span>
+                    <span id="new-addr-toggle-text">+ Usar endereço diferente</span>
                 </button>
                 <div id="new-address-form" class="hidden bg-slate-50 p-6 rounded-[32px] border border-slate-100 space-y-3">
                     <div class="flex gap-2">
@@ -275,7 +274,7 @@
                 <p class="font-black text-[10px] uppercase text-slate-400 tracking-widest ml-2">Forma de Pagamento</p>
                 <select id="pagamento-select" class="premium-input !py-4 font-black uppercase text-xs cursor-pointer">
                     <option value="pix_online">PIX (Pagar Agora Online)</option>
-                    <option value="pix_entrega">PIX (No Ato da Entrega/Retirada)</option>
+                    <option value="pix_entrega">PIX (Na Entrega/Retirada)</option>
                     <option value="cartao_debito">Cartão de Débito (Máquina)</option>
                     <option value="cartao_credito">Cartão de Crédito (Máquina)</option>
                     <option value="dinheiro">Dinheiro em Espécie</option>
@@ -309,8 +308,8 @@
 
 <div id="success-screen" class="hidden fixed inset-0 bg-white z-[5000] flex-col items-center justify-center p-10 text-center animate-[fadeIn_0.5s_ease-out]">
     <div class="text-[10rem] animate-bounce">🎊</div>
-    <h2 class="text-5xl font-[950] tracking-tighter text-black uppercase italic leading-none">Confirmado!</h2>
-    <p class="text-slate-400 font-bold text-lg mt-6 uppercase tracking-tight text-balance">Sua encomenda premium foi recebida.</p>
+    <h2 class="text-5xl font-[950] tracking-tighter text-black uppercase italic leading-none text-balance">Distribuidora Aline: Pedido Confirmado!</h2>
+    <p class="text-slate-400 font-bold text-lg mt-6 uppercase tracking-tight text-balance">Recebemos sua encomenda fresquinha.</p>
     <div class="bg-green-50 text-[#00C853] px-10 py-6 rounded-[40px] text-4xl font-black my-10 tracking-widest shadow-inner" id="order-num-display">#000000</div>
     <div class="w-full max-w-md space-y-5">
         <button class="btn-premium w-full py-8 rounded-[48px] bg-rose-600 text-xl shadow-2xl" onclick="window.sendWhatsApp()">📲 ENVIAR COMPROVANTE</button>
@@ -380,7 +379,7 @@ window.toggleFavorito = async (id) => {
     try {
         const favDoc = doc(db, 'artifacts', appId, 'public', 'data', 'clientes', auth.currentUser.uid);
         await setDoc(favDoc, { favoritos: window.state.favoritos, atualizadoEm: serverTimestamp() }, { merge: true });
-    } catch(e) { console.warn("Sync cloud falhou, usando local."); }
+    } catch(e) { console.warn("Sync cloud falhou."); }
 };
 
 // CÁLCULO TOTAL
@@ -437,9 +436,9 @@ window.fazerLogin = async e => {
     const btn = document.getElementById('btn-login'); 
     const em = document.getElementById('login-email').value.trim();
     const ps = document.getElementById('login-senha').value;
-    btn.disabled = true; btn.innerText = "Sincronizando...";
+    btn.disabled = true; btn.innerText = "Acessando...";
     try { await signInWithEmailAndPassword(auth, em, ps); }
-    catch(err){ window.showMsg("Dados incorretos. Verifique e-mail e senha."); btn.disabled = false; btn.innerText = "Acessar Loja"; }
+    catch(err){ window.showMsg("Dados incorretos."); btn.disabled = false; btn.innerText = "Acessar Loja"; }
 };
 
 window.fazerCadastro = async e => {
@@ -525,7 +524,7 @@ function renderLoja() {
     const filtered = window.state.produtos.filter(p => (p.nome || "").toLowerCase().includes(window.state.searchTerm) && p.ativo !== false);
     return `
       <div class="animate-[fadeIn_0.5s_ease-out] text-left">
-        <h2 class="text-3xl font-[950] tracking-tighter uppercase italic text-rose-600 mb-8">Nossos Ovos</h2>
+        <h2 class="text-3xl font-[950] tracking-tighter uppercase italic text-rose-600 mb-8 text-balance leading-tight">Distribuidora Aline</h2>
         <div class="grid grid-cols-1 gap-6">${filtered.map(p => renderProductCard(p)).join('') || '<div class="py-20 text-center font-black text-slate-200 uppercase">Sem produtos...</div>'}</div>
       </div>
     `;
@@ -545,10 +544,10 @@ function renderConta() {
     const c = window.clienteLogado;
     return `
       <div class="animate-[fadeIn_0.5s_ease-out] text-left space-y-8">
-        <div class="flex items-center gap-6">
+        <div class="flex items-center gap-6 text-balance">
             <div class="w-20 h-20 bg-rose-600 text-white flex items-center justify-center rounded-[28px] text-3xl shadow-xl">👤</div>
             <div>
-                <h2 class="text-3xl font-[950] tracking-tighter uppercase italic text-rose-600 leading-none">Meu Perfil</h2>
+                <h2 class="text-2xl font-[950] tracking-tighter uppercase italic text-rose-600 leading-none">${c.nome || 'Meu Perfil'}</h2>
                 <p class="text-slate-400 font-bold text-xs uppercase tracking-widest leading-none mt-2">${c.email || ''}</p>
             </div>
         </div>
@@ -604,7 +603,7 @@ window.openProductDetail = id => {
                     <span class="bg-rose-50 text-rose-600 px-4 py-2 rounded-full font-black text-[10px] uppercase tracking-widest">${p.embalagem || 'Unidade'}</span>
                     <span class="bg-slate-100 text-slate-400 px-4 py-2 rounded-full font-black text-[10px] uppercase tracking-widest">${p.categoria || 'Geral'}</span>
                 </div>
-                <p class="text-slate-500 font-medium text-lg leading-relaxed">${p.desc || 'Ovos frescos selecionados para sua mesa.'}</p>
+                <p class="text-slate-500 font-medium text-lg leading-relaxed text-balance">${p.desc || 'Ovos frescos selecionados para sua mesa.'}</p>
             </div>
             <div class="flex items-center justify-between pt-8 border-t border-slate-100">
                 <div class="text-slate-900 font-[950] text-5xl tracking-tighter italic leading-none">R$ ${window.fmt(p.preco)}</div>
@@ -680,7 +679,7 @@ function renderPedidos() {
                             </div>
                             <div class="font-black text-3xl tracking-tighter italic text-slate-900 leading-none text-right">R$ ${window.fmt(p.valorTotal)}</div>
                         </div>
-                        <div class="text-[12px] font-bold text-slate-400 bg-slate-50 p-6 rounded-[32px] text-left leading-relaxed">
+                        <div class="text-[12px] font-bold text-slate-400 bg-slate-50 p-6 rounded-[32px] text-left leading-relaxed text-balance">
                             ${(p.itens||[]).map(i => `<span class="text-slate-900 font-black">${i.qty || i.quantidade || 0}x</span> ${i.nome}`).join(' • ')}
                         </div>
                     </div>
@@ -715,7 +714,7 @@ window.addCartDet = (id, btn) => {
         window.state.carrinho[id] = (window.state.carrinho[id] || 0) + q; 
         window.syncCarrinho(); 
         window.showMsg("✅ Adicionado ao carrinho!"); 
-    } else window.showMsg("⚠️ Selecione a quantidade.");
+    } else window.showMsg("⚠️ Adicione a quantidade.");
 };
 
 window.syncCarrinho = () => { 
@@ -726,12 +725,12 @@ window.syncCarrinho = () => {
     if(island && txt) {
         if(tot > 0) {
             island.classList.remove('hidden');
+            island.classList.remove('max-md:hidden');
             island.classList.add('flex');
             island.classList.add('expand');
             txt.textContent = `${tot} Itens no Carrinho`;
             setTimeout(()=>island.classList.remove('expand'), 800);
         } else {
-            // ✅ REGRA: Retirar o "Carrinho Vazio" da visualização do celular
             island.classList.add('max-md:hidden');
             txt.textContent = 'Carrinho Vazio';
         }
@@ -840,7 +839,7 @@ window.saveOrderToFirebase = async () => {
 };
 
 window.sendWhatsApp = () => {
-    const text = `Olá! Fiz o pedido *${window.state.orderHash}* na AppEgg.\n*Cliente:* ${window.clienteLogado.nome}\n*Total:* R$ ${window.fmt(window.totalCarrinho())}`;
+    const text = `Olá! Fiz o pedido *${window.state.orderHash}* na Distribuidora Aline.\n*Cliente:* ${window.clienteLogado.nome}\n*Total:* R$ ${window.fmt(window.totalCarrinho())}`;
     window.open(`https://wa.me/5511985706243?text=${encodeURIComponent(text)}`, '_blank');
 };
 
