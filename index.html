@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Admin — AppEgg</title>
+  <title>Admin — App Distribuidora de Ovos Aline</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
@@ -129,8 +129,8 @@
 
 <div id="login-view">
     <div class="card" style="width:100%; max-width:400px; text-align:center; padding:40px; border-radius:32px; border:4px solid var(--border);">
-        <h2 style="color:var(--primary); margin-bottom: 5px; font-size: 2.2rem; font-weight: 900; font-style: italic; letter-spacing: -1px;">App Ovos Aline</h2>
-        <p style="color:var(--green); font-size: 0.75rem; font-weight: 900; margin-bottom: 30px; text-transform: uppercase; letter-spacing: 2px;">AppEgg Admin v7.0.1</p>
+        <h2 style="color:var(--primary); margin-bottom: 5px; font-size: 1.8rem; font-weight: 900; font-style: italic; letter-spacing: -1px;">App Distribuidora de Ovos Aline</h2>
+        <p style="color:var(--green); font-size: 0.75rem; font-weight: 900; margin-bottom: 30px; text-transform: uppercase; letter-spacing: 2px;">Painel Administrativo v7.0.1</p>
         
         <form id="login-form" onsubmit="event.preventDefault(); window.fazerLogin();">
             <div class="field" style="margin-bottom: 15px;">
@@ -147,7 +147,7 @@
 
 <div id="app-view">
     <header>
-      <div class="h-logo"><span>🥚</span> AppEgg</div>
+      <div class="h-logo"><span>🥚</span> App Distribuidora de Ovos Aline</div>
       <div style="display:flex; gap:10px;">
         <button class="h-back" style="background: rgba(255,255,255,0.15); border: none;" onclick="window.fazerLogout()">Sair do Painel</button>
       </div>
@@ -204,6 +204,7 @@
         
         <div class="field">
             <label>Formato / Embalagem</label>
+            <!-- ✅ CORREÇÃO MÍNIMA: Substituído por select com todas as opções originais -->
             <select id="mp-embalagem">
               <option value="Unidade">Unidade</option>
               <option value="Meia Dúzia (6)">Meia Dúzia (6)</option>
@@ -275,9 +276,9 @@ const DEFAULT_PRODUTOS = [
 window.STATUS_OPTIONS = ["CRIADO", "AGUARDANDO PIX", "EM SEPARAÇÃO", "SAIU PARA ENTREGA", "PRONTO PARA RETIRADA", "FINALIZADO", "CANCELADO"];
 
 window.config = {
-    nome:'App Ovos Aline', slogan:'Qualidade Premium', emoji:'🥚',
+    nome:'App Distribuidora de Ovos Aline', slogan:'Qualidade Premium', emoji:'🥚',
     heroTitle:'Ovos Fresquinhos 🥚', heroDesc:'Do campo direto pra sua mesa.',
-    pixChave:'', pixTipo:'Celular', pixNome:'App Ovos Aline', pixCidade:'SAO PAULO',
+    pixChave:'', pixTipo:'Celular', pixNome:'App Distribuidora de Ovos Aline', pixCidade:'SAO PAULO',
     corPrimaria:'#e11d48', corSecundaria:'#be123c',
     taxaDebito: 0, taxaCredito: 0, whatsapp: ''
 };
@@ -413,7 +414,7 @@ window.buildActiveViewBase = () => {
                                 </div>
                                 <div class="field">
                                     <label class="text-[10px] font-black uppercase text-slate-400 ml-2">Nome do Recebedor (PIX)</label>
-                                    <input id="pixNome" value="${cfg.pixNome || 'App Ovos Aline'}" class="input-egg font-bold text-slate-700" maxlength="25" required>
+                                    <input id="pixNome" value="${cfg.pixNome || 'App Distribuidora de Ovos Aline'}" class="input-egg font-bold text-slate-700" maxlength="25" required>
                                 </div>
                                 <div class="field">
                                     <label class="text-[10px] font-black uppercase text-slate-400 ml-2">Cidade (PIX)</label>
@@ -528,7 +529,7 @@ window.renderDashboard = () => {
     const pendingTotal = active.reduce((acc,l)=>acc+(Number(l.valorTotal)||0), 0);
     const produtosAtivos = window.produtos.filter(p => p.ativo).length;
     
-    // ✅ CORREÇÃO: Somar a quantidade total de todos os itens em todos os pedidos ativos (qty/amount fallbacks)
+    // ✅ CORREÇÃO MÍNIMA: Fallback qty/amount para itens solicitados nunca aparecerem zerados
     const totalItens = active.reduce((acc, l) => {
         const itensSoma = (l.itens && Array.isArray(l.itens)) 
             ? l.itens.reduce((sum, item) => sum + (Number(item.qtd || item.quantidade || item.qty || item.amount || 0)), 0) 
@@ -688,7 +689,7 @@ window.renderPedidos = () => {
             : 'O cliente virá buscar os produtos fisicamente.';
         
         const itensStr = (l.itens || []).map(i => {
-            // ✅ CORREÇÃO: Fallbacks qty/amount para não aparecer zerado
+            // ✅ CORREÇÃO MÍNIMA: Fallback qty/amount para itens nos pedidos
             const quantidade = i.qtd || i.quantidade || i.qty || i.amount || 0;
             return `<div style="margin-bottom:4px;"><span style="background:var(--cream);color:var(--primary);padding:2px 6px;border-radius:6px;font-weight:900;font-size:0.75rem;margin-right:6px;border:1px solid var(--border);">${quantidade}x</span><span style="font-weight:800;font-size:0.85rem;color:var(--brown);">${i.nome || i.produto}</span></div>`;
         }).join('');
@@ -997,7 +998,7 @@ window.handleSavePixConfig = async () => {
             chaveFinal = rawKey; chaveVisual = rawKey;
         }
 
-        const nomeRecebedor = nomeEl ? nomeEl.value.trim() : 'App Ovos Aline';
+        const nomeRecebedor = nomeEl ? nomeEl.value.trim() : 'App Distribuidora de Ovos Aline';
         const cidade = cidadeEl ? cidadeEl.value.trim() : 'SAO PAULO';
         const copiaCola = window.pixPayload(chaveFinal, 1.00, nomeRecebedor, cidade, 'TESTE001');
 
@@ -1053,7 +1054,7 @@ window.selBadge = (el, badge, cls) => {
     document.getElementById('mp-badgeClass').value = cls;
 };
 
-// ✅ LOGIN REAL CORRIGIDO
+// ✅ LOGIN REAL CORRIGIDO E ATIVADO
 window.fazerLogin = async () => {
     const btn = document.getElementById('btn-login');
     const em = document.getElementById('login-email').value.trim();
@@ -1067,11 +1068,7 @@ window.fazerLogin = async () => {
     } 
     catch(e) { 
         console.error("Erro de Autenticação Real:", e);
-        if (e.code === 'auth/invalid-credential' || e.code === 'auth/user-not-found') {
-            alert("Acesso negado. A conta que inseriu não existe ou a palavra-passe está incorreta.");
-        } else {
-            alert("Ocorreu um erro ao tentar entrar. " + e.message); 
-        }
+        alert("Acesso negado: Verifique os dados.");
         if(btn) { btn.disabled = false; btn.innerText = "Entrar no Painel"; }
     }
 };
