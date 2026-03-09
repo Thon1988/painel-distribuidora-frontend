@@ -6,12 +6,6 @@
   <title>Admin — AppEgg</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-  
-  <script>
-    window.fazerLogin = function() {
-        alert("A preparar ambiente seguro. Por favor, aguarde...");
-    };
-  </script>
 
   <style>
     *, *::before, *::after { box-sizing: border-box; margin:0; padding:0; }
@@ -35,7 +29,7 @@
     .h-logo { display:flex; align-items:center; gap:10px; font-size:1.15rem; font-weight:900; }
     .h-logo span { font-size:1.5rem; }
     .h-back { background:rgba(255,255,255,.2); border:2px solid rgba(255,255,255,.5); color:#fff; border-radius:50px; padding:6px 16px; cursor:pointer; font-size:.85rem; font-weight:700; text-decoration:none; display:flex; align-items:center; gap:6px; transition:background .2s; }
-    .h-back:hover { background:rgba(255,255,255,.35); }
+    .h-back:hover { background:rgba(255,255,255,0.35); }
     
     .layout { display:flex; flex:1; }
     .nav { width:220px; background:var(--white); border-right:1px solid var(--border); padding:20px 0; flex-shrink:0; }
@@ -136,7 +130,7 @@
 <div id="login-view">
     <div class="card" style="width:100%; max-width:400px; text-align:center; padding:40px; border-radius:32px; border:4px solid var(--border);">
         <h2 style="color:var(--primary); margin-bottom: 5px; font-size: 2.2rem; font-weight: 900; font-style: italic; letter-spacing: -1px;">App Ovos Aline</h2>
-        <p style="color:var(--green); font-size: 0.75rem; font-weight: 900; margin-bottom: 30px; text-transform: uppercase; letter-spacing: 2px;">AppEgg Admin v7.0</p>
+        <p style="color:var(--green); font-size: 0.75rem; font-weight: 900; margin-bottom: 30px; text-transform: uppercase; letter-spacing: 2px;">AppEgg Admin v7.0.1</p>
         
         <form id="login-form" onsubmit="event.preventDefault(); window.fazerLogin();">
             <div class="field" style="margin-bottom: 15px;">
@@ -210,14 +204,16 @@
         
         <div class="field">
             <label>Formato / Embalagem</label>
-            <input type="text" id="mp-embalagem" list="mp-embalagem-list" placeholder="Ex: Cartela (20)" style="cursor: text;">
-            <datalist id="mp-embalagem-list">
-                <option value="Unidade"></option>
-                <option value="Meia Dúzia (6)"></option>
-                <option value="Dúzia (12)"></option>
-                <option value="Cartela (30)"></option>
-                <option value="Caixa com 120 ovos"></option>
-            </datalist>
+            <select id="mp-embalagem">
+              <option value="Unidade">Unidade</option>
+              <option value="Meia Dúzia (6)">Meia Dúzia (6)</option>
+              <option value="Dúzia (12)">Dúzia (12)</option>
+              <option value="Bandeja (20)">Bandeja (20)</option>
+              <option value="Bandeja (30)">Bandeja (30)</option>
+              <option value="Caixa (60)">Caixa (60)</option>
+              <option value="Caixa (180)">Caixa (180)</option>
+              <option value="Personalizado">Personalizado</option>
+            </select>
         </div>
         
         <div class="field"><label>Preço (R$)</label><input id="mp-preco" type="number" min="0" step="0.01" placeholder="12.90" /></div>
@@ -249,7 +245,7 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getFirestore, collection, onSnapshot, doc, setDoc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, collection, onSnapshot, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 // --- CONFIGURAÇÃO FIREBASE FIXA E PADRONIZADA ---
@@ -532,10 +528,10 @@ window.renderDashboard = () => {
     const pendingTotal = active.reduce((acc,l)=>acc+(Number(l.valorTotal)||0), 0);
     const produtosAtivos = window.produtos.filter(p => p.ativo).length;
     
-    // ✅ CORREÇÃO: Somar a quantidade total de todos os itens em todos os pedidos ativos
+    // ✅ CORREÇÃO: Somar a quantidade total de todos os itens em todos os pedidos ativos (qty/amount fallbacks)
     const totalItens = active.reduce((acc, l) => {
         const itensSoma = (l.itens && Array.isArray(l.itens)) 
-            ? l.itens.reduce((sum, item) => sum + (Number(item.qtd || item.quantidade || 0)), 0) 
+            ? l.itens.reduce((sum, item) => sum + (Number(item.qtd || item.quantidade || item.qty || item.amount || 0)), 0) 
             : 0;
         return acc + itensSoma;
     }, 0);
@@ -692,7 +688,8 @@ window.renderPedidos = () => {
             : 'O cliente virá buscar os produtos fisicamente.';
         
         const itensStr = (l.itens || []).map(i => {
-            const quantidade = i.qtd || i.quantidade || 0;
+            // ✅ CORREÇÃO: Fallbacks qty/amount para não aparecer zerado
+            const quantidade = i.qtd || i.quantidade || i.qty || i.amount || 0;
             return `<div style="margin-bottom:4px;"><span style="background:var(--cream);color:var(--primary);padding:2px 6px;border-radius:6px;font-weight:900;font-size:0.75rem;margin-right:6px;border:1px solid var(--border);">${quantidade}x</span><span style="font-weight:800;font-size:0.85rem;color:var(--brown);">${i.nome || i.produto}</span></div>`;
         }).join('');
         const pagStr = (l.formaPagamento || 'Não Informado').replace('_', ' ').toUpperCase();
@@ -1056,7 +1053,7 @@ window.selBadge = (el, badge, cls) => {
     document.getElementById('mp-badgeClass').value = cls;
 };
 
-// Autenticação Real sem Bypass:
+// ✅ LOGIN REAL CORRIGIDO
 window.fazerLogin = async () => {
     const btn = document.getElementById('btn-login');
     const em = document.getElementById('login-email').value.trim();
@@ -1071,7 +1068,7 @@ window.fazerLogin = async () => {
     catch(e) { 
         console.error("Erro de Autenticação Real:", e);
         if (e.code === 'auth/invalid-credential' || e.code === 'auth/user-not-found') {
-            alert("Acesso negado. A conta que inseriu não existe ou a palavra-passe está incorreta.\n\nPassos para resolver:\n1. Vá à consola do Firebase.\n2. Aceda a 'Authentication' -> 'Users'.\n3. Clique em 'Add User' e crie a conta: " + em + "\n\nSe não configurar o utilizador, não poderá gerir a loja.");
+            alert("Acesso negado. A conta que inseriu não existe ou a palavra-passe está incorreta.");
         } else {
             alert("Ocorreu um erro ao tentar entrar. " + e.message); 
         }
@@ -1113,7 +1110,7 @@ window.initListeners = () => {
     const errHandler = (err) => {
         console.warn("Aviso do Firebase:", err.message);
         if (err.code === 'permission-denied') {
-            window.toast("Erro Firebase: Permissão Negada! A sua sessão pode ter expirado.");
+            window.toast("Erro Firebase: Permissão Negada!");
         }
     };
 
@@ -1125,7 +1122,6 @@ window.initListeners = () => {
     const u2 = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'store_config'), s => {
         if(s.exists()){
             window.config = { ...window.config, ...s.data() };
-            // Atualiza inputs visuais se estivermos na página de aparência
             if (window.state.view === 'aparencia') {
                 const i1 = document.getElementById('cfg-corPrimaria');
                 const i2 = document.getElementById('cfg-corSecundaria');
@@ -1133,11 +1129,7 @@ window.initListeners = () => {
                 if(i2) i2.value = window.config.corSecundaria;
             }
             if (window.state.view === 'loja') window.loadLojaForm();
-            
-            const focusedId = document.activeElement ? document.activeElement.id : null;
-            if (window.state.view === 'dashboard' && focusedId !== 'input-taxa-debito' && focusedId !== 'input-taxa-credito') {
-                window.renderDashboard();
-            }
+            if (window.state.view === 'dashboard') window.renderDashboard();
         }
     }, errHandler);
 
