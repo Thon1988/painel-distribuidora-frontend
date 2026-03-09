@@ -50,21 +50,12 @@
       -webkit-tap-highlight-color: transparent;
     }
 
-    /* Utilitários Visuais Apple Style */
     .premium-shadow { box-shadow: 0 10px 40px rgba(0,0,0,0.04); }
     .card-depth { border-radius: 32px; border: 1.5px solid var(--border); transition: var(--transition-premium); background: white; }
     .card-depth:hover { transform: translateY(-4px); border-color: var(--primary); box-shadow: 0 25px 50px rgba(225, 29, 72, 0.08); }
 
-    /* DYNAMIC ISLAND */
-    #island {
-      position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
-      background: var(--dark); color: white; padding: 12px 32px;
-      border-radius: 40px; z-index: 5000; font-weight: 700; font-size: 13px;
-      display: flex; align-items: center; gap: 10px;
-      transition: var(--transition-premium); box-shadow: 0 15px 35px rgba(0,0,0,0.3);
-      display: none; 
-    }
-    #island.expand { padding: 22px 60px; transform: translateX(-50%) scale(1.05); }
+    /* DYNAMIC ISLAND - OCULTO */
+    #island { display: none; }
 
     /* BARRA INFERIOR IOS STYLE */
     .nav-bottom {
@@ -98,9 +89,7 @@
         50% { transform: scale(1.1); }
         100% { transform: scale(1); }
     }
-    .wpp-float:active { transform: scale(0.9); }
 
-    /* INPUTS E COMPONENTES */
     .premium-input {
       width: 100%; padding: 18px 24px; border-radius: 20px;
       border: 2px solid var(--border); font-weight: 700;
@@ -116,51 +105,27 @@
       cursor: pointer; display: flex; align-items: center; justify-content: center;
       border: none; box-shadow: 0 10px 20px var(--primary-glow); font-size: 13px;
     }
-    .btn-premium:active { transform: scale(0.96); }
 
-    /* MODAIS */
     .mbk { position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(12px); z-index: 4500; display: none; align-items: center; justify-content: center; padding: 20px; transition: opacity 0.3s; }
     .mbk.open { display: flex; opacity: 1; }
     .modal-content { background: white; border-radius: 48px; width: 100%; max-width: 500px; max-height: 85vh; overflow-y: auto; animation: slideUp 0.4s var(--transition-premium); position: relative; }
     @keyframes slideUp { from { transform: translateY(40px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
-    /* FAVORITOS */
-    .fav-btn { transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-    .fav-btn:active { transform: scale(1.4); }
-
-    .fly-item { position: fixed; z-index: 9999; pointer-events: none; border-radius: 50%; transition: all 0.8s cubic-bezier(.22,.61,.36,1); }
-    .hide-scrollbar::-webkit-scrollbar { display: none; }
-    .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
-
     header { padding-top: max(1.5rem, env(safe-area-inset-top)); }
 
     /* MENU RÁPIDO */
-    .quick-menu-item {
-        display: flex; flex-direction: column; align-items: center; gap: 8px;
-        min-width: 80px; transition: var(--transition-premium);
-    }
-    .quick-menu-icon {
-        width: 54px; height: 54px; border-radius: 18px; 
-        display: flex; align-items: center; justify-content: center;
-        background: white; border: 1.5px solid var(--border);
-        color: var(--primary); shadow: 0 4px 10px rgba(0,0,0,0.02);
-    }
-    .quick-menu-item:active { transform: scale(0.9); }
+    .quick-menu-item { display: flex; flex-direction: column; align-items: center; gap: 8px; min-width: 80px; transition: var(--transition-premium); cursor: pointer; }
+    .quick-menu-icon { width: 54px; height: 54px; border-radius: 18px; display: flex; align-items: center; justify-content: center; background: white; border: 1.5px solid var(--border); color: var(--primary); }
+    .hide-scrollbar::-webkit-scrollbar { display: none; }
   </style>
 </head>
 <body class="no-scrollbar">
 
-<div id="island">
-    <span id="island-icon">🛒</span>
-    <span id="island-text"></span>
-</div>
-
-<!-- BOTÃO WHATSAPP (Dinamizado por JS) -->
 <a href="#" target="_blank" class="wpp-float hidden" id="whatsapp-btn">
     <i data-lucide="message-circle" class="w-8 h-8"></i>
 </a>
 
-<!-- CARREGAMENTO (LOADER) -->
+<!-- LOADER -->
 <div id="loader" class="fixed inset-0 bg-[#0F0F0F] z-[9999] flex items-center justify-center transition-opacity duration-700">
     <div class="text-center">
         <div class="text-9xl animate-pulse mb-6">🥚</div>
@@ -171,12 +136,12 @@
 
 <div id="toast-el" class="fixed top-10 left-1/2 -translate-x-1/2 bg-black text-white px-6 py-3 rounded-2xl font-bold text-sm z-[6000] opacity-0 translate-y-[-100px] transition-all duration-500"></div>
 
-<!-- TELA DE AUTENTICAÇÃO -->
+<!-- AUTH VIEW -->
 <div id="auth-view" class="hidden min-h-screen flex flex-col items-center justify-center p-6 bg-white text-balance text-center">
-    <div class="text-center mb-10 animate-[fadeIn_0.8s_ease-out]">
+    <div class="text-center mb-10">
         <div class="text-8xl mb-4 drop-shadow-xl text-center">🥚</div>
-        <h1 class="text-4xl font-[950] tracking-tighter text-rose-600 uppercase italic leading-none">Distribuidora de Ovos Aline</h1>
-        <p class="text-slate-400 font-extrabold uppercase tracking-tight text-[11px] mt-4 max-w-[280px] mx-auto leading-tight">
+        <h1 class="text-4xl font-[950] tracking-tighter text-rose-600 uppercase italic leading-none text-center">Distribuidora de Ovos Aline</h1>
+        <p class="text-slate-400 font-extrabold uppercase tracking-tight text-[11px] mt-4 max-w-[280px] mx-auto leading-tight text-center">
           Qualidade direta da granja para a sua mesa
         </p>
     </div>
@@ -190,16 +155,12 @@
         <form id="form-login" onsubmit="window.fazerLogin(event)" class="space-y-4">
             <input type="email" id="login-email" class="premium-input !text-center" placeholder="Seu e-mail" required autocomplete="username">
             <input type="password" id="login-senha" class="premium-input !text-center" placeholder="Sua senha" required autocomplete="current-password">
-            <div class="flex items-center justify-center gap-3">
-                <input type="checkbox" id="remember-email" class="w-4 h-4 accent-rose-600 cursor-pointer">
-                <label for="remember-email" class="text-xs font-black text-slate-400 uppercase cursor-pointer">Lembrar acesso</label>
-            </div>
             <button type="submit" id="btn-login" class="btn-premium w-full py-6 text-lg shadow-2xl uppercase">Entrar na Loja</button>
             <center><button type="button" onclick="window.setAuthMode('forgot')" class="text-rose-600 font-black text-xs mt-6 uppercase hover:underline">Esqueci a senha</button></center>
         </form>
 
         <form id="form-register" onsubmit="window.fazerCadastro(event)" class="hidden space-y-4 text-left">
-            <input type="text" id="reg-nome" class="premium-input" placeholder="Nome Completo" required autocomplete="name">
+            <input type="text" id="reg-nome" class="premium-input" placeholder="Nome Completo" required>
             <div class="flex gap-3">
                 <input type="text" id="reg-cpf" class="w-1/2 premium-input !px-4" placeholder="CPF" oninput="window.maskCPF(event)" maxlength="14" required>
                 <input type="tel" id="reg-tel" class="w-1/2 premium-input !px-4" placeholder="WhatsApp" oninput="window.maskPhone(event)" maxlength="15" required>
@@ -215,13 +176,12 @@
                     <input type="text" id="reg-bairro" class="flex-1 premium-input !p-4 !text-sm" placeholder="Bairro" required>
                 </div>
             </div>
-            <input type="email" id="reg-email" class="premium-input" placeholder="E-mail" required autocomplete="email">
-            <input type="password" id="reg-senha" class="premium-input" placeholder="Criar Senha" minlength="6" required autocomplete="new-password">
+            <input type="email" id="reg-email" class="premium-input" placeholder="E-mail" required>
+            <input type="password" id="reg-senha" class="premium-input" placeholder="Criar Senha" minlength="6" required>
             <button type="submit" id="btn-register" class="btn-premium w-full py-6 shadow-xl uppercase">Criar Perfil</button>
         </form>
 
         <form id="form-forgot" onsubmit="window.solicitarRecuperacao(event)" class="hidden space-y-6">
-            <p class="text-center text-slate-400 font-bold text-sm uppercase text-balance">Recupere o seu acesso via e-mail.</p>
             <input type="email" id="forgot-email" class="premium-input !text-center" placeholder="E-mail cadastrado" required>
             <button type="submit" class="btn-premium w-full py-6 rounded-[32px] shadow-xl uppercase">Enviar Link</button>
             <center><button type="button" onclick="window.setAuthMode('login')" class="text-slate-400 font-black text-xs uppercase mt-4">Voltar</button></center>
@@ -229,7 +189,7 @@
     </div>
 </div>
 
-<!-- TELA PRINCIPAL APP -->
+<!-- APP VIEW -->
 <div id="app-view" class="hidden animate-[fadeIn_0.5s_ease-out]">
     <header class="p-6 md:px-12 flex flex-col gap-5 bg-white border-b border-slate-50 sticky top-0 z-[1000] glass">
         <div class="flex items-center justify-between">
@@ -241,44 +201,27 @@
                 </div>
             </div>
         </div>
-        
         <div class="relative group">
-           <input type="text" id="search-input" oninput="window.handleSearch(this.value)" class="premium-input !py-4 !pl-14 !bg-slate-50 focus:!bg-white border-none shadow-sm text-sm !text-left" placeholder="Pesquisar ovos frescos...">
+           <input type="text" id="search-input" oninput="window.handleSearch(this.value)" class="premium-input !py-4 !pl-14 !bg-slate-50 border-none shadow-sm text-sm !text-left" placeholder="Pesquisar ovos frescos...">
            <span class="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300">🔍</span>
         </div>
     </header>
 
-    <div id="main-content" class="p-6 max-w-4xl mx-auto pb-32">
-        <!-- Conteúdo renderizado via JS -->
-    </div>
+    <div id="main-content" class="p-6 max-w-4xl mx-auto pb-32"></div>
 
-    <!-- NAVEGAÇÃO INFERIOR -->
     <nav class="nav-bottom">
-        <button onclick="window.setView('loja')" id="nav-loja" class="nav-item active">
-            <i data-lucide="home" class="w-6 h-6"></i>
-            Loja
-        </button>
-        <button onclick="window.setView('favoritos')" id="nav-favoritos" class="nav-item">
-            <i data-lucide="heart" class="w-6 h-6"></i>
-            Favoritos
-        </button>
+        <button onclick="window.setView('loja')" id="nav-loja" class="nav-item active"><i data-lucide="home" class="w-6 h-6"></i> Loja</button>
+        <button onclick="window.setView('favoritos')" id="nav-favoritos" class="nav-item"><i data-lucide="heart" class="w-6 h-6"></i> Favoritos</button>
         <button onclick="window.setView('carrinho')" id="nav-carrinho" class="nav-item">
-            <i data-lucide="shopping-bag" class="w-6 h-6"></i>
-            Carrinho
+            <i data-lucide="shopping-bag" class="w-6 h-6"></i> Carrinho
             <span id="cart-badge" class="nav-badge hidden">0</span>
         </button>
-        <button onclick="window.setView('pedidos')" id="nav-pedidos" class="nav-item">
-            <i data-lucide="list" class="w-6 h-6"></i>
-            Pedidos
-        </button>
-        <button onclick="window.setView('conta')" id="nav-conta" class="nav-item">
-            <i data-lucide="user" class="w-6 h-6"></i>
-            Conta
-        </button>
+        <button onclick="window.setView('pedidos')" id="nav-pedidos" class="nav-item"><i data-lucide="list" class="w-6 h-6"></i> Pedidos</button>
+        <button onclick="window.setView('conta')" id="nav-conta" class="nav-item"><i data-lucide="user" class="w-6 h-6"></i> Conta</button>
     </nav>
 </div>
 
-<!-- MODAIS -->
+<!-- MODAL DETALHE -->
 <div class="mbk" id="product-detail-modal">
     <div class="modal-content !max-w-[600px]">
         <button onclick="window.closeAll()" class="absolute top-8 right-8 w-12 h-12 bg-black/5 rounded-full flex items-center justify-center font-bold text-lg z-10 transition-colors hover:bg-black/10">✕</button>
@@ -286,10 +229,10 @@
     </div>
 </div>
 
+<!-- MODAL CHECKOUT -->
 <div class="mbk" id="checkout-modal">
     <div class="modal-content relative text-balance">
-        <button onclick="window.closeAll()" class="absolute top-6 right-6 w-10 h-10 bg-white/20 text-white rounded-full flex items-center justify-center font-bold text-lg z-10 transition-colors hover:bg-white/30">✕</button>
-        
+        <button onclick="window.closeAll()" class="absolute top-6 right-6 w-10 h-10 bg-white/20 text-white rounded-full flex items-center justify-center font-bold text-lg z-10">✕</button>
         <div class="p-10 bg-black text-white text-center">
             <div class="text-6xl mb-4">🛍️</div>
             <h3 class="text-2xl font-[950] uppercase italic tracking-tighter leading-none">Finalizar Pedido</h3>
@@ -345,7 +288,7 @@
 
 <div class="mbk" id="pix-modal">
     <div class="modal-content !max-w-[420px] !rounded-[56px] text-balance">
-        <button onclick="window.closeAll()" class="absolute top-8 right-8 w-12 h-12 bg-black/5 rounded-full flex items-center justify-center font-bold text-lg z-10 transition-colors hover:bg-black/10">✕</button>
+        <button onclick="window.closeAll()" class="absolute top-8 right-8 w-12 h-12 bg-black/5 rounded-full flex items-center justify-center font-bold text-lg">✕</button>
         <div class="p-10 bg-emerald-500 text-white text-center">
             <h3 class="text-2xl font-black italic uppercase tracking-tighter">Pagamento PIX</h3>
         </div>
@@ -353,14 +296,15 @@
             <div id="qrcode" class="inline-block p-5 bg-white rounded-[40px] border-4 border-slate-50 shadow-sm"></div>
             <div class="bg-slate-50 p-6 rounded-[32px] border-2 border-dashed border-slate-200">
                 <p class="text-[10px] font-black text-slate-400 uppercase mb-3 tracking-widest">Copia e Cola</p>
-                <div id="pix-code" class="font-mono text-[13px] font-bold break-all text-slate-700 leading-relaxed px-4 text-center select-all"></div>
+                <div id="pix-code" class="font-mono text-[13px] font-bold break-all text-slate-700 text-center select-all"></div>
             </div>
-            <button class="w-full py-6 bg-black text-white rounded-[24px] font-black uppercase text-[11px] tracking-widest shadow-xl active:scale-95 transition-all" onclick="window.doCopy()">📋 Copiar Código</button>
+            <button class="w-full py-6 bg-black text-white rounded-[24px] font-black uppercase text-[11px] tracking-widest shadow-xl" onclick="window.doCopy()">📋 Copiar Código</button>
             <button class="btn-premium w-full py-7 rounded-[32px] !bg-emerald-500 shadow-xl uppercase font-black" onclick="window.saveOrderToFirebase()">✅ JÁ PAGUEI / CONCLUIR</button>
         </div>
     </div>
 </div>
 
+<!-- TELA SUCESSO -->
 <div id="success-screen" class="hidden fixed inset-0 bg-white z-[5000] flex-col items-center justify-center p-10 text-center animate-[fadeIn_0.5s_ease-out]">
     <div class="text-[10rem] animate-bounce">🎊</div>
     <h2 class="text-5xl font-[950] tracking-tighter text-black uppercase italic leading-none text-balance">Distribuidora Aline: Pedido Confirmado!</h2>
@@ -401,41 +345,19 @@ window.state = {
 
 window.clienteLogado = {};
 window.pix_config = { rawKey:'', nomeRecebedor:'AppEgg', cidade:'SAO PAULO' };
-window.deferredPrompt = null;
 
-// SISTEMA DE FAVORITOS HÍBRIDO
-window.loadFavoritosFromLocal = () => {
-    if(!auth.currentUser) return [];
-    const key = `appegg_favs_${auth.currentUser.uid}`;
-    const saved = localStorage.getItem(key);
-    return saved ? JSON.parse(saved) : [];
-};
-
-window.saveFavoritosToLocal = (favs) => {
-    if(!auth.currentUser) return;
-    const key = `appegg_favs_${auth.currentUser.uid}`;
-    localStorage.setItem(key, JSON.stringify(favs));
-};
-
-window.toggleFavorito = async (id) => {
-    if(!auth.currentUser) {
-        window.showMsg("⚠️ Faça login para favoritar");
-        return;
+// ✅ FIX: FUNÇÃO VOLTAR À LOJA CORRIGIDA
+window.resetTudo = () => {
+    window.state.carrinho = {};
+    const successScreen = document.getElementById('success-screen');
+    if (successScreen) {
+        successScreen.classList.remove('flex');
+        successScreen.classList.add('hidden');
     }
-    const isFav = window.state.favoritos.includes(id);
-    if(isFav) {
-        window.state.favoritos = window.state.favoritos.filter(f => f !== id);
-        window.showMsg("Removido dos favoritos");
-    } else {
-        window.state.favoritos.push(id);
-        window.showMsg("Adicionado aos favoritos ❤️");
-    }
-    window.saveFavoritosToLocal(window.state.favoritos);
-    window.render();
-    try {
-        const favDoc = doc(db, 'artifacts', appId, 'public', 'data', 'clientes', auth.currentUser.uid);
-        await setDoc(favDoc, { favoritos: window.state.favoritos, atualizadoEm: serverTimestamp() }, { merge: true });
-    } catch(e) { console.warn("Sync cloud falhou."); }
+    window.setView('loja');
+    window.closeAll();
+    window.syncCarrinho();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 };
 
 window.totalCarrinho = () => {
@@ -478,10 +400,6 @@ window.setAuthMode = m => {
     if(formL) formL.style.display = isL ? 'block' : 'none';
     if(formR) formR.style.display = isR ? 'block' : 'none';
     if(formF) formF.style.display = isF ? 'block' : 'none';
-    
-    const tabL = document.getElementById('tab-login'); const tabR = document.getElementById('tab-register');
-    if(tabL) tabL.className = `flex-1 py-4 rounded-xl font-bold text-[12px] tracking-widest transition-all ${isL ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-400'} uppercase`;
-    if(tabR) tabR.className = `flex-1 py-4 rounded-xl font-bold text-[12px] tracking-widest transition-all ${isR ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-400'} uppercase`;
 };
 
 window.fazerLogin = async e => {
@@ -527,13 +445,13 @@ window.setView = v => {
 window.render = () => {
     const cont = document.getElementById('main-content'); if(!cont) return;
     if(window.state.view === 'loja') cont.innerHTML = renderLoja();
-    if(window.state.view === 'favoritos') cont.innerHTML = renderFavoritos();
-    if(window.state.view === 'carrinho') cont.innerHTML = renderCarrinho();
-    if(window.state.view === 'pedidos') cont.innerHTML = renderPedidos();
-    if(window.state.view === 'conta') cont.innerHTML = renderConta();
-    if(window.state.view === 'promocoes') cont.innerHTML = renderPromocoes();
-    if(window.state.view === 'fidelidade') cont.innerHTML = renderFidelidade();
-    if(window.state.view === 'cupons') cont.innerHTML = renderCupons();
+    else if(window.state.view === 'favoritos') cont.innerHTML = renderFavoritos();
+    else if(window.state.view === 'carrinho') cont.innerHTML = renderCarrinho();
+    else if(window.state.view === 'pedidos') cont.innerHTML = renderPedidos();
+    else if(window.state.view === 'conta') cont.innerHTML = renderConta();
+    else if(window.state.view === 'promocoes') cont.innerHTML = renderPromocoes();
+    else if(window.state.view === 'fidelidade') cont.innerHTML = renderFidelidade();
+    else if(window.state.view === 'cupons') cont.innerHTML = renderCupons();
     lucide.createIcons();
 };
 
@@ -545,8 +463,8 @@ function renderProductCard(p) {
       <div onclick="window.openProductDetail('${p.id}')" class="card-depth p-4 flex items-start gap-5 cursor-pointer relative overflow-hidden group text-balance">
         <div class="flex flex-col items-center gap-3 flex-shrink-0">
           <div class="w-24 h-24 bg-[#F5F5F7] rounded-[24px] overflow-hidden flex items-center justify-center border border-slate-50 relative">
-            ${p.foto_url ? `<img src="${p.foto_url}" class="w-full h-full object-cover transition-transform group-hover:scale-110">` : '<span class="text-4xl">🥚</span>'}
-            <button onclick="event.stopPropagation(); window.toggleFavorito('${p.id}')" class="fav-btn absolute top-1.5 left-1.5 w-7 h-7 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center shadow-sm">
+            ${p.foto_url ? `<img src="${p.foto_url}" class="w-full h-full object-cover transition-transform group-hover:scale-110">` : '<span class="text-4xl text-center">🥚</span>'}
+            <button onclick="event.stopPropagation(); window.toggleFavorito('${p.id}')" class="absolute top-1.5 left-1.5 w-7 h-7 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center shadow-sm">
               <span class="text-sm">${isFav ? '❤️' : '🤍'}</span>
             </button>
           </div>
@@ -561,7 +479,7 @@ function renderProductCard(p) {
           </div>
         </div>
 
-        <div class="flex-1 py-1">
+        <div class="flex-1 py-1 text-left">
           <h3 class="font-[800] text-slate-900 uppercase text-xs mb-1 tracking-tight leading-snug">${p.nome || 'Produto'}</h3>
           <p class="text-slate-400 font-bold text-[9px] uppercase italic leading-none">${p.embalagem || 'Unidade'}</p>
           <div class="mt-4">
@@ -576,7 +494,7 @@ function renderLoja() {
     const filtered = window.state.produtos.filter(p => (p.nome || "").toLowerCase().includes(window.state.searchTerm) && p.ativo !== false);
     return `
       <div class="animate-[fadeIn_0.5s_ease-out] text-left">
-        <!-- MENU RÁPIDO (REMOVIDO BOTÃO BAIXAR APP) -->
+        <!-- ✅ MENU RÁPIDO RESTAURADO (Sem botão de baixar app) -->
         <div class="flex gap-4 overflow-x-auto pb-8 hide-scrollbar">
             <div onclick="window.setView('promocoes')" class="quick-menu-item">
                 <div class="quick-menu-icon"><i data-lucide="tag"></i></div>
@@ -598,25 +516,21 @@ function renderLoja() {
     `;
 }
 
+// ✅ RENDERIZADORES DAS SEÇÕES RESTAURADOS
 function renderPromocoes() {
-    return `
-      <div class="animate-[fadeIn_0.5s_ease-out] text-left">
+    return `<div class="animate-[fadeIn_0.5s_ease-out] text-left">
         <button onclick="window.setView('loja')" class="mb-6 flex items-center gap-2 text-rose-600 font-black uppercase text-[10px] tracking-widest"><i data-lucide="arrow-left" class="w-4 h-4"></i> Voltar</button>
         <h2 class="text-3xl font-[950] tracking-tighter uppercase italic text-rose-600 mb-8">Promoções 🏷️</h2>
-        <div class="bg-rose-600 p-8 rounded-[40px] text-white mb-8 premium-shadow">
+        <div class="bg-rose-600 p-8 rounded-[40px] text-white mb-8 premium-shadow text-balance leading-relaxed">
             <h3 class="text-2xl font-black uppercase italic leading-none">Preço de Custo</h3>
             <p class="text-sm font-bold opacity-80 mt-2">Aproveite as ofertas do dia direto do produtor.</p>
         </div>
-        <div class="grid grid-cols-1 gap-6">
-            ${window.state.produtos.slice(0, 3).map(p => renderProductCard(p)).join('')}
-        </div>
-      </div>
-    `;
+        <div class="grid grid-cols-1 gap-6">${window.state.produtos.slice(0,3).map(p => renderProductCard(p)).join('')}</div>
+    </div>`;
 }
 
 function renderFidelidade() {
-    return `
-      <div class="animate-[fadeIn_0.5s_ease-out] text-left">
+    return `<div class="animate-[fadeIn_0.5s_ease-out] text-left">
         <button onclick="window.setView('loja')" class="mb-6 flex items-center gap-2 text-rose-600 font-black uppercase text-[10px] tracking-widest"><i data-lucide="arrow-left" class="w-4 h-4"></i> Voltar</button>
         <h2 class="text-3xl font-[950] tracking-tighter uppercase italic text-rose-600 mb-8">Fidelidade 💎</h2>
         <div class="bg-slate-900 p-10 rounded-[48px] text-white premium-shadow relative overflow-hidden text-balance">
@@ -625,34 +539,19 @@ function renderFidelidade() {
                 <div class="text-6xl font-[950] italic tracking-tighter mt-2">1.250</div>
                 <p class="text-sm font-bold text-slate-400 mt-4 text-balance">Faltam apenas 250 pontos para resgatar uma dúzia de ovos vermelhos!</p>
             </div>
-            <i data-lucide="award" class="absolute -right-10 -bottom-10 w-48 h-48 opacity-10 text-rose-600"></i>
         </div>
-      </div>
-    `;
+    </div>`;
 }
 
 function renderCupons() {
-    return `
-      <div class="animate-[fadeIn_0.5s_ease-out] text-left">
+    return `<div class="animate-[fadeIn_0.5s_ease-out] text-left">
         <button onclick="window.setView('loja')" class="mb-6 flex items-center gap-2 text-rose-600 font-black uppercase text-[10px] tracking-widest"><i data-lucide="arrow-left" class="w-4 h-4"></i> Voltar</button>
         <h2 class="text-3xl font-[950] tracking-tighter uppercase italic text-rose-600 mb-8">Meus Cupons 🎟️</h2>
-        <div class="space-y-4">
-            <div class="bg-white p-6 rounded-[32px] border-2 border-dashed border-rose-200 flex justify-between items-center">
-                <div>
-                    <h4 class="font-black text-rose-600 text-lg leading-none">PRIMEIRA</h4>
-                    <p class="text-[10px] font-bold text-slate-400 uppercase mt-1">R$ 5,00 de desconto</p>
-                </div>
-                <button onclick="navigator.clipboard.writeText('PRIMEIRA'); window.showMsg('Copiado!')" class="bg-rose-50 text-rose-600 px-4 py-2 rounded-xl font-black text-[10px] uppercase">Copiar</button>
-            </div>
-            <div class="bg-white p-6 rounded-[32px] border-2 border-dashed border-slate-200 flex justify-between items-center opacity-60">
-                <div>
-                    <h4 class="font-black text-slate-900 text-lg leading-none">OVOS10</h4>
-                    <p class="text-[10px] font-bold text-slate-400 uppercase mt-1">10% de desconto (Esgotado)</p>
-                </div>
-            </div>
+        <div class="bg-white p-6 rounded-[32px] border-2 border-dashed border-rose-200 flex justify-between items-center">
+            <div><h4 class="font-black text-rose-600 text-lg leading-none">PRIMEIRA</h4><p class="text-[10px] font-bold text-slate-400 uppercase mt-1">R$ 5,00 de desconto</p></div>
+            <button onclick="window.showMsg('🎟️ Cupom Copiado!')" class="bg-rose-50 text-rose-600 px-4 py-2 rounded-xl font-black text-[10px] uppercase">Copiar</button>
         </div>
-      </div>
-    `;
+    </div>`;
 }
 
 function renderFavoritos() {
@@ -676,28 +575,14 @@ function renderConta() {
                 <p class="text-slate-400 font-bold text-xs uppercase tracking-widest leading-none mt-2 text-balance">${c.email || ''}</p>
             </div>
         </div>
-        
         <form onsubmit="window.saveProfile(event)" class="space-y-4">
-            <div class="space-y-1">
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Nome Completo</label>
-                <input type="text" id="prof-nome" class="premium-input" value="${c.nome || ''}" required>
-            </div>
+            <input type="text" id="prof-nome" class="premium-input" placeholder="Nome" value="${c.nome || ''}" required>
             <div class="flex gap-3">
-                <div class="w-1/2 space-y-1 text-left">
-                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">CPF</label>
-                    <input type="text" id="prof-cpf" class="premium-input" value="${c.cpf || ''}" oninput="window.maskCPF(event)" maxlength="14" required>
-                </div>
-                <div class="w-1/2 space-y-1 text-left">
-                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">WhatsApp</label>
-                    <input type="tel" id="prof-tel" class="premium-input" value="${c.tel || ''}" oninput="window.maskPhone(event)" maxlength="15" required>
-                </div>
-            </div>
-            <div class="space-y-1">
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">E-mail de Contato</label>
-                <input type="email" id="prof-email" class="premium-input" value="${c.email || ''}" required>
+                <input type="text" id="prof-cpf" class="w-1/2 premium-input" placeholder="CPF" value="${c.cpf || ''}" oninput="window.maskCPF(event)" maxlength="14" required>
+                <input type="tel" id="prof-tel" class="w-1/2 premium-input" placeholder="WhatsApp" value="${c.tel || ''}" oninput="window.maskPhone(event)" maxlength="15" required>
             </div>
             <div class="bg-white p-8 rounded-[40px] premium-shadow border border-slate-50 text-left text-balance leading-relaxed">
-                <p class="text-[11px] font-black text-rose-600 uppercase tracking-widest ml-2 mb-4">Endereço de Entrega</p>
+                <p class="text-[11px] font-black text-rose-600 uppercase tracking-widest mb-4">Endereço de Entrega</p>
                 <div class="flex gap-2">
                     <input type="text" id="prof-cep" class="w-1/3 premium-input !p-4 !text-sm" value="${c.cep || ''}" oninput="window.maskCEP(event, 'prof')" maxlength="9" required>
                     <input type="text" id="prof-rua" class="flex-1 premium-input !p-4 !text-sm" value="${c.rua || ''}" required>
@@ -723,15 +608,14 @@ window.openProductDetail = id => {
                 ${p.foto_url ? `<img src="${p.foto_url}" class="w-full h-full object-cover">` : '<span class="text-9xl">🥚</span>'}
             </div>
             <div class="space-y-4 text-balance">
-                <h2 class="text-4xl font-[950] italic uppercase tracking-tighter text-rose-600 leading-tight">${p.nome}</h2>
+                <h2 class="text-4xl font-[950] italic uppercase tracking-tighter text-rose-600 leading-tight text-left">${p.nome}</h2>
                 <div class="flex items-center gap-3">
                     <span class="bg-rose-50 text-rose-600 px-4 py-2 rounded-full font-black text-[10px] uppercase tracking-widest">${p.embalagem || 'Unidade'}</span>
-                    <span class="bg-slate-100 text-slate-400 px-4 py-2 rounded-full font-black text-[10px] uppercase tracking-widest">${p.categoria || 'Geral'}</span>
                 </div>
-                <p class="text-slate-500 font-medium text-lg leading-relaxed">${p.desc || 'Ovos frescos selecionados para sua mesa.'}</p>
+                <p class="text-slate-500 font-medium text-lg leading-relaxed text-left text-balance">${p.desc || 'Ovos frescos selecionados para sua mesa.'}</p>
             </div>
             <div class="flex items-center justify-between pt-8 border-t border-slate-100">
-                <div class="text-slate-900 font-[950] text-5xl tracking-tighter italic leading-none">R$ ${window.fmt(p.preco)}</div>
+                <div class="text-slate-900 font-[950] text-5xl tracking-tighter italic leading-none text-left">R$ ${window.fmt(p.preco)}</div>
                 <div class="flex flex-col items-center gap-3">
                     <div class="flex items-center gap-4 bg-slate-50 p-2 rounded-2xl border border-slate-100">
                         <button onclick="window.chQty('${p.id}',-1)" class="w-10 h-10 font-black text-2xl text-slate-300">-</button>
@@ -763,7 +647,7 @@ function renderCarrinho() {
                 </div>
             </div>
             <div class="text-right">
-                <div class="font-black text-slate-950 text-2xl italic tracking-tighter leading-none">R$ ${window.fmt(sub)}</div>
+                <div class="font-black text-slate-950 text-2xl italic tracking-tighter leading-none text-right">R$ ${window.fmt(sub)}</div>
                 <button onclick="window.remCart('${k}')" class="text-[11px] font-black text-slate-300 uppercase mt-4 hover:text-rose-500 transition-colors leading-none">Remover</button>
             </div>
         </div>`;
@@ -776,9 +660,7 @@ function renderCarrinho() {
             ${keys.length > 0 ? `
                 <div class="bg-black p-8 rounded-[40px] text-white space-y-8 shadow-2xl">
                     <div class="flex justify-between items-end">
-                       <div class="flex flex-col">
-                           <span class="text-white/30 font-black uppercase text-[11px] tracking-widest leading-none">Total Geral</span>
-                       </div>
+                       <span class="text-white/30 font-black uppercase text-[11px] tracking-widest leading-none">Total Geral</span>
                        <span class="text-4xl font-[950] tracking-tighter italic text-rose-600 leading-none">R$ ${window.fmt(t)}</span>
                     </div>
                     <button onclick="window.openCheckout()" class="btn-premium w-full py-6 rounded-[32px] text-xl italic uppercase tracking-widest shadow-2xl shadow-rose-900/50 font-black leading-none">Fechar Pedido</button>
@@ -797,10 +679,7 @@ function renderPedidos() {
                         <div class="flex justify-between items-start mb-6">
                             <div class="text-left text-balance">
                                 <h4 class="font-black uppercase text-slate-900 text-xl tracking-tighter leading-none">${p.pedidoID || '#ID'}</h4>
-                                <div class="mt-2 flex items-center gap-2">
-                                    <span class="status-dot ${p.status === 'FINALIZADO' ? 'bg-green-500' : 'bg-rose-500'} animate-pulse"></span>
-                                    <p class="text-[12px] font-black text-slate-400 uppercase tracking-widest leading-none">${p.status || 'PENDENTE'}</p>
-                                </div>
+                                <div class="mt-2 flex items-center gap-2"><p class="text-[12px] font-black text-slate-400 uppercase tracking-widest leading-none">${p.status || 'PENDENTE'}</p></div>
                             </div>
                             <div class="font-black text-3xl tracking-tighter italic text-slate-900 leading-none text-right">R$ ${window.fmt(p.valorTotal)}</div>
                         </div>
@@ -813,43 +692,16 @@ function renderPedidos() {
         </div>`;
 }
 
-// LÓGICA INTERATIVA (MODIFICADA: REMOVIDAS FUNÇÕES DE INSTALAÇÃO)
+// LÓGICA INTERATIVA
 window.syncCarrinho = () => { 
     const tot = Object.values(window.state.carrinho).reduce((a,b)=>a+b, 0);
     const b = document.getElementById('cart-badge'); 
     if(b) { if(tot > 0){ b.textContent = tot; b.classList.remove('hidden'); } else { b.classList.add('hidden'); } }
-    const island = document.getElementById('island'); const txt = document.getElementById('island-text');
-    if(island && txt) {
-        if(tot > 0) {
-            island.style.display = 'flex';
-            island.classList.remove('hidden', 'max-md:hidden');
-            island.classList.add('expand');
-            txt.textContent = `${tot} Itens no Carrinho`;
-            setTimeout(()=>island.classList.remove('expand'), 800);
-        } else {
-            island.style.display = 'none'; 
-            txt.textContent = '';
-        }
-    }
     window.render();
 };
 
 window.remCart = id => { delete window.state.carrinho[id]; window.syncCarrinho(); };
-window.changeCartQty = (id, d) => { 
-    window.state.carrinho[id] += d; 
-    if(window.state.carrinho[id] <= 0) delete window.state.carrinho[id]; 
-    window.syncCarrinho(); 
-};
-
-window.fly = (el) => {
-    const r = el.getBoundingClientRect(); const target = document.getElementById('island').getBoundingClientRect();
-    const clone = el.cloneNode(true); clone.className = 'fly-item';
-    clone.style.top = r.top+'px'; clone.style.left = r.left+'px'; clone.style.width = r.width+'px'; clone.style.height = r.height+'px';
-    document.body.appendChild(clone);
-    setTimeout(() => { clone.style.top = target.top+'px'; clone.style.left = target.left+'px'; clone.style.width = '20px'; clone.style.height = '20px'; clone.style.opacity = '0'; }, 50);
-    setTimeout(() => clone.remove(), 850);
-};
-
+window.changeCartQty = (id, d) => { window.state.carrinho[id] += d; if(window.state.carrinho[id] <= 0) delete window.state.carrinho[id]; window.syncCarrinho(); };
 window.closeAll = () => { document.querySelectorAll('.mbk').forEach(el => { el.classList.remove('open'); setTimeout(()=>el.style.display='none', 300); }); };
 
 window.setDelivery = t => {
@@ -888,17 +740,23 @@ window.saveOrderToFirebase = async () => {
     const cartKeys = Object.keys(window.state.carrinho);
     const items = cartKeys.map(k => { 
         const p = window.state.produtos.find(x=>x.id===k); 
-        return p ? { id:p.id, nome:p.nome, qty:window.state.carrinho[k], preco:p.preco } : null; 
+        const q = Number(window.state.carrinho[k] || 0);
+        return p && q > 0 ? { id:p.id, nome:p.nome, qty: q, preco: Number(p.preco) } : null; 
     }).filter(it => it !== null);
+
+    if (items.length === 0) return window.showMsg("Carrinho vazio!");
+
     try {
         const pf = window.clienteLogado;
         let finalAddr = { ...pf };
         if(window.state.deliveryType === 'entrega' && window.state.usingNewAddress) {
             finalAddr = { rua: document.getElementById('new-rua').value, num: document.getElementById('new-num').value, bairro: document.getElementById('new-bairro').value, cep: document.getElementById('new-cep').value, nome: pf.nome, tel: pf.tel };
         }
-        await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'vendas_logs'), { clienteId: auth.currentUser.uid, pedidoID: h, valorTotal: window.totalCarrinho(), itens: items, dadosCliente: finalAddr, status: 'CRIADO', tipoEntrega: window.state.deliveryType, formaPagamento: document.getElementById('pagamento-select').value, criadoEm: serverTimestamp() });
+        await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'vendas_logs'), { 
+          clienteId: auth.currentUser.uid, pedidoID: h, valorTotal: window.totalCarrinho(), itens: items, dadosCliente: finalAddr, status: 'CRIADO', tipoEntrega: window.state.deliveryType, formaPagamento: document.getElementById('pagamento-select').value, criadoEm: serverTimestamp() 
+        });
         window.state.orderHash = h; document.getElementById('order-num-display').textContent = h; window.closeAll(); 
-        const sS = document.getElementById('success-screen'); sS.classList.remove('hidden'); sS.classList.add('flex');
+        const sS = document.getElementById('success-screen'); if(sS) { sS.classList.remove('hidden'); sS.classList.add('flex'); }
         window.state.carrinho = {}; window.syncCarrinho();
     } catch(e) { window.showMsg("Erro no pedido."); }
 };
@@ -916,7 +774,6 @@ window.saveProfile = async e => {
 };
 
 window.doCopy = () => { const el = document.createElement('textarea'); el.value = document.getElementById('pix-code').textContent; document.body.appendChild(el); el.select(); document.execCommand('copy'); document.body.removeChild(el); window.showMsg("📋 Código PIX Copiado!"); };
-window.resetTudo = () => { window.state.carrinho = {}; window.setView('loja'); window.closeAll(); window.syncCarrinho(); };
 window.removeAccents = (s) => (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^\x00-\x7F]/g,'').toUpperCase();
 window.pixPayload = (key, amount, name, city, txid) => {
     const tlv = (id, v) => id + String(v.length).padStart(2,'0') + v;
@@ -936,33 +793,13 @@ onAuthStateChanged(auth, async u => {
         window.setView('loja');
         onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'estoque'), s => { window.state.produtos = s.docs.map(d=>({id:d.id, ...d.data()})); window.render(); });
         onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'vendas_logs'), s => { window.state.pedidos = s.docs.map(d=>({id:d.id, ...d.data()})).filter(p => p.clienteId === u.uid).sort((a, b) => (b.criadoEm?.toMillis?.() || 0) - (a.criadoEm?.toMillis?.() || 0)); window.render(); });
-        
-        onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'pix_config'), s => { 
-            if(s.exists()){
-                window.pix_config = s.data();
-                const wNum = s.data().whatsapp || s.data().tel_contato || '5511985706243';
-                window.state.whatsappNumber = wNum;
-                const wBtn = document.getElementById('whatsapp-btn');
-                if(wBtn) {
-                    wBtn.href = `https://wa.me/${wNum.replace(/\D/g, '')}`;
-                    wBtn.classList.remove('hidden');
-                }
-            }
-        });
-
-        window.state.favoritos = window.loadFavoritosFromLocal();
-        onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'clientes', u.uid), s => {
-            if(s.exists()){
-                const d = s.data(); window.clienteLogado = d;
-                if(d.favoritos){ window.state.favoritos = d.favoritos; window.saveFavoritosToLocal(d.favoritos); }
-                window.render();
-            } else window.setView('conta');
-        });
+        onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'pix_config'), s => { if(s.exists()){ window.pix_config = s.data(); const wNum = s.data().whatsapp || s.data().tel_contato || '5511985706243'; window.state.whatsappNumber = wNum; const wBtn = document.getElementById('whatsapp-btn'); if(wBtn) { wBtn.href = `https://wa.me/${wNum.replace(/\D/g, '')}`; wBtn.classList.remove('hidden'); } } });
+        onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'clientes', u.uid), s => { if(s.exists()){ const d = s.data(); window.clienteLogado = d; if(d.favoritos){ window.state.favoritos = d.favoritos; } window.render(); } });
     } else { document.getElementById('auth-view').style.display='flex'; document.getElementById('app-view').style.display='none'; window.setAuthMode('login'); }
     if(loader) setTimeout(() => { loader.style.opacity = '0'; setTimeout(()=>loader.style.display='none', 700); }, 1500);
 });
 
-// ✅ EXPOSIÇÃO GLOBAL DAS FUNÇÕES EM FALTA
+// FUNÇÕES DE QUANTIDADE E ADIÇÃO
 window.chQty = (id, delta) => {
     const el = document.getElementById(`qty-${id}`);
     const elDet = document.getElementById(`qty-det-${id}`);
@@ -977,16 +814,17 @@ window.addCart = (id, btn) => {
     const qty = parseInt(el?.textContent || '0');
     if(qty <= 0) return window.showMsg("Selecione a quantidade");
     window.state.carrinho[id] = (window.state.carrinho[id] || 0) + qty;
-    el.textContent = '0';
+    if(el) el.textContent = '0';
     window.syncCarrinho();
     window.showMsg("🛒 Adicionado!");
 };
 
 window.addCartDet = (id, btn) => {
-    const el = document.getElementById(`qty-det-${id}`);
-    const qty = parseInt(el?.textContent || '0');
+    const elDet = document.getElementById(`qty-det-${id}`);
+    const qty = parseInt(elDet?.textContent || '0');
     if(qty <= 0) return window.showMsg("Selecione a quantidade");
     window.state.carrinho[id] = (window.state.carrinho[id] || 0) + qty;
+    if(elDet) elDet.textContent = '0';
     window.syncCarrinho();
     window.showMsg("🛒 Adicionado!");
 };
@@ -997,6 +835,16 @@ window.toggleNewAddress = () => {
     const txt = document.getElementById('new-addr-toggle-text');
     if(form) form.style.display = window.state.usingNewAddress ? 'block' : 'none';
     if(txt) txt.textContent = window.state.usingNewAddress ? '✕ Cancelar' : '+ Usar endereço diferente';
+};
+
+window.toggleFavorito = async (id) => {
+    if(!auth.currentUser) return;
+    const isFav = window.state.favoritos.includes(id);
+    if(isFav) window.state.favoritos = window.state.favoritos.filter(f => f !== id);
+    else window.state.favoritos.push(id);
+    window.render();
+    try { await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'clientes', auth.currentUser.uid), { favoritos: window.state.favoritos }, { merge: true }); }
+    catch(e) {}
 };
 
 lucide.createIcons();
