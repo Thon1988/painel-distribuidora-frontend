@@ -253,7 +253,6 @@ import { getFirestore, collection, onSnapshot, doc, setDoc, updateDoc, deleteDoc
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 // --- CONFIGURAÇÃO FIREBASE FIXA E PADRONIZADA ---
-// ✅ App ID e Firebase Config padronizados
 const firebaseConfig = {
     apiKey: "AIzaSyD3Otz9-zdZH-E5Feg9IOGWPzVycoe8gro",
     authDomain: "distribuidora-de-ovos-aline.firebaseapp.com",
@@ -533,6 +532,14 @@ window.renderDashboard = () => {
     const pendingTotal = active.reduce((acc,l)=>acc+(Number(l.valorTotal)||0), 0);
     const produtosAtivos = window.produtos.filter(p => p.ativo).length;
     
+    // ✅ CORREÇÃO: Somar a quantidade total de todos os itens em todos os pedidos ativos
+    const totalItens = active.reduce((acc, l) => {
+        const itensSoma = (l.itens && Array.isArray(l.itens)) 
+            ? l.itens.reduce((sum, item) => sum + (Number(item.qtd || item.quantidade || 0)), 0) 
+            : 0;
+        return acc + itensSoma;
+    }, 0);
+
     let totalPix = 0;
     let totalDinheiro = 0;
     let totalDebito = 0;
@@ -563,12 +570,12 @@ window.renderDashboard = () => {
                 <h3 class="text-4xl font-[950] italic">${active.length}</h3>
             </div>
             <div class="bg-white border border-slate-200 p-6 rounded-[24px] shadow-sm text-slate-800">
-                <p class="text-xs font-black uppercase text-slate-400 mb-1">Valores a Receber (Bruto)</p>
-                <h3 class="text-3xl font-[950] italic text-slate-700">R$ ${window.fmt(pendingTotal)}</h3>
+                <p class="text-xs font-black uppercase text-slate-400 mb-1">Itens em Separação</p>
+                <h3 class="text-3xl font-[950] italic text-slate-700">${totalItens} <span class="text-sm">un.</span></h3>
             </div>
             <div class="bg-slate-900 p-6 rounded-[24px] text-white shadow-2xl">
-                <p class="text-xs font-black uppercase opacity-60 mb-1">Produtos na Vitrine</p>
-                <h3 class="text-4xl font-[950] italic">${produtosAtivos} / ${window.produtos.length}</h3>
+                <p class="text-xs font-black uppercase opacity-60 mb-1">Valor Bruto a Receber</p>
+                <h3 class="text-3xl font-[950] italic">R$ ${window.fmt(pendingTotal)}</h3>
             </div>
         `;
     }
@@ -935,6 +942,31 @@ window.handleSaveStoreConfig = async () => {
     finally { if(btn) { btn.disabled = false; btn.innerText = "💾 Guardar Dados da Loja"; } }
 };
 
+// ✅ CORREÇÃO: GRAVAÇÃO DA APARÊNCIA
+window.handleSaveAparencia = async () => {
+    const cp = document.getElementById('cfg-corPrimaria').value;
+    const cs = document.getElementById('cfg-corSecundaria').value;
+    const btn = document.getElementById('btn-save-aparencia');
+    if(btn) { btn.disabled = true; btn.innerText = "A guardar..."; }
+    
+    try {
+        // Grava no caminho exato que o PWA consome
+        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'store_config'), {
+            corPrimaria: cp, 
+            corSecundaria: cs,
+            updatedAt: serverTimestamp()
+        }, {merge:true});
+        
+        window.config.corPrimaria = cp;
+        window.config.corSecundaria = cs;
+        window.toast("✅ Aparência guardada e sincronizada!");
+    } catch(e) { 
+        console.error(e);
+        window.toast("Erro ao guardar aparência."); 
+    }
+    finally { if(btn) { btn.disabled = false; btn.innerText = "💾 Guardar Cores"; } }
+};
+
 window.handleSavePixConfig = async () => {
     const btn = document.getElementById('btn-save-pix');
     if(btn) { btn.disabled = true; btn.innerText = "A guardar..."; }
@@ -1093,8 +1125,14 @@ window.initListeners = () => {
     const u2 = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'store_config'), s => {
         if(s.exists()){
             window.config = { ...window.config, ...s.data() };
+            // Atualiza inputs visuais se estivermos na página de aparência
+            if (window.state.view === 'aparencia') {
+                const i1 = document.getElementById('cfg-corPrimaria');
+                const i2 = document.getElementById('cfg-corSecundaria');
+                if(i1) i1.value = window.config.corPrimaria;
+                if(i2) i2.value = window.config.corSecundaria;
+            }
             if (window.state.view === 'loja') window.loadLojaForm();
-            if (window.state.view === 'aparencia') window.loadAparenciaForm();
             
             const focusedId = document.activeElement ? document.activeElement.id : null;
             if (window.state.view === 'dashboard' && focusedId !== 'input-taxa-debito' && focusedId !== 'input-taxa-credito') {
@@ -1115,7 +1153,6 @@ window.initListeners = () => {
     }, errHandler);
 
     const u4 = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'vendas_logs'), s => {
-        console.log("📦 Pedidos atualizados em tempo real:", s.docs.length);
         window.logs = s.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b)=>{
             const tA = a.criadoEm?.seconds || 0;
             const tB = b.criadoEm?.seconds || 0;
@@ -1134,7 +1171,6 @@ window.boot = async () => {
     const loginBtn = document.getElementById('btn-login');
     if (loginBtn) { loginBtn.disabled = false; loginBtn.innerText = "Entrar no Painel"; }
     
-    // O onAuthStateChanged é agora a ÚNICA fonte da verdade para transição de ecrã
     onAuthStateChanged(auth, u => {
         if (u) {
             document.getElementById('login-view').style.display = 'none';
