@@ -174,7 +174,7 @@
 <!-- TELA DE AUTENTICAÇÃO -->
 <div id="auth-view" class="hidden min-h-screen flex flex-col items-center justify-center p-6 bg-white text-balance text-center">
     <div class="text-center mb-10 animate-[fadeIn_0.8s_ease-out]">
-        <div class="text-8xl mb-4 drop-shadow-xl">🥚</div>
+        <div class="text-8xl mb-4 drop-shadow-xl text-center">🥚</div>
         <h1 class="text-4xl font-[950] tracking-tighter text-rose-600 uppercase italic leading-none">Distribuidora de Ovos Aline</h1>
         <p class="text-slate-400 font-extrabold uppercase tracking-tight text-[11px] mt-4 max-w-[280px] mx-auto leading-tight">
           Qualidade direta da granja para a sua mesa
@@ -188,8 +188,8 @@
         </div>
 
         <form id="form-login" onsubmit="window.fazerLogin(event)" class="space-y-4">
-            <input type="email" id="login-email" class="premium-input !text-center" placeholder="Seu e-mail" required>
-            <input type="password" id="login-senha" class="premium-input !text-center" placeholder="Sua senha" required>
+            <input type="email" id="login-email" class="premium-input !text-center" placeholder="Seu e-mail" required autocomplete="username">
+            <input type="password" id="login-senha" class="premium-input !text-center" placeholder="Sua senha" required autocomplete="current-password">
             <div class="flex items-center justify-center gap-3">
                 <input type="checkbox" id="remember-email" class="w-4 h-4 accent-rose-600 cursor-pointer">
                 <label for="remember-email" class="text-xs font-black text-slate-400 uppercase cursor-pointer">Lembrar acesso</label>
@@ -199,7 +199,7 @@
         </form>
 
         <form id="form-register" onsubmit="window.fazerCadastro(event)" class="hidden space-y-4 text-left">
-            <input type="text" id="reg-nome" class="premium-input" placeholder="Nome Completo" required>
+            <input type="text" id="reg-nome" class="premium-input" placeholder="Nome Completo" required autocomplete="name">
             <div class="flex gap-3">
                 <input type="text" id="reg-cpf" class="w-1/2 premium-input !px-4" placeholder="CPF" oninput="window.maskCPF(event)" maxlength="14" required>
                 <input type="tel" id="reg-tel" class="w-1/2 premium-input !px-4" placeholder="WhatsApp" oninput="window.maskPhone(event)" maxlength="15" required>
@@ -215,8 +215,8 @@
                     <input type="text" id="reg-bairro" class="flex-1 premium-input !p-4 !text-sm" placeholder="Bairro" required>
                 </div>
             </div>
-            <input type="email" id="reg-email" class="premium-input" placeholder="E-mail" required>
-            <input type="password" id="reg-senha" class="premium-input" placeholder="Criar Senha" minlength="6" required>
+            <input type="email" id="reg-email" class="premium-input" placeholder="E-mail" required autocomplete="email">
+            <input type="password" id="reg-senha" class="premium-input" placeholder="Criar Senha" minlength="6" required autocomplete="new-password">
             <button type="submit" id="btn-register" class="btn-premium w-full py-6 shadow-xl uppercase">Criar Perfil</button>
         </form>
 
@@ -403,25 +403,7 @@ window.clienteLogado = {};
 window.pix_config = { rawKey:'', nomeRecebedor:'AppEgg', cidade:'SAO PAULO' };
 window.deferredPrompt = null;
 
-// ✅ SISTEMA DE INSTALAÇÃO PWA
-window.addEventListener('beforeinstallprompt', (e) => {
-  e.preventDefault();
-  window.deferredPrompt = e;
-  window.render(); // Re-renderiza para mostrar o botão se disponível
-});
-
-window.instalarApp = async () => {
-    if (window.deferredPrompt) {
-        window.deferredPrompt.prompt();
-        const { outcome } = await window.deferredPrompt.userChoice;
-        if (outcome === 'accepted') window.deferredPrompt = null;
-        window.render();
-    } else {
-        window.showMsg("Abra o menu do navegador e selecione 'Instalar' ou 'Adicionar ao ecrã inicial'.");
-    }
-};
-
-// ✅ SISTEMA DE FAVORITOS HÍBRIDO
+// SISTEMA DE FAVORITOS HÍBRIDO
 window.loadFavoritosFromLocal = () => {
     if(!auth.currentUser) return [];
     const key = `appegg_favs_${auth.currentUser.uid}`;
@@ -456,7 +438,6 @@ window.toggleFavorito = async (id) => {
     } catch(e) { console.warn("Sync cloud falhou."); }
 };
 
-// CÁLCULO TOTAL
 window.totalCarrinho = () => {
   return Object.keys(window.state.carrinho).reduce((acc, k) => {
     const p = window.state.produtos.find(x => x.id === k);
@@ -465,7 +446,6 @@ window.totalCarrinho = () => {
   }, 0);
 };
 
-// UI UTILS
 window.showMsg = (msg) => {
     const t = document.getElementById('toast-el'); if(!t) return;
     t.textContent = msg; t.style.opacity = '1'; t.style.transform = 'translateX(-50%) translateY(0)';
@@ -492,7 +472,6 @@ window.buscaCep = async (cep, prefix) => {
     } catch (e) {}
 };
 
-// CONTROLE AUTH
 window.setAuthMode = m => {
     const isL = m==='login'; const isR = m==='register'; const isF = m==='forgot';
     const formL = document.getElementById('form-login'); const formR = document.getElementById('form-register'); const formF = document.getElementById('form-forgot');
@@ -508,10 +487,10 @@ window.setAuthMode = m => {
 window.fazerLogin = async e => {
     e.preventDefault();
     const btn = document.getElementById('btn-login'); 
-    const em = document.getElementById('login-email').value.trim();
-    const ps = document.getElementById('login-senha').value;
+    const emV = document.getElementById('login-email').value.trim();
+    const psV = document.getElementById('login-senha').value;
     btn.disabled = true;
-    try { await signInWithEmailAndPassword(auth, em, ps); }
+    try { await signInWithEmailAndPassword(auth, emV, psV); }
     catch(err){ window.showMsg("Dados incorretos."); btn.disabled = false; }
 };
 
@@ -519,12 +498,12 @@ window.fazerCadastro = async e => {
     e.preventDefault();
     const btn = document.getElementById('btn-register'); btn.disabled = true;
     try {
-        const em = document.getElementById('reg-email').value.trim(); 
+        const emR = document.getElementById('reg-email').value.trim(); 
         const senha = document.getElementById('reg-senha').value;
-        const uc = await createUserWithEmailAndPassword(auth, em, senha); 
+        const uc = await createUserWithEmailAndPassword(auth, emR, senha); 
         const nome = document.getElementById('reg-nome').value.trim();
         await updateProfile(uc.user, { displayName: nome });
-        const dados = { nome, cpf: document.getElementById('reg-cpf').value, tel: document.getElementById('reg-tel').value, email: em, rua: document.getElementById('reg-rua').value.trim(), num: document.getElementById('reg-num').value.trim(), bairro: document.getElementById('reg-bairro').value.trim(), cep: document.getElementById('reg-cep').value.trim(), criadoEm: serverTimestamp(), favoritos: [] };
+        const dados = { nome, cpf: document.getElementById('reg-cpf').value, tel: document.getElementById('reg-tel').value, email: emR, rua: document.getElementById('reg-rua').value.trim(), num: document.getElementById('reg-num').value.trim(), bairro: document.getElementById('reg-bairro').value.trim(), cep: document.getElementById('reg-cep').value.trim(), criadoEm: serverTimestamp(), favoritos: [] };
         await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'clientes', uc.user.uid), dados);
         window.clienteLogado = dados;
     } catch(err) { window.showMsg("Erro no cadastro."); btn.disabled = false; }
@@ -538,7 +517,6 @@ window.solicitarRecuperacao = async e => {
 
 window.fazerLogout = () => { if(confirm("Deseja mesmo sair?")) signOut(auth).then(()=>location.reload()); };
 
-// NAVEGAÇÃO
 window.setView = v => {
     window.state.view = v;
     document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
@@ -561,7 +539,6 @@ window.render = () => {
 
 window.handleSearch = val => { window.state.searchTerm = val.toLowerCase(); window.render(); };
 
-// RENDERIZAR CARD DO PRODUTO
 function renderProductCard(p) {
     const isFav = window.state.favoritos.includes(p.id);
     return `
@@ -599,7 +576,7 @@ function renderLoja() {
     const filtered = window.state.produtos.filter(p => (p.nome || "").toLowerCase().includes(window.state.searchTerm) && p.ativo !== false);
     return `
       <div class="animate-[fadeIn_0.5s_ease-out] text-left">
-        <!-- MENU RÁPIDO -->
+        <!-- MENU RÁPIDO (REMOVIDO BOTÃO BAIXAR APP) -->
         <div class="flex gap-4 overflow-x-auto pb-8 hide-scrollbar">
             <div onclick="window.setView('promocoes')" class="quick-menu-item">
                 <div class="quick-menu-icon"><i data-lucide="tag"></i></div>
@@ -612,10 +589,6 @@ function renderLoja() {
             <div onclick="window.setView('cupons')" class="quick-menu-item">
                 <div class="quick-menu-icon"><i data-lucide="ticket"></i></div>
                 <span class="text-[10px] font-black uppercase text-slate-500">Cupons</span>
-            </div>
-            <div onclick="window.instalarApp()" class="quick-menu-item">
-                <div class="quick-menu-icon"><i data-lucide="download"></i></div>
-                <span class="text-[10px] font-black uppercase text-slate-500">Baixar App</span>
             </div>
         </div>
 
@@ -735,7 +708,6 @@ function renderConta() {
                 </div>
             </div>
             <button type="submit" class="btn-premium w-full py-7 rounded-[32px] shadow-2xl">Salvar Alterações</button>
-            <button type="button" onclick="window.instalarApp()" class="w-full mt-4 flex items-center justify-center gap-2 text-rose-600 font-black uppercase text-[10px] tracking-widest"><i data-lucide="download" class="w-4 h-4"></i> Instalar Aplicação</button>
             <button type="button" onclick="window.fazerLogout()" class="btn-premium w-full py-5 !bg-black !text-white rounded-[32px] font-black uppercase text-[10px] tracking-[0.3em] mt-4 shadow-xl leading-none">Sair da Conta</button>
         </form>
       </div>
@@ -841,7 +813,7 @@ function renderPedidos() {
         </div>`;
 }
 
-// LÓGICA INTERATIVA
+// LÓGICA INTERATIVA (MODIFICADA: REMOVIDAS FUNÇÕES DE INSTALAÇÃO)
 window.syncCarrinho = () => { 
     const tot = Object.values(window.state.carrinho).reduce((a,b)=>a+b, 0);
     const b = document.getElementById('cart-badge'); 
@@ -892,7 +864,6 @@ window.setDelivery = t => {
 
 window.openCheckout = () => {
     document.getElementById('checkout-total-btn').textContent = 'R$ ' + window.fmt(window.totalCarrinho());
-    document.getElementById('checkout-total-val').textContent = 'R$ ' + window.fmt(window.totalCarrinho());
     window.setDelivery('retirada'); 
     const modal = document.getElementById('checkout-modal'); modal.style.display='flex'; setTimeout(()=>modal.classList.add('open'), 10);
 };
@@ -959,17 +930,16 @@ window.pixPayload = (key, amount, name, city, txid) => {
 onAuthStateChanged(auth, async u => {
     const loader = document.getElementById('loader');
     if(u){
+        window.state.user = u;
         document.getElementById('auth-view').style.display='none';
         document.getElementById('app-view').style.display='block';
         window.setView('loja');
         onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'estoque'), s => { window.state.produtos = s.docs.map(d=>({id:d.id, ...d.data()})); window.render(); });
         onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'vendas_logs'), s => { window.state.pedidos = s.docs.map(d=>({id:d.id, ...d.data()})).filter(p => p.clienteId === u.uid).sort((a, b) => (b.criadoEm?.toMillis?.() || 0) - (a.criadoEm?.toMillis?.() || 0)); window.render(); });
         
-        // Listener de Configurações (WhatsApp e PIX)
         onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'pix_config'), s => { 
             if(s.exists()){
                 window.pix_config = s.data();
-                // ✅ Captura o número do WhatsApp dinamicamente
                 const wNum = s.data().whatsapp || s.data().tel_contato || '5511985706243';
                 window.state.whatsappNumber = wNum;
                 const wBtn = document.getElementById('whatsapp-btn');
@@ -991,6 +961,45 @@ onAuthStateChanged(auth, async u => {
     } else { document.getElementById('auth-view').style.display='flex'; document.getElementById('app-view').style.display='none'; window.setAuthMode('login'); }
     if(loader) setTimeout(() => { loader.style.opacity = '0'; setTimeout(()=>loader.style.display='none', 700); }, 1500);
 });
+
+// ✅ EXPOSIÇÃO GLOBAL DAS FUNÇÕES EM FALTA
+window.chQty = (id, delta) => {
+    const el = document.getElementById(`qty-${id}`);
+    const elDet = document.getElementById(`qty-det-${id}`);
+    let curr = parseInt(el?.textContent || elDet?.textContent || '0');
+    curr = Math.max(0, curr + delta);
+    if(el) el.textContent = curr;
+    if(elDet) elDet.textContent = curr;
+};
+
+window.addCart = (id, btn) => {
+    const el = document.getElementById(`qty-${id}`);
+    const qty = parseInt(el?.textContent || '0');
+    if(qty <= 0) return window.showMsg("Selecione a quantidade");
+    window.state.carrinho[id] = (window.state.carrinho[id] || 0) + qty;
+    el.textContent = '0';
+    window.syncCarrinho();
+    window.showMsg("🛒 Adicionado!");
+};
+
+window.addCartDet = (id, btn) => {
+    const el = document.getElementById(`qty-det-${id}`);
+    const qty = parseInt(el?.textContent || '0');
+    if(qty <= 0) return window.showMsg("Selecione a quantidade");
+    window.state.carrinho[id] = (window.state.carrinho[id] || 0) + qty;
+    window.syncCarrinho();
+    window.showMsg("🛒 Adicionado!");
+};
+
+window.toggleNewAddress = () => {
+    window.state.usingNewAddress = !window.state.usingNewAddress;
+    const form = document.getElementById('new-address-form');
+    const txt = document.getElementById('new-addr-toggle-text');
+    if(form) form.style.display = window.state.usingNewAddress ? 'block' : 'none';
+    if(txt) txt.textContent = window.state.usingNewAddress ? '✕ Cancelar' : '+ Usar endereço diferente';
+};
+
+lucide.createIcons();
 </script>
 </body>
 </html>
