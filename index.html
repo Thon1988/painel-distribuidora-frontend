@@ -56,8 +56,8 @@
     .form-grid.full { grid-template-columns:1fr; }
     .field { display:flex; flex-direction:column; gap:6px; }
     .field label { font-size:.75rem; font-weight:800; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; }
-    .field input, .field select, .field textarea { border:2px solid var(--border); border-radius:12px; padding:12px 16px; font-size:.92rem; color:var(--brown); font-family:inherit; transition:all .2s; outline:none; background:var(--cream); font-weight: 700;}
-    .field input:focus, .field select:focus, .field textarea:focus { border-color:var(--primary); box-shadow:0 0 0 4px rgba(225,29,72,.15); background:var(--white);}
+    .field input, .field select, .field textarea, .input-egg { border:2px solid var(--border); border-radius:12px; padding:12px 16px; font-size:.92rem; color:var(--brown); font-family:inherit; transition:all .2s; outline:none; background:var(--cream); font-weight: 700;}
+    .field input:focus, .field select:focus, .field textarea:focus, .input-egg:focus { border-color:var(--primary); box-shadow:0 0 0 4px rgba(225,29,72,.15); background:var(--white);}
     .field input:disabled { opacity: 0.7; cursor: not-allowed; }
     .field textarea { resize:vertical; min-height:80px; }
     .color-row { display:flex; align-items:center; gap:12px; }
@@ -138,7 +138,7 @@
 <div id="login-view">
     <div class="card" style="width:100%; max-width:400px; text-align:center; padding:40px; border-radius:32px; border:4px solid var(--border);">
         <h2 style="color:var(--primary); margin-bottom: 5px; font-size: 1.8rem; font-weight: 900; font-style: italic; letter-spacing: -1px;">App Distribuidora de Ovos Aline</h2>
-        <p style="color:var(--green); font-size: 0.75rem; font-weight: 900; margin-bottom: 30px; text-transform: uppercase; letter-spacing: 2px;">Painel Administrativo v7.0.31</p>
+        <p style="color:var(--green); font-size: 0.75rem; font-weight: 900; margin-bottom: 30px; text-transform: uppercase; letter-spacing: 2px;">Painel Administrativo v7.0.38</p>
         
         <form id="login-form" onsubmit="event.preventDefault(); window.fazerLogin();">
             <div class="field" style="margin-bottom: 15px;">
@@ -224,6 +224,8 @@
             </select>
         </div>
         
+        <div class="field"><label>Quantidade no Estoque</label><input id="mp-estoque" type="number" min="0" placeholder="0" /></div>
+
         <div class="field"><label>Preço (R$)</label><input id="mp-preco" type="number" min="0" step="0.01" placeholder="12.90" /></div>
       </div>
       <div class="field"><label>Descrição Longa</label><textarea id="mp-desc" rows="3" placeholder="Descreva o produto com carinho..."></textarea></div>
@@ -329,6 +331,24 @@ window.toast = (msg) => {
 };
 
 window.fmt = n => Number(n || 0).toFixed(2).replace('.',',');
+
+window.removeAccents = (s) => (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^\x00-\x7F]/g,'').toUpperCase();
+
+window.crc16 = (s) => {
+    let c = 0xFFFF;
+    for (let i=0; i<s.length; i++) {
+        c ^= (s.charCodeAt(i) & 0xFF) << 8;
+        for (let j=0; j<8; j++) c = (c & 0x8000) ? ((c << 1) ^ 0x1021) & 0xFFFF : (c << 1) & 0xFFFF;
+    }
+    return (c & 0xFFFF).toString(16).toUpperCase().padStart(4,'0');
+};
+
+window.pixPayload = (key, amount, name, city, txid) => {
+    const tlv = (id, v) => id + String(v.length).padStart(2,'0') + v;
+    const ma = tlv('00','BR.GOV.BCB.PIX') + tlv('01', key);
+    let p = tlv('00','01') + tlv('26', ma) + tlv('52','0000') + tlv('53','986') + tlv('54', Number(amount).toFixed(2)) + tlv('58','BR') + tlv('59', window.removeAccents(name).slice(0,25)||'LOJA') + tlv('60', window.removeAccents(city).slice(0,15)||'BR') + tlv('62', tlv('05', window.removeAccents(txid).slice(0,25)||'TESTE'));
+    return p + tlv('63', window.crc16(p + '6304'));
+};
 
 window.goTo = (sec) => {
     document.querySelectorAll('.nav-item').forEach(el => {
@@ -566,7 +586,7 @@ window.renderDashboard = () => {
     const active = window.logs.filter(l => !["FINALIZADO", "CANCELADO"].includes(l.status));
     const pendingTotal = active.reduce((acc,l)=>acc+(Number(l.valorTotal)||0), 0);
     
-    // ✅ CORREÇÃO: Fallback qty/amount para itens solicitados nunca aparecerem zerados
+    // ✅ CORREÇÃO MÍNIMA: Fallback qty/amount para itens solicitados nunca aparecerem zerados
     const totalItens = active.reduce((acc, l) => {
         const itensSoma = (l.itens && Array.isArray(l.itens)) 
             ? l.itens.reduce((sum, item) => sum + (Number(item.qtd || item.quantidade || item.qty || item.amount || 0)), 0) 
@@ -725,8 +745,8 @@ window.renderPedidos = () => {
             ? `${l.dadosCliente?.rua || ''}, ${l.dadosCliente?.num || ''} - ${l.dadosCliente?.bairro || ''} <br><span style="font-size:0.75rem;color:var(--muted);margin-top:4px;display:block;">Comp: ${l.dadosCliente?.comp || 'N/A'}</span>`
             : 'O cliente virá buscar os produtos fisicamente.';
         
-        const itensArr = Array.isArray(l.itens) ? l.itens : [];
-        const itensStr = itensArr.map(i => {
+        const itensStr = (l.itens || []).map(i => {
+            // ✅ CORREÇÃO MÍNIMA: Fallback qty/amount para itens nos pedidos
             const quantidade = i.qtd || i.quantidade || i.qty || i.amount || 0;
             return `<div style="margin-bottom:4px;"><span style="background:var(--cream);color:var(--primary);padding:2px 6px;border-radius:6px;font-weight:900;font-size:0.75rem;margin-right:6px;border:1px solid var(--border);">${quantidade}x</span><span style="font-weight:800;font-size:0.85rem;color:var(--brown);">${i.nome || i.produto}</span></div>`;
         }).join('');
@@ -814,7 +834,7 @@ window.renderProdList = () => {
             <div class="prod-emoji" style="padding: ${imgPadding}; border: ${p.foto_url ? 'none' : ''};">${imageElement}</div>
             <div class="prod-info">
                 <h4>${p.nome || ''} ${p.badge?`<span style="background:${p.badgeClass==='green'?'#10b981':p.badgeClass==='amber'?'#f59e0b':'#e11d48'};color:#fff;font-size:.65rem;padding:3px 10px;border-radius:50px;font-weight:800;vertical-align:middle;margin-left:8px;">${p.badge}</span>`:''}</h4>
-                <p>${p.tipo || ''} · Embalagem: <strong>${p.embalagem || 'Não definida'}</strong> · ${p.ativo?'✅ Ativo':'⏸ Oculto'}</p>
+                <p>${p.tipo || ''} · Embalagem: <strong>${p.embalagem || 'Não definida'}</strong> · Estoque: <strong style="color: ${(p.estoque || 0) <= 5 ? 'var(--red)' : 'var(--green)'}">${p.estoque || 0} un.</strong> · ${p.ativo?'✅ Ativo':'⏸ Oculto'}</p>
             </div>
             <div class="prod-price">R$ ${window.fmt(p.preco)}</div>
             <div class="prod-actions">
@@ -851,6 +871,7 @@ window.openProdModal = (id = null) => {
     document.getElementById('mp-emoji').value       = p.emoji || '🥚';
     document.getElementById('mp-tipo').value        = p.tipo  || '';
     document.getElementById('mp-embalagem').value   = p.embalagem || 'Dúzia (12)';
+    document.getElementById('mp-estoque').value     = p.estoque || 0;
     document.getElementById('mp-preco').value       = p.preco || '';
     document.getElementById('mp-desc').value        = p.desc  || '';
     document.getElementById('mp-badge').value       = p.badge || '';
@@ -872,9 +893,9 @@ window.closeProdModal = () => document.getElementById('prod-modal').classList.re
 window.saveProd = async () => {
     const nome  = document.getElementById('mp-nome').value.trim();
     const preco = parseFloat(document.getElementById('mp-preco').value);
+    const estoque = parseInt(document.getElementById('mp-estoque').value) || 0;
     
-    if (!nome) { window.toast('⚠️ Informe o nome!'); return; }
-    if (isNaN(preco)) { window.toast('⚠️ Informe o preço!'); return; }
+    if (!nome || isNaN(preco)) { window.toast('⚠️ Preencha os campos obrigatórios!'); return; }
     
     const btn = document.getElementById('btn-save-product-modal');
     if(btn) { btn.disabled = true; btn.innerText = "A guardar..."; }
@@ -892,6 +913,7 @@ window.saveProd = async () => {
         tipo: document.getElementById('mp-tipo').value, 
         embalagem: document.getElementById('mp-embalagem').value.trim() || 'Unidade',
         preco,
+        estoque,
         desc: document.getElementById('mp-desc').value,
         badge: document.getElementById('mp-badge').value,
         badgeClass: document.getElementById('mp-badgeClass').value,
@@ -1089,116 +1111,6 @@ window.selBadge = (el, badge, cls) => {
     document.getElementById('mp-badgeClass').value = cls;
 };
 
-// --- LOGIC FUNCTIONS (RELATÓRIO) ---
-window.relatorioAtual = [];
-
-window.gerarRelatorio = (tipo) => {
-    let inicio;
-    let fim = new Date();
-    const logsArr = Array.isArray(window.logs) ? window.logs : [];
-
-    if(tipo === "dia"){
-        inicio = new Date();
-        inicio.setHours(0,0,0,0);
-    }
-    if(tipo === "semana"){
-        inicio = new Date();
-        inicio.setDate(inicio.getDate() - 7);
-    }
-    if(tipo === "quinzena"){
-        inicio = new Date();
-        inicio.setDate(inicio.getDate() - 15);
-    }
-    if(tipo === "mes"){
-        inicio = new Date();
-        inicio.setMonth(inicio.getMonth() - 1);
-    }
-    if(tipo === "custom"){
-        const startVal = document.getElementById("rel-data-inicio").value;
-        const endVal = document.getElementById("rel-data-fim").value;
-        if(!startVal || !endVal) { window.toast("⚠️ Selecione as datas"); return; }
-        inicio = new Date(startVal);
-        fim = new Date(endVal);
-        fim.setHours(23,59,59,999);
-    }
-
-    const vendas = logsArr.filter(v => {
-        const data = new Date((v.criadoEm?.seconds || 0) * 1000);
-        return data >= inicio && data <= fim && v.status === "FINALIZADO";
-    });
-
-    window.relatorioAtual = vendas;
-    window.renderRelatorio(vendas);
-};
-
-window.renderRelatorio = (vendas) => {
-    const el = document.getElementById("relatorio-resultado");
-    if(!el) return;
-
-    if(!vendas.length){
-        el.innerHTML = "<p style='font-weight:700; color:var(--muted); text-align:center; padding:20px;'>Nenhuma venda finalizada encontrada.</p>";
-        return;
-    }
-
-    let total = 0;
-    const linhas = vendas.map(v=>{
-        total += v.valorTotal || 0;
-        const cliente = v.dadosCliente?.nome || "Anonimo";
-        const dataStr = v.criadoEm ? new Date(v.criadoEm.seconds*1000).toLocaleString('pt-PT') : "---";
-
-        return `
-        <tr>
-            <td>${v.pedidoID || '---'}</td>
-            <td>${cliente}</td>
-            <td>${dataStr}</td>
-            <td>R$ ${window.fmt(v.valorTotal)}</td>
-        </tr>
-        `;
-    }).join("");
-
-    el.innerHTML = `
-        <div style="margin-bottom:10px;font-weight:900; background:var(--white); padding:15px; border-radius:12px; border:1px solid var(--border); text-align:center;">
-            Total vendido no período: <span style="color:var(--green)">R$ ${window.fmt(total)}</span>
-        </div>
-
-        <div style="overflow-x:auto; background:white; border-radius:15px; border:1px solid var(--border)">
-            <table class="rel-table">
-                <thead>
-                    <tr>
-                        <th>Pedido</th>
-                        <th>Cliente</th>
-                        <th>Data</th>
-                        <th>Valor</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${linhas}
-                </tbody>
-            </table>
-        </div>
-    `;
-};
-
-window.exportarCSV = () => {
-    if(!window.relatorioAtual.length){
-        window.toast("Nenhum relatório gerado");
-        return;
-    }
-
-    let csv = "Pedido,Cliente,Data,Valor\n";
-    window.relatorioAtual.forEach(v=>{
-        const cliente = (v.dadosCliente?.nome || "Anonimo").replace(/,/g, '');
-        const data = v.criadoEm ? new Date(v.criadoEm.seconds*1000).toLocaleString('pt-PT').replace(',','') : "---";
-        csv += `${v.pedidoID || '---'},${cliente},${data},${(v.valorTotal || 0).toFixed(2)}\n`;
-    });
-
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = "relatorio_vendas_ovos_aline.csv";
-    link.click();
-};
-
 window.fazerLogin = async () => {
     const btn = document.getElementById('btn-login');
     const em = document.getElementById('login-email').value.trim();
@@ -1220,30 +1132,21 @@ window.fazerLogout = async () => {
     try { await signOut(auth); } catch(e){}
 };
 
-window.removeAccents = (s) => (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^\x00-\x7F]/g,'').toUpperCase();
-window.pixPayload = (key, amount, name, city, txid) => {
-    const tlv = (id, v) => id + String(v.length).padStart(2,'0') + v;
-    const ma = tlv('00','BR.GOV.BCB.PIX') + tlv('01', key);
-    let p = tlv('00','01') + tlv('26', ma) + tlv('52','0000') + tlv('53','986') + tlv('54', Number(amount).toFixed(2)) + tlv('58','BR') + tlv('59', window.removeAccents(name).slice(0,25)||'LOJA') + tlv('60', window.removeAccents(city).slice(0,15)||'BR') + tlv('62', tlv('05', window.removeAccents(txid).slice(0,25)||'TESTE'));
-    return p + tlv('63', window.crc16(p + '6304'));
-};
-window.crc16 = (s) => {
-    let c = 0xFFFF;
-    for (let i=0; i<s.length; i++) {
-        c ^= (s.charCodeAt(i) & 0xFF) << 8;
-        for (let j=0; j<8; j++) c = (c & 0x8000) ? ((c << 1) ^ 0x1021) & 0xFFFF : (c << 1) & 0xFFFF;
-    }
-    return (c & 0xFFFF).toString(16).toUpperCase().padStart(4,'0');
-};
-
 window.initListeners = () => {
     if (window.isListening) return;
     window.isListening = true;
 
+    const errHandler = (err) => {
+        console.warn("Aviso do Firebase:", err.message);
+        if (err.code === 'permission-denied') {
+            window.toast("Erro Firebase: Permissão Negada!");
+        }
+    };
+
     const u1 = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'estoque'), s => {
         window.produtos = s.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b)=>(a.nome||"").localeCompare(b.nome||""));
         if (window.state.view === 'produtos') window.renderProdList();
-    });
+    }, errHandler);
 
     const u2 = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'store_config'), s => {
         if(s.exists()){
@@ -1257,7 +1160,7 @@ window.initListeners = () => {
             if (window.state.view === 'loja') window.loadLojaForm();
             if (window.state.view === 'dashboard') window.renderDashboard();
         }
-    });
+    }, errHandler);
 
     const u3 = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'pix_config'), s => {
         if(s.exists()){
@@ -1268,20 +1171,25 @@ window.initListeners = () => {
             window.config.pixCidade = d.cidade || '';
             if (window.state.view === 'pix') window.loadPixForm();
         }
-    });
+    }, errHandler);
 
     const u4 = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'vendas_logs'), s => {
-        window.logs = s.docs.map(d => ({ id: d.id, ...d.data() }));
+        window.logs = s.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b)=>{
+            const tA = a.criadoEm?.seconds || 0;
+            const tB = b.criadoEm?.seconds || 0;
+            return tB - tA;
+        });
         if (window.state.view === 'pedidos') window.renderPedidos();
         if (window.state.view === 'dashboard') window.renderDashboard();
-        if (window.state.view === 'relatorios') window.renderRelatorio(window.relatorioAtual);
-    });
+    }, errHandler);
 
     window.firebaseUnsubs.push(u1, u2, u3, u4);
 };
 
 window.boot = async () => {
     await window.initAuth();
+    const loginBtn = document.getElementById('btn-login');
+    if (loginBtn) { loginBtn.disabled = false; loginBtn.innerText = "Entrar no Painel"; }
     onAuthStateChanged(auth, u => {
         if (u) {
             document.getElementById('login-view').style.display = 'none';
