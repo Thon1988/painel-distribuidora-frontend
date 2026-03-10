@@ -173,6 +173,7 @@
                 </div>
                 <div class="flex gap-2">
                     <input type="text" id="reg-num" class="w-1/4 premium-input !p-4 !text-sm" placeholder="Nº" required>
+                    <input type="text" id="reg-comp" class="w-1/3 premium-input !p-4 !text-sm" placeholder="Comp.">
                     <input type="text" id="reg-bairro" class="flex-1 premium-input !p-4 !text-sm" placeholder="Bairro" required>
                 </div>
             </div>
@@ -263,9 +264,20 @@
                     </div>
                     <div class="flex gap-2 text-left">
                         <input type="text" id="new-num" class="w-1/4 premium-input !p-4 !text-sm" placeholder="Nº">
+                        <input type="text" id="new-comp" class="w-1/3 premium-input !p-4 !text-sm" placeholder="Comp.">
                         <input type="text" id="new-bairro" class="flex-1 premium-input !p-4 !text-sm" placeholder="Bairro">
                     </div>
                 </div>
+            </div>
+
+            <!-- APLICAÇÃO DE CUPONS NO CHECKOUT -->
+            <div class="space-y-2 mt-4 bg-slate-50 p-4 rounded-[24px] border border-slate-100">
+                <p class="font-black text-[10px] uppercase text-slate-400 tracking-widest ml-2">Cupom de Desconto</p>
+                <div class="flex gap-2">
+                    <input type="text" id="checkout-cupom" class="premium-input !py-4 font-black uppercase flex-1 text-xs" placeholder="Ex: BEMVINDO10">
+                    <button onclick="window.applyCoupon()" class="bg-black text-white px-6 rounded-[16px] font-black text-[10px] uppercase tracking-widest shadow-md">Aplicar</button>
+                </div>
+                <p id="cupom-msg" class="text-[10px] font-bold ml-2 hidden mt-2"></p>
             </div>
 
             <div class="space-y-2">
@@ -340,14 +352,25 @@ setPersistence(auth, browserLocalPersistence).catch(e => console.warn(e));
 window.state = {
     user: null, view: 'loja', produtos: [], pedidos: [], carrinho: {}, favoritos: [],
     deliveryType: 'retirada', orderHash: '', usingNewAddress: false,
-    searchTerm: '', category: 'Todos', whatsappNumber: ''
+    searchTerm: '', category: 'Todos', whatsappNumber: '', appliedCoupon: null
 };
 
 window.clienteLogado = {};
 window.pix_config = { rawKey:'', nomeRecebedor:'AppEgg', cidade:'SAO PAULO' };
+window.fidelidadeConfig = { ativo: false };
+window.cupons = [];
+
+window.firebaseUnsubs = [];
+window.clearAdminListeners = () => {
+    window.firebaseUnsubs.forEach(unsub => {
+        if (typeof unsub === 'function') unsub();
+    });
+    window.firebaseUnsubs = [];
+};
 
 window.resetTudo = () => {
     window.state.carrinho = {};
+    window.state.appliedCoupon = null;
     const successScreen = document.getElementById('success-screen');
     if (successScreen) {
         successScreen.classList.remove('flex');
@@ -365,6 +388,14 @@ window.totalCarrinho = () => {
     const qty = window.state.carrinho[k] || 0;
     return acc + ((p ? Number(p.preco) : 0) * qty);
   }, 0);
+};
+
+window.totalDescontado = () => {
+    let total = window.totalCarrinho();
+    if(window.state.appliedCoupon) {
+        total = total - (total * (window.state.appliedCoupon.desconto / 100));
+    }
+    return total;
 };
 
 window.showMsg = (msg) => {
@@ -420,7 +451,21 @@ window.fazerCadastro = async e => {
         const uc = await createUserWithEmailAndPassword(auth, emR, senha); 
         const nome = document.getElementById('reg-nome').value.trim();
         await updateProfile(uc.user, { displayName: nome });
-        const dados = { nome, cpf: document.getElementById('reg-cpf').value, tel: document.getElementById('reg-tel').value, email: emR, rua: document.getElementById('reg-rua').value.trim(), num: document.getElementById('reg-num').value.trim(), bairro: document.getElementById('reg-bairro').value.trim(), cep: document.getElementById('reg-cep').value.trim(), criadoEm: serverTimestamp(), favoritos: [] };
+        
+        const dados = { 
+            nome, 
+            cpf: document.getElementById('reg-cpf').value, 
+            tel: document.getElementById('reg-tel').value, 
+            email: emR, 
+            rua: document.getElementById('reg-rua').value.trim(), 
+            num: document.getElementById('reg-num').value.trim(), 
+            comp: document.getElementById('reg-comp').value.trim(), 
+            bairro: document.getElementById('reg-bairro').value.trim(), 
+            cep: document.getElementById('reg-cep').value.trim(), 
+            pontosFidelidade: 0,
+            criadoEm: serverTimestamp(), 
+            favoritos: [] 
+        };
         await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'clientes', uc.user.uid), dados);
         window.clienteLogado = dados;
     } catch(err) { window.showMsg("Erro no cadastro."); btn.disabled = false; }
@@ -432,7 +477,12 @@ window.solicitarRecuperacao = async e => {
     try { await sendPasswordResetEmail(auth, em); window.showMsg("📧 Link enviado!"); window.setAuthMode('login'); } catch(e) { window.showMsg("E-mail não localizado."); }
 };
 
-window.fazerLogout = () => { if(confirm("Deseja mesmo sair?")) signOut(auth).then(()=>location.reload()); };
+window.fazerLogout = () => { 
+    if(confirm("Deseja mesmo sair?")) {
+        window.clearAdminListeners();
+        signOut(auth).then(()=>location.reload());
+    } 
+};
 
 window.setView = v => {
     window.state.view = v;
@@ -563,6 +613,41 @@ function renderFavoritos() {
 
 function renderConta() {
     const c = window.clienteLogado;
+    let fidelidadeHtml = '';
+    
+    if(window.fidelidadeConfig && window.fidelidadeConfig.ativo) {
+        const pontos = c.pontosFidelidade || 0;
+        const meta = window.fidelidadeConfig.metaPontos || 100;
+        const premio = window.fidelidadeConfig.premio || 'Prêmio Surpresa';
+        const progress = Math.min((pontos / meta) * 100, 100);
+        const isReady = pontos >= meta;
+
+        fidelidadeHtml = `
+        <div class="bg-gradient-to-br from-slate-900 to-black p-8 rounded-[40px] premium-shadow text-white mb-8 text-left text-balance relative overflow-hidden">
+            <div class="absolute top-0 right-0 p-6 opacity-10 text-6xl">💎</div>
+            <div class="relative z-10">
+                <h3 class="text-xl font-[950] tracking-tighter uppercase italic text-rose-500 mb-1">Clube Aline</h3>
+                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-6">Cartão Fidelidade</p>
+                
+                <div class="flex justify-between items-end mb-2">
+                    <span class="text-3xl font-[950] italic leading-none">${pontos} <span class="text-sm font-bold text-slate-400 not-italic">/ ${meta} pts</span></span>
+                </div>
+                
+                <div class="w-full bg-slate-800 rounded-full h-4 mb-4 overflow-hidden border border-slate-700">
+                    <div class="bg-gradient-to-r from-rose-600 to-rose-400 h-4 rounded-full transition-all duration-1000" style="width: ${progress}%"></div>
+                </div>
+                
+                <p class="text-xs font-bold text-slate-300 mb-6">Prêmio: <span class="text-white">${premio}</span></p>
+                
+                ${isReady ? 
+                    `<button type="button" onclick="window.resgatarPremio()" class="w-full py-4 bg-rose-600 text-white rounded-full font-black uppercase tracking-widest text-[11px] shadow-xl shadow-rose-900/50 animate-pulse">🎁 Resgatar Prêmio Agora!</button>` : 
+                    `<div class="w-full py-4 bg-slate-800 text-slate-500 rounded-full font-black uppercase tracking-widest text-[11px] text-center border border-slate-700">Faltam ${meta - pontos} pontos</div>`
+                }
+            </div>
+        </div>
+        `;
+    }
+
     return `
       <div class="animate-[fadeIn_0.5s_ease-out] text-left space-y-8">
         <div class="flex items-center gap-6 text-balance">
@@ -572,6 +657,9 @@ function renderConta() {
                 <p class="text-slate-400 font-bold text-xs uppercase tracking-widest leading-none mt-2 text-balance">${c.email || ''}</p>
             </div>
         </div>
+        
+        ${fidelidadeHtml}
+
         <form onsubmit="window.saveProfile(event)" class="space-y-4">
             <input type="text" id="prof-nome" class="premium-input" placeholder="Nome" value="${c.nome || ''}" required>
             <div class="flex gap-3">
@@ -585,8 +673,9 @@ function renderConta() {
                     <input type="text" id="prof-rua" class="flex-1 premium-input !p-4 !text-sm" value="${c.rua || ''}" required>
                 </div>
                 <div class="flex gap-2 mt-2">
-                    <input type="text" id="prof-num" class="w-1/4 premium-input !p-4 !text-sm" value="${c.num || ''}" required>
-                    <input type="text" id="prof-bairro" class="flex-1 premium-input !p-4 !text-sm" value="${c.bairro || ''}" required>
+                    <input type="text" id="prof-num" class="w-1/4 premium-input !p-4 !text-sm" value="${c.num || ''}" placeholder="Nº" required>
+                    <input type="text" id="prof-comp" class="w-1/3 premium-input !p-4 !text-sm" value="${c.comp || ''}" placeholder="Comp.">
+                    <input type="text" id="prof-bairro" class="flex-1 premium-input !p-4 !text-sm" value="${c.bairro || ''}" placeholder="Bairro" required>
                 </div>
             </div>
             <button type="submit" class="btn-premium w-full py-7 rounded-[32px] shadow-2xl">Salvar Alterações</button>
@@ -595,6 +684,30 @@ function renderConta() {
       </div>
     `;
 }
+
+window.resgatarPremio = async () => {
+    const meta = window.fidelidadeConfig.metaPontos || 100;
+    const pontosAtuais = window.clienteLogado.pontosFidelidade || 0;
+    if(pontosAtuais < meta) return;
+
+    if(confirm(`Deseja resgatar seu prêmio: ${window.fidelidadeConfig.premio}?`)) {
+        try {
+            const novosPontos = pontosAtuais - meta;
+            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'clientes', auth.currentUser.uid), {
+                pontosFidelidade: novosPontos
+            });
+            window.clienteLogado.pontosFidelidade = novosPontos;
+            
+            const text = `🎉 *RESGATE DE FIDELIDADE* 🎉\nOlá, acabei de atingir a meta do Clube Aline!\n*Cliente:* ${window.clienteLogado.nome}\n*Prêmio:* ${window.fidelidadeConfig.premio}\nPor favor, inclua no meu próximo pedido.`;
+            window.open(`https://wa.me/${window.state.whatsappNumber.replace(/\D/g, '') || '5511985706243'}?text=${encodeURIComponent(text)}`, '_blank');
+            
+            window.render();
+            window.showMsg("🎁 Prêmio Resgatado!");
+        } catch(e) {
+            window.showMsg("Erro ao resgatar.");
+        }
+    }
+};
 
 window.openProductDetail = id => {
     const p = window.state.produtos.find(x => x.id === id);
@@ -667,61 +780,60 @@ function renderCarrinho() {
 }
 
 function renderPedidos() {
-    return `
-        <div class="space-y-10 text-left animate-[fadeIn_0.5s_ease-out]">
-            <h2 class="text-4xl font-[950] tracking-tighter uppercase italic text-rose-600 mb-6">Histórico de Pedidos</h2>
-            <div class="grid gap-6">
-                ${window.state.pedidos.map(p => {
-                    const isEntrega = p.tipoEntrega === 'entrega';
-                    const entregaStr = isEntrega ? '🚚 ENTREGA' : '🏪 RETIRADA';
-                    const endereco = isEntrega 
-                        ? p.dadosCliente?.rua + ', ' + p.dadosCliente?.num + ' - ' + p.dadosCliente?.bairro + ' <br><span style="font-size:0.75rem;color:var(--text-muted);margin-top:4px;display:block;">Comp: ' + (p.dadosCliente?.comp || 'N/A') + '</span>'
-                        : 'Você retirará o pedido na loja.';
+    return '<div class="space-y-10 text-left animate-[fadeIn_0.5s_ease-out]">' +
+        '<h2 class="text-4xl font-[950] tracking-tighter uppercase italic text-rose-600 mb-6">Histórico de Pedidos</h2>' +
+        '<div class="grid gap-6">' +
+            (window.state.pedidos.map(p => {
+                const isEntrega = p.tipoEntrega === 'entrega';
+                const entregaStr = isEntrega ? '🚚 ENTREGA' : '🏪 RETIRADA';
+                const endereco = isEntrega 
+                    ? p.dadosCliente?.rua + ', ' + p.dadosCliente?.num + ' ' + (p.dadosCliente?.comp ? '- ' + p.dadosCliente?.comp : '') + ' <br><span style="font-size:0.75rem;color:var(--text-muted);margin-top:4px;display:block;">' + (p.dadosCliente?.bairro || 'N/A') + '</span>'
+                    : 'Você retirará o pedido na loja.';
+                
+                const itensStr = (p.itens || []).map(i => {
+                    const quantidade = i.qty || i.quantidade || i.amount || 0;
+                    return '<div style="margin-bottom:4px;"><span style="background:var(--bg);color:var(--primary);padding:2px 6px;border-radius:6px;font-weight:900;font-size:0.75rem;margin-right:6px;border:1px solid var(--border);">' + quantidade + 'x</span><span style="font-weight:800;font-size:0.85rem;color:var(--dark);">' + (i.nome || i.produto) + '</span></div>';
+                }).join('');
+                const pagStr = (p.formaPagamento || 'Não Informado').replace('_', ' ').toUpperCase();
+
+                let borderColor = 'var(--border)';
+                if (p.status === 'CRIADO') borderColor = '#f59e0b';
+                else if (p.status === 'EM SEPARAÇÃO') borderColor = 'var(--primary)';
+                else if (p.status === 'SAIU PARA ENTREGA' || p.status === 'PRONTO PARA RETIRADA') borderColor = 'var(--success)';
+                else if (p.status === 'FINALIZADO') borderColor = '#000000';
+                else if (p.status === 'CANCELADO') borderColor = '#94a3b8';
+
+                return '<div class="card-depth premium-shadow relative overflow-hidden" style="border-left-width: 12px; border-left-color: ' + (borderColor === 'var(--success)' ? '#00C853' : borderColor) + '; padding: 24px; display: block; width: 100%;">' +
+                    '<div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:16px; border-bottom:1px solid var(--border); padding-bottom:16px; margin-bottom:16px;">' +
+                        '<div>' +
+                            '<span style="background:var(--bg); color:var(--primary); border:1px solid var(--border); padding:4px 10px; border-radius:50px; font-size:0.75rem; font-weight:900; letter-spacing:1px;">Pedido ' + (p.pedidoID || '#---') + '</span>' +
+                            '<span style="font-size:0.75rem; color:var(--text-muted); font-weight:800; margin-left:10px;">' + (p.criadoEm ? new Date(p.criadoEm.seconds * 1000).toLocaleString('pt-PT') : 'Hoje') + '</span>' +
+                            '<h3 style="margin:12px 0 4px; font-size:1.3rem; font-weight:900; color:var(--dark); text-transform:uppercase;">Status: ' + (p.status || 'PENDENTE') + '</h3>' +
+                        '</div>' +
+                        '<div style="text-align:right;">' +
+                            '<span style="background:' + (isEntrega ? '#e0f2fe' : '#dcfce7') + '; color:' + (isEntrega ? '#1d4ed8' : '#047857') + '; padding:6px 14px; border-radius:10px; font-size:0.75rem; font-weight:900; display:inline-block; margin-bottom:12px;">' + entregaStr + '</span>' +
+                            '<h2 style="font-size:1.8rem; font-weight:900; color:var(--primary); margin:0;">R$ ' + window.fmt(p.valorTotal) + '</h2>' +
+                        '</div>' +
+                    '</div>' +
                     
-                    const itensStr = (p.itens || []).map(i => {
-                        const quantidade = i.qty || i.quantidade || i.amount || 0;
-                        return '<div style="margin-bottom:4px;"><span style="background:var(--bg);color:var(--primary);padding:2px 6px;border-radius:6px;font-weight:900;font-size:0.75rem;margin-right:6px;border:1px solid var(--border);">' + quantidade + 'x</span><span style="font-weight:800;font-size:0.85rem;color:var(--dark);">' + (i.nome || i.produto) + '</span></div>';
-                    }).join('');
-                    const pagStr = (p.formaPagamento || 'Não Informado').replace('_', ' ').toUpperCase();
-
-                    let borderColor = 'var(--border)';
-                    if (p.status === 'CRIADO') borderColor = '#f59e0b';
-                    else if (p.status === 'EM SEPARAÇÃO') borderColor = 'var(--primary)';
-                    else if (p.status === 'SAIU PARA ENTREGA' || p.status === 'PRONTO PARA RETIRADA') borderColor = 'var(--success)';
-                    else if (p.status === 'FINALIZADO') borderColor = '#000000';
-                    else if (p.status === 'CANCELADO') borderColor = '#94a3b8';
-
-                    return '<div class="card-depth premium-shadow relative overflow-hidden" style="border-left-width: 12px; border-left-color: ' + (borderColor === 'var(--success)' ? '#00C853' : borderColor) + '; padding: 24px; display: block; width: 100%;">' +
-                        '<div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:16px; border-bottom:1px solid var(--border); padding-bottom:16px; margin-bottom:16px;">' +
-                            '<div>' +
-                                '<span style="background:var(--bg); color:var(--primary); border:1px solid var(--border); padding:4px 10px; border-radius:50px; font-size:0.75rem; font-weight:900; letter-spacing:1px;">Pedido ' + (p.pedidoID || '#---') + '</span>' +
-                                '<span style="font-size:0.75rem; color:var(--text-muted); font-weight:800; margin-left:10px;">' + (p.criadoEm ? new Date(p.criadoEm.seconds * 1000).toLocaleString('pt-PT') : 'Hoje') + '</span>' +
-                                '<h3 style="margin:12px 0 4px; font-size:1.3rem; font-weight:900; color:var(--dark); text-transform:uppercase;">Status: ' + (p.status || 'PENDENTE') + '</h3>' +
-                            '</div>' +
-                            '<div style="text-align:right;">' +
-                                '<span style="background:' + (isEntrega ? '#e0f2fe' : '#dcfce7') + '; color:' + (isEntrega ? '#1d4ed8' : '#047857') + '; padding:6px 14px; border-radius:10px; font-size:0.75rem; font-weight:900; display:inline-block; margin-bottom:12px;">' + entregaStr + '</span>' +
-                                '<h2 style="font-size:1.8rem; font-weight:900; color:var(--primary); margin:0;">R$ ' + window.fmt(p.valorTotal) + '</h2>' +
-                            '</div>' +
+                    '<div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:16px;">' +
+                        '<div>' +
+                            '<p style="font-size:0.75rem; font-weight:900; color:var(--text-muted); text-transform:uppercase; margin-bottom:8px; border-bottom:2px solid var(--bg); padding-bottom:4px;">Itens Solicitados</p>' +
+                            itensStr +
                         '</div>' +
-                        
-                        '<div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:16px;">' +
-                            '<div>' +
-                                '<p style="font-size:0.75rem; font-weight:900; color:var(--text-muted); text-transform:uppercase; margin-bottom:8px; border-bottom:2px solid var(--bg); padding-bottom:4px;">Itens Solicitados</p>' +
-                                itensStr +
-                            '</div>' +
-                            '<div>' +
-                                '<p style="font-size:0.75rem; font-weight:900; color:var(--text-muted); text-transform:uppercase; margin-bottom:8px; border-bottom:2px solid var(--bg); padding-bottom:4px;">Metódo de Pagamento</p>' +
-                                '<span style="background:var(--bg); border:1px solid var(--border); padding:6px 12px; border-radius:10px; font-size:0.8rem; font-weight:800; color:var(--dark); display:inline-block;">' + pagStr + '</span>' +
-                            '</div>' +
-                            '<div>' +
-                                '<p style="font-size:0.75rem; font-weight:900; color:var(--text-muted); text-transform:uppercase; margin-bottom:8px; border-bottom:2px solid var(--bg); padding-bottom:4px;">Endereço / Retirada</p>' +
-                                '<p style="font-size:0.85rem; font-weight:700; color:var(--dark); line-height:1.5; margin:0;">' + endereco + '</p>' +
-                            '</div>' +
+                        '<div>' +
+                            '<p style="font-size:0.75rem; font-weight:900; color:var(--text-muted); text-transform:uppercase; margin-bottom:8px; border-bottom:2px solid var(--bg); padding-bottom:4px;">Metódo de Pagamento</p>' +
+                            '<span style="background:var(--bg); border:1px solid var(--border); padding:6px 12px; border-radius:10px; font-size:0.8rem; font-weight:800; color:var(--dark); display:inline-block;">' + pagStr + '</span>' +
                         '</div>' +
-                    '</div>';
-                }).join('') || '<div class="text-center py-24 text-slate-200 font-black uppercase italic tracking-widest text-balance leading-relaxed">Sem pedidos efetuados.</div>'}
-            </div>
-        </div>`;
+                        '<div>' +
+                            '<p style="font-size:0.75rem; font-weight:900; color:var(--text-muted); text-transform:uppercase; margin-bottom:8px; border-bottom:2px solid var(--bg); padding-bottom:4px;">Endereço / Retirada</p>' +
+                            '<p style="font-size:0.85rem; font-weight:700; color:var(--dark); line-height:1.5; margin:0;">' + endereco + '</p>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>';
+            }).join('') || '<div class="text-center py-24 text-slate-200 font-black uppercase italic tracking-widest text-balance leading-relaxed">Sem pedidos efetuados.</div>') +
+            '</div>' +
+        '</div>';
 }
 
 // LÓGICA INTERATIVA
@@ -738,18 +850,65 @@ window.closeAll = () => { document.querySelectorAll('.mbk').forEach(el => { el.c
 
 window.setDelivery = t => {
     window.state.deliveryType = t;
-    const cR = document.getElementById('check-retirada'); const cE = document.getElementById('check-entrega');
+    const cR = document.getElementById('check-retirada'); 
+    const cE = document.getElementById('check-entrega');
+    const boxRetirada = document.getElementById('info-retirada-box');
+    const boxEntrega = document.getElementById('info-entrega-box');
+
     if(cR) cR.className = `flex-1 py-4 rounded-[20px] font-black text-[11px] uppercase ${t==='retirada'?'bg-white text-rose-600 shadow-sm':'text-slate-400'}`;
     if(cE) cE.className = `flex-1 py-4 rounded-[20px] font-black text-[11px] uppercase ${t==='entrega'?'bg-white text-rose-600 shadow-sm':'text-slate-400'}`;
-    const label = document.getElementById('checkout-addr-display');
-    if(t==='retirada') label.innerHTML = "Rua Antônio Freire da Silva, 87<br>Jardim das Camélias, São Paulo - SP"; 
-    else label.innerHTML = `${window.clienteLogado.rua||''}, ${window.clienteLogado.num||''} - ${window.clienteLogado.bairro||''}`;
+    
+    if(t === 'retirada') {
+        if(boxRetirada) boxRetirada.classList.remove('hidden');
+        if(boxEntrega) boxEntrega.classList.add('hidden');
+    } else {
+        if(boxRetirada) boxRetirada.classList.add('hidden');
+        if(boxEntrega) boxEntrega.classList.remove('hidden');
+        const label = document.getElementById('checkout-addr-display');
+        if(label) label.innerHTML = `${window.clienteLogado.rua||''}, ${window.clienteLogado.num||''} ${window.clienteLogado.comp ? '- ' + window.clienteLogado.comp : ''}<br>${window.clienteLogado.bairro||''}`;
+    }
 };
 
 window.openCheckout = () => {
-    document.getElementById('checkout-total-btn').textContent = 'R$ ' + window.fmt(window.totalCarrinho());
+    window.state.appliedCoupon = null;
+    const cupomInput = document.getElementById('checkout-cupom');
+    const msgEl = document.getElementById('cupom-msg');
+    if(cupomInput) cupomInput.value = '';
+    if(msgEl) { msgEl.textContent = ''; msgEl.classList.add('hidden'); }
+
+    window.updateCheckoutTotal();
     window.setDelivery('retirada'); 
     const modal = document.getElementById('checkout-modal'); modal.style.display='flex'; setTimeout(()=>modal.classList.add('open'), 10);
+};
+
+window.applyCoupon = () => {
+    const code = document.getElementById('checkout-cupom').value.trim().toUpperCase();
+    if(!code) return window.showMsg('Digite um cupom primeiro.');
+    
+    const cupom = window.cupons.find(c => c.codigo === code);
+    const msgEl = document.getElementById('cupom-msg');
+    
+    if(cupom) {
+        const today = new Date().toISOString().split('T')[0];
+        if(cupom.validade && cupom.validade < today) {
+            msgEl.textContent = '❌ Cupom expirado!';
+            msgEl.className = 'text-[10px] font-bold ml-2 text-red-500 mt-2 block';
+            window.state.appliedCoupon = null;
+        } else {
+            window.state.appliedCoupon = cupom;
+            msgEl.textContent = `✅ Cupom aplicado: ${cupom.desconto}% de desconto!`;
+            msgEl.className = 'text-[10px] font-bold ml-2 text-green-500 mt-2 block';
+        }
+    } else {
+        msgEl.textContent = '❌ Cupom inválido!';
+        msgEl.className = 'text-[10px] font-bold ml-2 text-red-500 mt-2 block';
+        window.state.appliedCoupon = null;
+    }
+    window.updateCheckoutTotal();
+};
+
+window.updateCheckoutTotal = () => {
+    document.getElementById('checkout-total-btn').textContent = 'R$ ' + window.fmt(window.totalDescontado());
 };
 
 window.processCheckout = async () => {
@@ -757,7 +916,7 @@ window.processCheckout = async () => {
     if(pag === 'pix_online') {
         let cleanKey = (window.pix_config.rawKey || "").replace(/\D/g, '');
         if (cleanKey.length === 11 && !window.pix_config.rawKey.startsWith('+')) cleanKey = '+55' + cleanKey;
-        const payload = window.pixPayload(cleanKey, window.totalCarrinho(), window.pix_config.nomeRecebedor, window.pix_config.cidade, 'APPEGG');
+        const payload = window.pixPayload(cleanKey, window.totalDescontado(), window.pix_config.nomeRecebedor, window.pix_config.cidade, 'APPEGG');
         document.getElementById('pix-code').textContent = payload;
         const qrEl = document.getElementById('qrcode');
         if(qrEl) { qrEl.innerHTML = ''; new QRCode(qrEl, { text:payload, width:220, height:220 }); }
@@ -782,10 +941,20 @@ window.saveOrderToFirebase = async () => {
         const pf = window.clienteLogado;
         let finalAddr = { ...pf };
         if(window.state.deliveryType === 'entrega' && window.state.usingNewAddress) {
-            finalAddr = { rua: document.getElementById('new-rua').value, num: document.getElementById('new-num').value, bairro: document.getElementById('new-bairro').value, cep: document.getElementById('new-cep').value, nome: pf.nome, tel: pf.tel };
+            finalAddr = { rua: document.getElementById('new-rua').value, num: document.getElementById('new-num').value, comp: document.getElementById('new-comp').value, bairro: document.getElementById('new-bairro').value, cep: document.getElementById('new-cep').value, nome: pf.nome, tel: pf.tel };
         }
+        
         await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'vendas_logs'), { 
-          clienteId: auth.currentUser.uid, pedidoID: h, valorTotal: window.totalCarrinho(), itens: items, dadosCliente: finalAddr, status: 'CRIADO', tipoEntrega: window.state.deliveryType, formaPagamento: document.getElementById('pagamento-select').value, criadoEm: serverTimestamp() 
+          clienteId: auth.currentUser.uid, 
+          pedidoID: h, 
+          valorTotal: window.totalDescontado(), 
+          cupomAplicado: window.state.appliedCoupon ? window.state.appliedCoupon.codigo : null,
+          itens: items, 
+          dadosCliente: finalAddr, 
+          status: 'CRIADO', 
+          tipoEntrega: window.state.deliveryType, 
+          formaPagamento: document.getElementById('pagamento-select').value, 
+          criadoEm: serverTimestamp() 
         });
         window.state.orderHash = h; document.getElementById('order-num-display').textContent = h; window.closeAll(); 
         const sS = document.getElementById('success-screen'); if(sS) { sS.classList.remove('hidden'); sS.classList.add('flex'); }
@@ -794,13 +963,16 @@ window.saveOrderToFirebase = async () => {
 };
 
 window.sendWhatsApp = () => {
-    const text = `Olá! Fiz o pedido *${window.state.orderHash}* na Distribuidora Aline.\n*Cliente:* ${window.clienteLogado.nome}\n*Total:* R$ ${window.fmt(window.totalCarrinho())}`;
+    let text = `Olá! Fiz o pedido *${window.state.orderHash}* na Distribuidora Aline.\n*Cliente:* ${window.clienteLogado.nome}\n*Total:* R$ ${window.fmt(window.totalDescontado())}`;
+    if(window.state.appliedCoupon) {
+        text += `\n*Cupom Usado:* ${window.state.appliedCoupon.codigo} (-${window.state.appliedCoupon.desconto}%)`;
+    }
     window.open(`https://wa.me/${window.state.whatsappNumber.replace(/\D/g, '') || '5511985706243'}?text=${encodeURIComponent(text)}`, '_blank');
 };
 
 window.saveProfile = async e => {
     e.preventDefault();
-    const d = { nome: document.getElementById('prof-nome').value.trim(), cpf: document.getElementById('prof-cpf').value, tel: document.getElementById('prof-tel').value, email: document.getElementById('prof-email').value.trim(), cep: document.getElementById('prof-cep').value, rua: document.getElementById('prof-rua').value.trim(), num: document.getElementById('prof-num').value.trim(), bairro: document.getElementById('prof-bairro').value.trim() };
+    const d = { nome: document.getElementById('prof-nome').value.trim(), cpf: document.getElementById('prof-cpf').value, tel: document.getElementById('prof-tel').value, email: document.getElementById('prof-email').value.trim(), cep: document.getElementById('prof-cep').value, rua: document.getElementById('prof-rua').value.trim(), num: document.getElementById('prof-num').value.trim(), comp: document.getElementById('prof-comp').value.trim(), bairro: document.getElementById('prof-bairro').value.trim() };
     try { await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'clientes', auth.currentUser.uid), d, {merge:true}); window.clienteLogado = d; window.showMsg("✅ Perfil Atualizado!"); } 
     catch(err) { window.showMsg("Erro."); }
 };
@@ -823,11 +995,28 @@ onAuthStateChanged(auth, async u => {
         document.getElementById('auth-view').style.display='none';
         document.getElementById('app-view').style.display='block';
         window.setView('loja');
-        onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'estoque'), s => { window.state.produtos = s.docs.map(d=>({id:d.id, ...d.data()})); window.state.isLoading = false; window.render(); });
-        onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'vendas_logs'), s => { window.state.pedidos = s.docs.map(d=>({id:d.id, ...d.data()})).filter(p => p.clienteId === u.uid).sort((a, b) => (b.criadoEm?.toMillis?.() || 0) - (a.criadoEm?.toMillis?.() || 0)); window.render(); });
-        onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'pix_config'), s => { if(s.exists()){ window.pix_config = s.data(); const wNum = s.data().whatsapp || s.data().tel_contato || '5511985706243'; window.state.whatsappNumber = wNum; const wBtn = document.getElementById('whatsapp-btn'); if(wBtn) { wBtn.href = `https://wa.me/${wNum.replace(/\D/g, '')}`; wBtn.classList.remove('hidden'); } } });
-        onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'clientes', u.uid), s => { if(s.exists()){ const d = s.data(); window.clienteLogado = d; if(d.favoritos){ window.state.favoritos = d.favoritos; } window.render(); } });
-    } else { document.getElementById('auth-view').style.display='flex'; document.getElementById('app-view').style.display='none'; window.setAuthMode('login'); }
+        
+        const errHandler = (err) => {
+            console.warn("Aviso do Firebase:", err.message);
+        };
+        
+        const u1 = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'estoque'), s => { window.state.produtos = s.docs.map(d=>({id:d.id, ...d.data()})); window.state.isLoading = false; window.render(); }, errHandler);
+        const u2 = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'vendas_logs'), s => { window.state.pedidos = s.docs.map(d=>({id:d.id, ...d.data()})).filter(p => p.clienteId === u.uid).sort((a, b) => (b.criadoEm?.toMillis?.() || 0) - (a.criadoEm?.toMillis?.() || 0)); window.render(); }, errHandler);
+        const u3 = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'pix_config'), s => { if(s.exists()){ window.pix_config = s.data(); const wNum = s.data().whatsapp || s.data().tel_contato || '5511985706243'; window.state.whatsappNumber = wNum; const wBtn = document.getElementById('whatsapp-btn'); if(wBtn) { wBtn.href = `https://wa.me/${wNum.replace(/\D/g, '')}`; wBtn.classList.remove('hidden'); } } }, errHandler);
+        const u4 = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'clientes', u.uid), s => { if(s.exists()){ const d = s.data(); window.clienteLogado = d; if(d.favoritos){ window.state.favoritos = d.favoritos; } window.render(); } }, errHandler);
+        
+        // LISTENERS PARA CUPONS E FIDELIDADE NO LADO DO CLIENTE
+        const u5 = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'cupons'), s => { window.cupons = s.docs.map(d => ({ id: d.id, ...d.data() })); }, errHandler);
+        const u6 = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'fidelidade_config'), s => { if(s.exists()){ window.fidelidadeConfig = s.data(); if(window.state.view === 'conta') window.render(); } }, errHandler);
+
+        window.firebaseUnsubs.push(u1, u2, u3, u4, u5, u6);
+
+    } else { 
+        window.clearAdminListeners();
+        document.getElementById('auth-view').style.display='flex'; 
+        document.getElementById('app-view').style.display='none'; 
+        window.setAuthMode('login'); 
+    }
     if(loader) setTimeout(() => { loader.style.opacity = '0'; setTimeout(()=>loader.style.display='none', 700); }, 1500);
 });
 
