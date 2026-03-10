@@ -25,7 +25,7 @@
       --shadow:  0 4px 20px rgba(15, 23, 42, .08);
     }
     
-    body { font-family:'Segoe UI',system-ui,sans-serif; background:var(--cream); color:var(--brown); min-height:100vh; display:flex; flex-direction:column; }
+    body { font-family:'Segoe UI',system-ui,sans-serif; background:var(--cream); color:var(--brown); min-height:100vh; display:flex; flex-direction:column; overflow-x:hidden;}
     
     header { background:linear-gradient(135deg,var(--dark),var(--primary)); color:#fff; padding:0 24px; height:64px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:100; box-shadow:0 3px 14px rgba(0,0,0,.15); }
     .h-logo { display:flex; align-items:center; gap:10px; font-size:1.15rem; font-weight:900; }
@@ -142,7 +142,7 @@
 <div id="login-view">
     <div class="card" style="width:100%; max-width:400px; text-align:center; padding:40px; border-radius:32px; border:4px solid var(--border);">
         <h2 style="color:var(--primary); margin-bottom: 5px; font-size: 1.8rem; font-weight: 900; font-style: italic; letter-spacing: -1px;">App Distribuidora de Ovos Aline</h2>
-        <p style="color:var(--green); font-size: 0.75rem; font-weight: 900; margin-bottom: 30px; text-transform: uppercase; letter-spacing: 2px;">Painel Administrativo v7.0.44</p>
+        <p style="color:var(--green); font-size: 0.75rem; font-weight: 900; margin-bottom: 30px; text-transform: uppercase; letter-spacing: 2px;">Painel Administrativo v7.0.49</p>
         
         <form id="login-form" onsubmit="event.preventDefault(); window.fazerLogin();">
             <div class="field" style="margin-bottom: 15px;">
@@ -159,7 +159,8 @@
 <div id="app-view">
     <header>
       <div class="h-logo"><span>🥚</span> App Distribuidora de Ovos Aline</div>
-      <div style="display:flex; gap:10px;">
+      <div style="display:flex; gap:10px; align-items:center;">
+        <button id="btn-volume" onclick="window.toggleVolume()" class="btn-sm" style="background:rgba(255,255,255,0.15); border:2px solid rgba(255,255,255,0.5); color:#fff; border-radius:50px; font-weight:900;">🔊 Alto</button>
         <button class="h-back" style="background: rgba(255,255,255,0.15); border: none;" onclick="window.fazerLogout()">Sair do Painel</button>
       </div>
     </header>
@@ -172,12 +173,17 @@
         <div class="nav-item" onclick="window.goTo('produtos')"><span class="ni">🥚</span> Catálogo</div>
         <div class="nav-item" onclick="window.goTo('relatorios')"><span class="ni">📈</span> Relatório de Vendas</div>
 
+        <!-- OPÇÕES 3 E 4 E FIDELIDADE -->
+        <div class="nav-title mt-4 border-t border-slate-100 pt-4">Marketing & Vendas</div>
+        <!-- ✅ NOVA ABA DO PLANO FIDELIDADE -->
+        <div class="nav-item" onclick="window.goTo('fidelidade')"><span class="ni">💎</span> Plano Fidelidade</div>
+        <div class="nav-item" onclick="window.goTo('cupons')"><span class="ni">🎟️</span> Cupons de Desconto</div>
+        <div class="nav-item" onclick="window.goTo('mensagens')"><span class="ni">📢</span> Notificações Push</div>
+
         <div class="nav-title mt-4 border-t border-slate-100 pt-4">Configurações</div>
         <div class="nav-item" onclick="window.goTo('loja')"><span class="ni">🏪</span> Dados da Loja</div>
         <div class="nav-item" onclick="window.goTo('pix')"><span class="ni">💚</span> Configurar PIX</div>
         <div class="nav-item" onclick="window.goTo('aparencia')"><span class="ni">🎨</span> Aparência</div>
-        
-        <!-- GESTÃO DE USUÁRIOS COM ÍCONE RESTAURADO -->
         <div class="nav-item" onclick="window.goTo('usuarios')"><span class="ni">👥</span> Gestão de Usuários</div>
       </nav>
 
@@ -186,6 +192,16 @@
           </main>
       </div>
     </div>
+</div>
+
+<div id="new-order-popup" style="position:fixed; bottom:40px; right:40px; background:var(--white); border-left:12px solid var(--green); padding:30px; border-radius:24px; box-shadow:0 30px 60px rgba(0,0,0,0.3); z-index:9999; transform:translateX(150%); transition:transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1); display:flex; flex-direction:column; gap:10px; width:400px; max-width:90vw;">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h3 style="font-size:1.5rem; font-weight:900; color:var(--green); margin:0;">🔔 NOVO PEDIDO!</h3>
+        <button onclick="document.getElementById('new-order-popup').style.transform='translateX(150%)'" style="background:none; border:none; font-size:1.5rem; cursor:pointer; color:var(--muted); font-weight:900;">✕</button>
+    </div>
+    <p id="nop-client" style="font-size:1.2rem; font-weight:800; color:var(--brown); margin:0;"></p>
+    <p id="nop-value" style="font-size:2.5rem; font-weight:900; color:var(--primary); margin:0; font-style:italic; line-height:1;"></p>
+    <button onclick="window.goTo('pedidos'); document.getElementById('new-order-popup').style.transform='translateX(150%)';" class="btn btn-green" style="margin-top:15px; width:100%;">Processar Encomenda</button>
 </div>
 
 <div class="modal-bg" id="prod-modal">
@@ -231,7 +247,6 @@
         
         <div class="field"><label>Quantidade no Estoque</label><input id="mp-estoque" type="number" min="0" placeholder="0" /></div>
 
-        <!-- ✅ MELHORIA: PREÇO DE CUSTO PARA LUCRO LÍQUIDO -->
         <div class="field"><label>Preço de Venda (R$)</label><input id="mp-preco" type="number" min="0" step="0.01" placeholder="12.90" /></div>
         <div class="field"><label>Preço de Custo (R$) - Oculto</label><input id="mp-custo" type="number" min="0" step="0.01" placeholder="9.50" /></div>
 
@@ -304,17 +319,21 @@ window.produtos = [];
 window.logs = [];
 window.adminUsers = []; 
 window.auditLogs = [];
+window.cupons = [];      
+window.notificacoes = [];
+window.fidelidadeConfig = { ativo: false }; // ✅ NOVO: Estado da Fidelidade
 window.editingId = null;
 window.firebaseUnsubs = [];
 window.isListening = false;
 window.state = { view: 'dashboard' };
 
-// ✅ NOVO: Estado de Paginação e Filtros
+// Estado de Paginação e Filtros
 window.filtroStatusPedido = 'TODOS';
 window.buscaPedido = '';
 window.paginaAtualPedidos = 1;
 const ITENS_POR_PAGINA = 10;
 window.isFirstLogsLoad = true;
+window.volumeLevel = 3; 
 
 // --- FUNÇÕES GLOBAIS BLINDADAS ---
 
@@ -381,6 +400,15 @@ window.logAction = async (actionDesc) => {
     }
 };
 
+window.toggleVolume = () => {
+    window.volumeLevel = (window.volumeLevel - 1 + 4) % 4; 
+    const btn = document.getElementById('btn-volume');
+    if(btn) {
+        const labels = ['🔇 Mudo', '🔈 Baixo', '🔉 Médio', '🔊 Alto'];
+        btn.innerHTML = labels[window.volumeLevel];
+    }
+};
+
 window.goTo = (sec) => {
     document.querySelectorAll('.nav-item').forEach(el => {
         el.classList.remove('active');
@@ -401,6 +429,9 @@ window.goTo = (sec) => {
     if (sec === 'pedidos') window.renderPedidos();
     if (sec === 'produtos') window.renderProdList();
     if (sec === 'usuarios') { window.renderUsuariosList(); window.renderAuditLogs(); }
+    
+    if (sec === 'cupons') window.renderCuponsList();
+    if (sec === 'mensagens') window.renderNotificacoesList();
 };
 
 window.buildActiveViewBase = () => {
@@ -409,9 +440,8 @@ window.buildActiveViewBase = () => {
             return `
             <div class="space-y-10 fade-in">
                 <h2 class="text-4xl font-[950] text-slate-900 tracking-tighter uppercase italic mb-2">Administrativo</h2>
-                <div id="dash-stats-grid" class="grid grid-cols-1 md:grid-cols-4 gap-6"></div> <!-- 4 Colunas agora -->
+                <div id="dash-stats-grid" class="grid grid-cols-1 md:grid-cols-4 gap-6"></div>
                 
-                <!-- ✅ MELHORIA: GRÁFICO VISUAL -->
                 <div class="bg-white rounded-[40px] p-8 border border-slate-200 shadow-sm mt-6">
                     <h3 class="text-lg font-black uppercase text-slate-800 tracking-tighter mb-6 flex items-center gap-2">📈 Evolução de Vendas (Últimos 7 Dias)</h3>
                     <div style="position: relative; height:250px; width:100%">
@@ -456,6 +486,99 @@ window.buildActiveViewBase = () => {
 
                 <div id="relatorio-resultado"></div>
             </div>`;
+
+        // ✅ NOVO CASO: CONFIGURAÇÃO DE FIDELIDADE
+        case 'fidelidade': {
+            const f = window.fidelidadeConfig || {};
+            return `
+            <div class="space-y-10 fade-in">
+                <div class="mb-6">
+                    <h2 class="text-4xl font-[950] text-slate-900 tracking-tighter uppercase italic mb-1">Programa de Fidelidade</h2>
+                    <p class="text-slate-500 font-bold text-sm">Recompense os clientes que mais compram. Os pontos são calculados nos pedidos FINALIZADOS.</p>
+                </div>
+                <div class="bg-white rounded-[40px] p-8 border border-slate-200 shadow-sm">
+                    <form onsubmit="event.preventDefault(); window.saveFidelidadeConfig();">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                            <div class="field">
+                                <label class="text-[10px] font-black uppercase text-slate-400 ml-2">Status do Programa</label>
+                                <select id="fid-ativo" class="input-egg text-xs uppercase font-bold">
+                                    <option value="true" ${f.ativo ? 'selected' : ''}>🟢 ATIVADO</option>
+                                    <option value="false" ${!f.ativo ? 'selected' : ''}>🔴 DESATIVADO</option>
+                                </select>
+                            </div>
+                            <div class="field">
+                                <label class="text-[10px] font-black uppercase text-slate-400 ml-2">Prémio do Cliente</label>
+                                <input id="fid-premio" type="text" value="${f.premio || ''}" class="input-egg font-black text-rose-600" placeholder="Ex: 1 Cartela de 30 Ovos Brancos" required>
+                            </div>
+                            <div class="field">
+                                <label class="text-[10px] font-black uppercase text-slate-400 ml-2">A cada R$ Gasto...</label>
+                                <input id="fid-reais" type="number" step="0.01" value="${f.reaisPorPonto || 1}" class="input-egg font-bold" placeholder="Ex: 1.00" required>
+                            </div>
+                            <div class="field">
+                                <label class="text-[10px] font-black uppercase text-slate-400 ml-2">...Ganha (X) Pontos</label>
+                                <input id="fid-pontos" type="number" value="${f.pontosGanhos || 1}" class="input-egg font-bold" placeholder="Ex: 1" required>
+                            </div>
+                            <div class="field md:col-span-2">
+                                <label class="text-[10px] font-black uppercase text-slate-400 ml-2">Pontos Necessários para o Prémio</label>
+                                <input id="fid-meta" type="number" value="${f.metaPontos || 100}" class="input-egg font-black text-emerald-600 text-2xl" placeholder="Ex: 100" required>
+                            </div>
+                        </div>
+                        <div style="display: flex; justify-content: flex-start; margin-top: 24px; width: 100%;">
+                            <button type="submit" class="btn btn-primary shadow-xl">💾 Guardar Regras de Fidelidade</button>
+                        </div>
+                    </form>
+                </div>
+            </div>`;
+        }
+
+        case 'cupons':
+            return `
+            <div class="space-y-10 fade-in">
+                <div class="mb-6">
+                    <h2 class="text-4xl font-[950] text-slate-900 tracking-tighter uppercase italic mb-1">Gestão de Cupons</h2>
+                    <p class="text-slate-500 font-bold text-sm">Crie códigos de desconto para atrair clientes (ex: BEMVINDO10).</p>
+                </div>
+                <div class="bg-white rounded-[40px] p-8 border border-slate-200 shadow-sm">
+                    <form onsubmit="event.preventDefault(); window.saveCupom();">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div class="field"><label class="text-[10px] font-black uppercase text-slate-400 ml-2">Código do Cupom</label><input id="cupom-codigo" type="text" class="input-egg uppercase font-black text-rose-600" placeholder="Ex: CARNAVAL20" required></div>
+                            <div class="field"><label class="text-[10px] font-black uppercase text-slate-400 ml-2">Desconto (%)</label><input id="cupom-desconto" type="number" class="input-egg" min="1" max="100" placeholder="20" required></div>
+                            <div class="field"><label class="text-[10px] font-black uppercase text-slate-400 ml-2">Data de Validade</label><input id="cupom-validade" type="date" class="input-egg" required></div>
+                        </div>
+                        <div style="display: flex; justify-content: flex-start; margin-top: 24px; width: 100%;">
+                            <button type="submit" class="btn btn-primary">➕ Gerar Cupom</button>
+                        </div>
+                    </form>
+                </div>
+                <div class="mt-8">
+                    <h3 class="text-xl font-black uppercase text-slate-800 tracking-tighter mb-4">Cupons Ativos</h3>
+                    <div id="cupons-list" class="grid gap-4"></div>
+                </div>
+            </div>`;
+
+        case 'mensagens':
+            return `
+            <div class="space-y-10 fade-in">
+                <div class="mb-6">
+                    <h2 class="text-4xl font-[950] text-slate-900 tracking-tighter uppercase italic mb-1">Notificações em Massa</h2>
+                    <p class="text-slate-500 font-bold text-sm">Dispare mensagens promocionais para todos os clientes ativos.</p>
+                </div>
+                <div class="bg-white rounded-[40px] p-8 border border-slate-200 shadow-sm">
+                    <form onsubmit="event.preventDefault(); window.sendMensagem();">
+                        <div class="grid grid-cols-1 gap-6">
+                            <div class="field"><label class="text-[10px] font-black uppercase text-slate-400 ml-2">Título da Notificação</label><input id="msg-titulo" type="text" class="input-egg font-black text-slate-800" placeholder="Ex: 🔥 Promoção Relâmpago de Sexta!" required maxlength="50"></div>
+                            <div class="field"><label class="text-[10px] font-black uppercase text-slate-400 ml-2">Corpo da Mensagem</label><textarea id="msg-texto" class="input-egg" placeholder="Escreva a sua mensagem para os clientes..." rows="4" required maxlength="150"></textarea></div>
+                        </div>
+                        <div style="display: flex; justify-content: flex-start; margin-top: 24px; width: 100%;">
+                            <button type="submit" class="btn btn-primary bg-gradient-to-r from-amber-500 to-orange-500 border-none shadow-xl">📢 Disparar Notificação</button>
+                        </div>
+                    </form>
+                </div>
+                <div class="mt-8">
+                    <h3 class="text-xl font-black uppercase text-slate-800 tracking-tighter mb-4">Histórico de Envios</h3>
+                    <div id="mensagens-list" class="grid gap-4 max-h-[400px] overflow-y-auto"></div>
+                </div>
+            </div>`;
             
         case 'usuarios':
             return `
@@ -477,8 +600,9 @@ window.buildActiveViewBase = () => {
                                 <input id="new-admin-pass" type="password" class="input-egg" minlength="6" required>
                             </div>
                         </div>
-                        <!-- BOTAO ALINHADO A ESQUERDA -->
-                        <button type="submit" id="btn-create-admin" class="btn btn-primary mt-6">➕ Criar Usuário</button>
+                        <div style="display: flex; justify-content: flex-start; margin-top: 24px; width: 100%;">
+                            <button type="submit" id="btn-create-admin" class="btn btn-primary">➕ Criar Usuário</button>
+                        </div>
                     </form>
                 </div>
 
@@ -496,15 +620,14 @@ window.buildActiveViewBase = () => {
         case 'produtos': 
             return `
             <div class="space-y-10 fade-in">
-                <!-- BOTAO ALINHADO A ESQUERDA -->
-                <div class="flex flex-col items-start gap-4 mb-6">
-                    <div>
-                        <h2 class="text-4xl font-[950] text-slate-900 tracking-tighter uppercase italic mb-1">Gerenciar Produtos</h2>
-                        <p class="text-slate-500 font-bold text-sm">Adicione, edite, ative/desative e elimine produtos do catálogo.</p>
+                <div class="mb-6">
+                    <h2 class="text-4xl font-[950] text-slate-900 tracking-tighter uppercase italic mb-1">Gerenciar Produtos</h2>
+                    <p class="text-slate-500 font-bold text-sm mb-4">Adicione, edite, ative/desative e elimine produtos do catálogo.</p>
+                    <div style="display: flex; justify-content: flex-start; width: 100%;">
+                        <button onclick="window.openProdModal()" class="btn btn-primary shadow-md active:scale-95 transition-all mt-2">
+                            + Adicionar Produto
+                        </button>
                     </div>
-                    <button onclick="window.openProdModal()" class="btn btn-primary shadow-md active:scale-95 transition-all mt-2">
-                        + Adicionar Produto
-                    </button>
                 </div>
                 <div id="prod-list" class="prod-list"></div>
             </div>`;
@@ -517,7 +640,6 @@ window.buildActiveViewBase = () => {
                     <p class="text-slate-500 font-bold text-sm">Organize as entregas e as retiradas na loja.</p>
                 </div>
                 
-                <!-- ✅ MELHORIA: BARRA DE PESQUISA E FILTROS -->
                 <div class="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm mb-8">
                     <div class="flex flex-col md:flex-row gap-4">
                         <input type="text" id="search-pedidos" placeholder="Pesquisar por nome ou número do pedido..." class="input-egg flex-1" onkeyup="window.pesquisarPedidos(this.value)">
@@ -534,7 +656,6 @@ window.buildActiveViewBase = () => {
 
                 <div id="pedidos-list" class="grid gap-6"></div>
                 
-                <!-- ✅ MELHORIA: PAGINAÇÃO UI -->
                 <div id="pedidos-pagination" class="flex justify-center gap-2 mt-8"></div>
             </div>`;
 
@@ -575,8 +696,7 @@ window.buildActiveViewBase = () => {
                                     <label class="text-[10px] font-black uppercase text-slate-400 ml-2">Cidade (PIX)</label>
                                     <input id="pixCidade" value="${cfg.pixCidade || 'SAO PAULO'}" class="input-egg font-bold text-slate-700" maxlength="15" required>
                                 </div>
-                                <!-- BOTAO ALINHADO A ESQUERDA -->
-                                <div class="md:col-span-2 pt-2">
+                                <div class="md:col-span-2 pt-2" style="display: flex; justify-content: flex-start; width: 100%;">
                                     <button id="btn-save-pix" type="submit" class="btn btn-primary shadow-xl transition-all" style="padding:16px; font-size:1.1rem;">💾 Salvar Configurações do PIX</button>
                                 </div>
                             </form>
@@ -632,8 +752,9 @@ window.buildActiveViewBase = () => {
                             </div>
                         </div>
 
-                        <!-- BOTAO ALINHADO A ESQUERDA -->
-                        <div class="save-row mt-8"><button id="btn-save-loja" type="submit" class="btn btn-green" style="padding:16px; font-size:1.1rem;">💾 Guardar Configurações na Nuvem</button></div>
+                        <div style="display: flex; justify-content: flex-start; margin-top: 24px; width: 100%;">
+                            <button id="btn-save-loja" type="submit" class="btn btn-green" style="padding:16px; font-size:1.1rem;">💾 Guardar Configurações na Nuvem</button>
+                        </div>
                     </form>
                 </div>
             </div>`;
@@ -644,7 +765,7 @@ window.buildActiveViewBase = () => {
             <div class="space-y-10 fade-in">
                 <div class="mb-6">
                     <h2 class="text-4xl font-[950] text-slate-900 tracking-tighter uppercase italic mb-1">Cores do Tema</h2>
-                    <p class="text-slate-500 font-bold text-sm">Personalize as cores principais da loja.</p>
+                    <p class="text-slate-500 font-bold text-sm">Personalize as cores principais da loja em tempo real.</p>
                 </div>
                 <div class="bg-white rounded-[40px] p-8 border border-slate-200 shadow-sm">
                     <form onsubmit="event.preventDefault(); window.handleSaveAparencia();">
@@ -672,14 +793,105 @@ window.buildActiveViewBase = () => {
                             <button type="button" class="btn btn-sm" style="background:linear-gradient(135deg,#2E7D32,#43A047);color:#fff" onclick="window.setTheme('#43A047','#2E7D32')">🌿 Verde Campo</button>
                           </div>
                         </div>
-                        <!-- BOTAO ALINHADO A ESQUERDA -->
-                        <div class="save-row mt-8"><button id="btn-save-aparencia" type="submit" class="btn btn-green" style="padding:16px; font-size:1.1rem;">💾 Guardar Cores</button></div>
+                        <div style="display: flex; justify-content: flex-start; margin-top: 24px; width: 100%;">
+                            <button id="btn-save-aparencia" type="submit" class="btn btn-green" style="padding:16px; font-size:1.1rem;">💾 Guardar Cores</button>
+                        </div>
                     </form>
                 </div>
             </div>`;
         }
     }
     return '';
+};
+
+// --- GESTÃO DE FIDELIDADE (NOVO) ---
+window.saveFidelidadeConfig = async () => {
+    try {
+        const data = {
+            ativo: document.getElementById('fid-ativo').value === 'true',
+            premio: document.getElementById('fid-premio').value,
+            reaisPorPonto: parseFloat(document.getElementById('fid-reais').value),
+            pontosGanhos: parseInt(document.getElementById('fid-pontos').value),
+            metaPontos: parseInt(document.getElementById('fid-meta').value),
+            updatedAt: serverTimestamp()
+        };
+        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'fidelidade_config'), data, {merge: true});
+        window.toast("✅ Plano Fidelidade atualizado!");
+        window.logAction("Atualizou as regras do Plano de Fidelidade.");
+    } catch(e) { window.toast("Erro ao salvar fidelidade."); }
+};
+
+
+// --- GESTÃO DE CUPONS E NOTIFICAÇÕES ---
+window.saveCupom = async () => {
+    const cod = document.getElementById('cupom-codigo').value.trim().toUpperCase();
+    const desc = parseFloat(document.getElementById('cupom-desconto').value);
+    const val = document.getElementById('cupom-validade').value;
+    if(!cod || isNaN(desc) || !val) return window.toast('⚠️ Preencha todos os campos!');
+    
+    try {
+        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'cupons', cod), {
+            codigo: cod, desconto: desc, validade: val, criadoEm: serverTimestamp()
+        });
+        window.toast('✅ Cupom criado!');
+        window.logAction(`Criou o cupom de desconto: ${cod} (${desc}%)`);
+        document.getElementById('cupom-codigo').value = '';
+    } catch(e) { window.toast('Erro ao criar cupom'); }
+};
+
+window.deleteCupom = async (id) => {
+    if(confirm('Apagar este cupom permanentemente?')) {
+        await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'cupons', id));
+        window.toast('🗑 Cupom removido');
+    }
+};
+
+window.renderCuponsList = () => {
+    const list = document.getElementById('cupons-list'); if(!list) return;
+    if(!window.cupons || window.cupons.length === 0) {
+        list.innerHTML = `<p class="text-slate-500 font-bold p-4 bg-white border border-slate-200 rounded-2xl">Nenhum cupom ativo no momento.</p>`;
+        return;
+    }
+    list.innerHTML = window.cupons.map(c => `
+        <div class="bg-white p-6 rounded-2xl border border-slate-200 flex justify-between items-center shadow-sm">
+            <div>
+                <h4 class="font-black text-2xl text-rose-600">${c.codigo}</h4>
+                <p class="font-bold text-slate-500 mt-1 uppercase tracking-widest text-[11px]">Desconto: <span class="text-emerald-500">${c.desconto}%</span> &nbsp;|&nbsp; Validade: ${c.validade}</p>
+            </div>
+            <button onclick="window.deleteCupom('${c.id}')" class="btn btn-red btn-sm !py-3 !px-6">Revogar</button>
+        </div>
+    `).join('');
+};
+
+window.sendMensagem = async () => {
+    const tit = document.getElementById('msg-titulo').value.trim();
+    const txt = document.getElementById('msg-texto').value.trim();
+    if(!tit || !txt) return window.toast('⚠️ Preencha título e mensagem!');
+    
+    try {
+        await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'notificacoes'), {
+            titulo: tit, mensagem: txt, disparadoEm: serverTimestamp()
+        });
+        window.toast('📢 Notificação Disparada!');
+        window.logAction(`Disparou notificação Push: ${tit}`);
+        document.getElementById('msg-titulo').value = '';
+        document.getElementById('msg-texto').value = '';
+    } catch(e) { window.toast('Erro ao disparar mensagem.'); }
+};
+
+window.renderNotificacoesList = () => {
+    const list = document.getElementById('mensagens-list'); if(!list) return;
+    if(!window.notificacoes || window.notificacoes.length === 0) {
+        list.innerHTML = `<p class="text-slate-500 font-bold p-4 bg-white border border-slate-200 rounded-2xl">O histórico está limpo.</p>`;
+        return;
+    }
+    list.innerHTML = window.notificacoes.map(m => `
+        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm mb-4">
+            <h4 class="font-black text-lg text-slate-800">${m.titulo}</h4>
+            <p class="text-slate-600 mt-2 font-semibold">${m.mensagem}</p>
+            <p class="text-[10px] text-slate-400 font-black mt-4 uppercase tracking-widest">Enviado em: ${m.disparadoEm ? new Date(m.disparadoEm.seconds*1000).toLocaleString('pt-PT') : 'Agora'}</p>
+        </div>
+    `).join('');
 };
 
 // --- GESTÃO DE USUÁRIOS & AUDITORIA ---
@@ -801,7 +1013,6 @@ window.renderDashboard = () => {
     
     const deducoes = (totalDebito * (tDebito/100)) + ((totalCredito + totalCartaoGenerico) * (tCredito/100));
     
-    // ✅ MELHORIA: CÁLCULO DE LUCRO LÍQUIDO REAL COM BASE NO CUSTO DO CATÁLOGO
     const totalCost = activeOrders.reduce((acc, l) => {
         const itensArr = Array.isArray(l.itens) ? l.itens : [];
         const orderCost = itensArr.reduce((sum, item) => {
@@ -837,7 +1048,6 @@ window.renderDashboard = () => {
         `;
     }
 
-    // ✅ MELHORIA: RENDERIZAÇÃO DO CHART.JS
     const ctx = document.getElementById('salesChart');
     if (ctx && typeof Chart !== 'undefined') {
         if (window.salesChartInstance) window.salesChartInstance.destroy();
@@ -938,7 +1148,7 @@ window.renderDashboard = () => {
             return `
             <div class="prod-item" style="padding:16px 24px;">
                 <div style="flex:1;">
-                    <h4 style="margin:0;font-size:1.05rem;font-weight:900;color:var(--brown);">${cliente} <span style="color:var(--primary);font-size:0.75rem;margin-left:6px;">${l.pedidoID || ''}</span></h4>
+                    <h4 style="margin:0;font-size:1.05rem;font-weight:900;color:var(--brown);">${cliente} <span style="color:var(--primary);font-size:0.75margin-left:6px;">${l.pedidoID || ''}</span></h4>
                     <div style="margin-top:6px;display:flex;gap:10px;align-items:center;">
                         ${badge}
                         <span style="font-size:0.85rem;font-weight:800;color:var(--muted);">R$ ${window.fmt(l.valorTotal)}</span>
@@ -964,7 +1174,6 @@ window.updateTaxa = async (val, field) => {
     } catch(e) { window.toast("Erro ao guardar taxa."); }
 };
 
-// ✅ FUNÇÕES DE FILTRO E PESQUISA DE PEDIDOS
 window.filtrarPedidos = (val) => { window.filtroStatusPedido = val; window.paginaAtualPedidos = 1; window.renderPedidos(); };
 window.pesquisarPedidos = (val) => { window.buscaPedido = val.toLowerCase(); window.paginaAtualPedidos = 1; window.renderPedidos(); };
 window.mudarPaginaPedidos = (dir) => { window.paginaAtualPedidos += dir; window.renderPedidos(); };
@@ -976,7 +1185,6 @@ window.renderPedidos = () => {
 
     const logsArr = Array.isArray(window.logs) ? window.logs : [];
     
-    // ✅ MELHORIA: APLICAÇÃO DE FILTROS E PESQUISA
     let pending = logsArr.filter(l => {
         if(window.filtroStatusPedido !== 'TODOS' && l.status !== window.filtroStatusPedido) return false;
         if(window.filtroStatusPedido === 'TODOS' && ['FINALIZADO','CANCELADO'].includes(l.status)) return false;
@@ -994,7 +1202,6 @@ window.renderPedidos = () => {
         return tB - tA;
     });
 
-    // ✅ MELHORIA: PAGINAÇÃO NO FRONTEND (Evita travamentos e mantém Regra 2)
     const totalPages = Math.ceil(sortedPending.length / ITENS_POR_PAGINA) || 1;
     if (window.paginaAtualPedidos > totalPages) window.paginaAtualPedidos = totalPages;
     if (window.paginaAtualPedidos < 1) window.paginaAtualPedidos = 1;
@@ -1067,7 +1274,6 @@ window.renderPedidos = () => {
         `;
     }).join('');
 
-    // Renderiza controles de paginação
     if(pagination) {
         pagination.innerHTML = `
             <button class="pagination-btn" onclick="window.mudarPaginaPedidos(-1)" ${window.paginaAtualPedidos === 1 ? 'disabled' : ''}>Anterior</button>
@@ -1086,6 +1292,33 @@ window.handleStatusUpdate = async (id, status) => {
         });
         window.toast(`✅ Estado Atualizado`);
         window.logAction(`Atualizou o status do pedido ${id} para ${status}`);
+
+        // ✅ LÓGICA DE FIDELIDADE AUTOMÁTICA
+        if (status === 'FINALIZADO' && window.fidelidadeConfig && window.fidelidadeConfig.ativo) {
+            const order = window.logs.find(x => x.id === id);
+            if (order && order.dadosCliente && order.dadosCliente.uid) {
+                const total = Number(order.valorTotal) || 0;
+                const reaisPorPonto = Number(window.fidelidadeConfig.reaisPorPonto) || 1;
+                const pontosGanhos = Number(window.fidelidadeConfig.pontosGanhos) || 1;
+                const pontosAtribuidos = Math.floor(total / reaisPorPonto) * pontosGanhos;
+                
+                if (pontosAtribuidos > 0) {
+                    try {
+                        const clientRef = doc(db, 'artifacts', appId, 'public', 'data', 'clientes', order.dadosCliente.uid);
+                        const clientSnap = await getDoc(clientRef);
+                        if (clientSnap.exists()) {
+                            const currentPoints = Number(clientSnap.data().pontosFidelidade) || 0;
+                            await updateDoc(clientRef, {
+                                pontosFidelidade: currentPoints + pontosAtribuidos
+                            });
+                            window.logAction(`Fidelidade: +${pontosAtribuidos} pontos atribuídos ao cliente ${order.dadosCliente.nome}`);
+                        }
+                    } catch (err) {
+                        console.warn("Erro nas permissões de fidelidade: ", err);
+                    }
+                }
+            }
+        }
     } catch(e) { window.toast("Erro ao atualizar."); }
 };
 
@@ -1156,7 +1389,6 @@ window.openProdModal = (id = null) => {
     document.getElementById('mp-embalagem').value   = p.embalagem || 'Dúzia (12)';
     document.getElementById('mp-estoque').value     = p.estoque || 0;
     
-    // ✅ CARREGA O NOVO CAMPO DE CUSTO
     document.getElementById('mp-custo').value       = p.custo || '';
     
     document.getElementById('mp-preco').value       = p.preco || '';
@@ -1180,7 +1412,7 @@ window.closeProdModal = () => document.getElementById('prod-modal').classList.re
 window.saveProd = async () => {
     const nome  = document.getElementById('mp-nome').value.trim();
     const preco = parseFloat(document.getElementById('mp-preco').value);
-    const custo = parseFloat(document.getElementById('mp-custo').value) || 0; // ✅ CAPTURA CUSTO
+    const custo = parseFloat(document.getElementById('mp-custo').value) || 0;
     const estoque = parseInt(document.getElementById('mp-estoque').value) || 0;
     
     if (!nome || isNaN(preco)) { window.toast('⚠️ Preencha os campos obrigatórios!'); return; }
@@ -1201,7 +1433,7 @@ window.saveProd = async () => {
         tipo: document.getElementById('mp-tipo').value, 
         embalagem: document.getElementById('mp-embalagem').value.trim() || 'Unidade',
         preco,
-        custo, // ✅ SALVA O CUSTO
+        custo,
         estoque,
         desc: document.getElementById('mp-desc').value,
         badge: document.getElementById('mp-badge').value,
@@ -1255,8 +1487,20 @@ window.loadAparenciaForm = () => {
 };
 
 window.updateColorPreview = () => {
-    if(document.getElementById('cfg-corPrimariaHex') && document.getElementById('cfg-corPrimaria')) document.getElementById('cfg-corPrimariaHex').value   = document.getElementById('cfg-corPrimaria').value;
-    if(document.getElementById('cfg-corSecundariaHex') && document.getElementById('cfg-corSecundaria')) document.getElementById('cfg-corSecundariaHex').value = document.getElementById('cfg-corSecundaria').value;
+    const pInput = document.getElementById('cfg-corPrimaria');
+    const sInput = document.getElementById('cfg-corSecundaria');
+    
+    if (pInput) {
+        document.documentElement.style.setProperty('--primary', pInput.value);
+        const hexP = document.getElementById('cfg-corPrimariaHex');
+        if(hexP) hexP.value = pInput.value;
+    }
+    
+    if (sInput) {
+        document.documentElement.style.setProperty('--dark', sInput.value);
+        const hexS = document.getElementById('cfg-corSecundariaHex');
+        if(hexS) hexS.value = sInput.value;
+    }
 };
 
 window.syncColorFromText = (which) => {
@@ -1385,12 +1629,6 @@ window.renderPixPreview = () => {
     }
 };
 
-window.updateImgPreview = () => {
-    const val = document.getElementById('mp-foto').value;
-    const preview = document.getElementById('mp-img-preview');
-    if (preview) preview.innerHTML = val ? `<img src="${val}" class="w-full h-full object-cover">` : '📷';
-};
-
 window.handleFileUpload = (e) => {
     const file = e.target.files[0]; if(!file) return;
     const reader = new FileReader();
@@ -1445,6 +1683,10 @@ window.initListeners = () => {
     const u2 = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'store_config'), s => {
         if(s.exists()){
             window.config = { ...window.config, ...s.data() };
+            
+            document.documentElement.style.setProperty('--primary', window.config.corPrimaria || '#e11d48');
+            document.documentElement.style.setProperty('--dark', window.config.corSecundaria || '#be123c');
+
             if (window.state.view === 'aparencia') {
                 const i1 = document.getElementById('cfg-corPrimaria');
                 const i2 = document.getElementById('cfg-corSecundaria');
@@ -1468,14 +1710,30 @@ window.initListeners = () => {
     }, errHandler);
 
     const u4 = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'vendas_logs'), s => {
-        // ✅ MELHORIA: ALERTA SONORO DE NOVO PEDIDO
         if(!window.isFirstLogsLoad) {
             s.docChanges().forEach(change => {
                 if(change.type === 'added') {
                     const data = change.doc.data();
                     if(data.status === 'CRIADO') {
-                        try { new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg').play(); } catch(e){}
-                        window.toast('🔔 NOVO PEDIDO RECEBIDO!');
+                        const vols = [0, 0.4, 0.7, 1.0];
+                        const vol = vols[window.volumeLevel];
+                        if(vol > 0) {
+                            try { 
+                                const audio = new Audio('https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg');
+                                audio.volume = vol;
+                                audio.play(); 
+                            } catch(e){}
+                        }
+                        
+                        const pop = document.getElementById('new-order-popup');
+                        const pCli = document.getElementById('nop-client');
+                        const pVal = document.getElementById('nop-value');
+                        if(pop && pCli && pVal) {
+                            pCli.textContent = data.dadosCliente?.nome || 'Cliente Anónimo';
+                            pVal.textContent = 'R$ ' + window.fmt(data.valorTotal);
+                            pop.style.transform = 'translateX(0)';
+                            setTimeout(() => { pop.style.transform = 'translateX(150%)'; }, 30000);
+                        }
                     }
                 }
             });
@@ -1491,23 +1749,46 @@ window.initListeners = () => {
         if (window.state.view === 'dashboard') window.renderDashboard();
     }, errHandler);
 
-    // Listener para Usuários
     const u5 = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'admin_users'), s => {
         window.adminUsers = s.docs.map(d => ({ id: d.id, ...d.data() }));
         if (window.state.view === 'usuarios') window.renderUsuariosList();
     }, errHandler);
 
-    // Listener para Logs de Auditoria
     const u6 = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'audit_logs'), s => {
         window.auditLogs = s.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b)=>{
             const tA = a.timestamp?.seconds || 0;
             const tB = b.timestamp?.seconds || 0;
-            return tB - tA; // Ordem decrescente (mais recentes primeiro)
+            return tB - tA; 
         });
         if (window.state.view === 'usuarios') window.renderAuditLogs();
     }, errHandler);
 
-    window.firebaseUnsubs.push(u1, u2, u3, u4, u5, u6);
+    const u7 = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'cupons'), s => {
+        window.cupons = s.docs.map(d => ({ id: d.id, ...d.data() }));
+        if (window.state.view === 'cupons') window.renderCuponsList();
+    }, errHandler);
+
+    const u8 = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'notificacoes'), s => {
+        window.notificacoes = s.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b)=>{
+            const tA = a.disparadoEm?.seconds || 0;
+            const tB = b.disparadoEm?.seconds || 0;
+            return tB - tA; 
+        });
+        if (window.state.view === 'mensagens') window.renderNotificacoesList();
+    }, errHandler);
+
+    // ✅ NOVO LISTENER: FIDELIDADE
+    const u9 = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'fidelidade_config'), s => {
+        if(s.exists()){
+            window.fidelidadeConfig = s.data();
+            if(window.state.view === 'fidelidade') {
+                const mainEl = document.getElementById('main-content');
+                if (mainEl) mainEl.innerHTML = window.buildActiveViewBase();
+            }
+        }
+    }, errHandler);
+
+    window.firebaseUnsubs.push(u1, u2, u3, u4, u5, u6, u7, u8, u9);
 };
 
 window.boot = async () => {
