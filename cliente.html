@@ -137,7 +137,7 @@
 <div id="toast-el" class="fixed top-10 left-1/2 -translate-x-1/2 bg-black text-white px-6 py-3 rounded-2xl font-bold text-sm z-[6000] opacity-0 translate-y-[-100px] transition-all duration-500"></div>
 
 <!-- BANNER INSTALAÇÃO PWA -->
-<div id="install-banner" class="hidden fixed bottom-[90px] left-4 right-4 bg-slate-900/95 backdrop-blur-xl border border-slate-700 text-white p-4 rounded-3xl shadow-2xl z-[4500] flex items-center justify-between animate-[slideUp_0.4s_ease-out]">
+<div id="install-banner" class="hidden fixed bottom-[100px] left-4 right-4 bg-slate-900/95 backdrop-blur-xl border border-slate-700 text-white p-4 rounded-3xl shadow-2xl z-[5000] flex items-center justify-between animate-[slideUp_0.4s_ease-out]">
     <div class="flex items-center gap-3">
         <div class="w-12 h-12 bg-rose-600 rounded-2xl flex items-center justify-center text-2xl shadow-lg">🥚</div>
         <div class="text-left text-balance">
@@ -309,8 +309,9 @@
                 </select>
             </div>
 
-            <button onclick="window.processCheckout()" class="btn-premium w-full py-6 rounded-[32px] text-xl shadow-2xl font-black">
-                Confirmar Reserva (<span id="checkout-total-btn">R$ 0,00</span>)
+            <!-- ✅ BOTÃO REDIMENSIONADO E RENOMEADO -->
+            <button onclick="window.processCheckout()" class="btn-premium w-full py-4 rounded-[24px] text-base shadow-xl font-black mt-2">
+                Confirmar Pedido (<span id="checkout-total-btn">R$ 0,00</span>)
             </button>
         </div>
     </div>
@@ -329,20 +330,24 @@
                 <div id="pix-code" class="font-mono text-[13px] font-bold break-all text-slate-700 text-center select-all"></div>
             </div>
             <button class="w-full py-6 bg-black text-white rounded-[24px] font-black uppercase text-[11px] tracking-widest shadow-xl" onclick="window.doCopy()">📋 Copiar Código</button>
-            <button class="btn-premium w-full py-7 rounded-[32px] !bg-emerald-500 shadow-xl uppercase font-black" onclick="window.saveOrderToFirebase()">✅ JÁ PAGUEI / CONCLUIR</button>
+            <button class="btn-premium w-full py-4 rounded-[24px] !bg-emerald-500 shadow-xl uppercase font-black" onclick="window.saveOrderToFirebase()">✅ JÁ PAGUEI / CONCLUIR</button>
         </div>
     </div>
 </div>
 
 <!-- TELA SUCESSO -->
-<div id="success-screen" class="hidden fixed inset-0 bg-white z-[5000] flex-col items-center justify-center p-10 text-center animate-[fadeIn_0.5s_ease-out]">
-    <div class="text-[10rem] animate-bounce">🎊</div>
-    <h2 class="text-5xl font-[950] tracking-tighter text-black uppercase italic leading-none text-balance">Distribuidora Aline: Pedido Confirmado!</h2>
-    <p class="text-slate-400 font-bold text-lg mt-6 uppercase tracking-tight text-balance">Recebemos sua encomenda fresquinha.</p>
-    <div class="bg-green-50 text-[#00C853] px-10 py-6 rounded-[40px] text-4xl font-black my-10 tracking-widest shadow-inner" id="order-num-display">#000000</div>
-    <div class="w-full max-w-md space-y-5">
-        <button class="btn-premium w-full py-8 rounded-[48px] bg-rose-600 text-xl shadow-2xl" onclick="window.sendWhatsApp()">📲 ENVIAR COMPROVANTE</button>
-        <button onclick="window.resetTudo()" class="btn-premium w-full py-6 rounded-[32px] bg-black text-white font-black text-[11px] tracking-[0.3em] uppercase italic text-balance leading-none">Voltar à Loja</button>
+<div id="success-screen" class="hidden fixed inset-0 bg-white z-[5000] flex-col items-center justify-center p-8 text-center animate-[fadeIn_0.5s_ease-out]">
+    <!-- ✅ EMOJI E TEXTOS REDIMENSIONADOS -->
+    <div class="text-[6rem] animate-bounce mb-2">🎊</div>
+    <h2 class="text-3xl font-[950] tracking-tighter text-black uppercase italic leading-none text-balance">Pedido Confirmado!</h2>
+    <p class="text-slate-400 font-bold text-sm mt-4 uppercase tracking-tight text-balance">Recebemos sua encomenda fresquinha.</p>
+    
+    <div class="bg-green-50 text-[#00C853] px-8 py-4 rounded-3xl text-3xl font-black my-6 tracking-widest shadow-inner border border-green-100" id="order-num-display">#000000</div>
+    
+    <!-- ✅ BOTÕES REDIMENSIONADOS -->
+    <div class="w-full max-w-sm space-y-3">
+        <button class="btn-premium w-full py-4 rounded-3xl bg-rose-600 text-sm shadow-xl font-black uppercase tracking-widest" onclick="window.sendWhatsApp()">📲 ENVIAR COMPROVANTE</button>
+        <button onclick="window.resetTudo()" class="btn-premium w-full py-3 rounded-3xl bg-black text-white font-black text-[11px] tracking-[0.2em] uppercase italic text-balance leading-none shadow-md">Voltar à Loja</button>
     </div>
 </div>
 
@@ -844,7 +849,8 @@ function renderCarrinho() {
                        <span class="text-white/30 font-black uppercase text-[11px] tracking-widest leading-none">Total Geral</span>
                        <span class="text-4xl font-[950] tracking-tighter italic text-rose-600 leading-none">R$ ${window.fmt(t)}</span>
                     </div>
-                    <button onclick="window.openCheckout()" class="btn-premium w-full py-6 rounded-[32px] text-xl italic uppercase tracking-widest shadow-2xl shadow-rose-900/50 font-black leading-none">Fechar Pedido</button>
+                    <!-- ✅ BOTÃO FECHAR PEDIDO REDIMENSIONADO -->
+                    <button onclick="window.openCheckout()" class="btn-premium w-full py-4 rounded-[24px] text-base italic uppercase tracking-widest shadow-xl shadow-rose-900/50 font-black leading-none">Fechar Pedido</button>
                 </div>
             ` : ''}
         </div>`;
@@ -1218,8 +1224,10 @@ window.toggleFavorito = async (id) => {
     catch(e) {}
 };
 
-// ✅ LÓGICA DE INSTALAÇÃO PWA NATIVA
+// ✅ LÓGICA DE INSTALAÇÃO PWA (ANDROID E IOS)
 window.deferredPrompt = null;
+
+// Tenta detetar Android nativamente
 window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     window.deferredPrompt = e;
@@ -1229,10 +1237,27 @@ window.addEventListener('beforeinstallprompt', (e) => {
     }
 });
 
-document.getElementById('btn-install')?.addEventListener('click', async () => {
+// Força exibição no iOS (já que a Apple não suporta beforeinstallprompt)
+const isIos = () => {
+  const userAgent = window.navigator.userAgent.toLowerCase();
+  return /iphone|ipad|ipod/.test( userAgent );
+}
+const isInStandaloneMode = () => ('standalone' in window.navigator) && (window.navigator.standalone);
+
+if (isIos() && !isInStandaloneMode()) {
     const installBanner = document.getElementById('install-banner');
-    if (installBanner) installBanner.classList.add('hidden');
+    const btnInstall = document.getElementById('btn-install');
+    if(installBanner && btnInstall) {
+        btnInstall.textContent = "Ver Como";
+        btnInstall.onclick = () => window.showMsg("Toque em Compartilhar (quadrado com seta) e depois 'Adicionar à Tela de Início'");
+        installBanner.classList.remove('hidden');
+    }
+}
+
+document.getElementById('btn-install')?.addEventListener('click', async () => {
     if (window.deferredPrompt) {
+        const installBanner = document.getElementById('install-banner');
+        if (installBanner) installBanner.classList.add('hidden');
         window.deferredPrompt.prompt();
         const { outcome } = await window.deferredPrompt.userChoice;
         if (outcome === 'accepted') {
