@@ -346,7 +346,6 @@ window.state = {
 window.clienteLogado = {};
 window.pix_config = { rawKey:'', nomeRecebedor:'AppEgg', cidade:'SAO PAULO' };
 
-// ✅ FIX: FUNÇÃO VOLTAR À LOJA CORRIGIDA
 window.resetTudo = () => {
     window.state.carrinho = {};
     const successScreen = document.getElementById('success-screen');
@@ -494,7 +493,6 @@ function renderLoja() {
     const filtered = window.state.produtos.filter(p => (p.nome || "").toLowerCase().includes(window.state.searchTerm) && p.ativo !== false);
     return `
       <div class="animate-[fadeIn_0.5s_ease-out] text-left">
-        <!-- ✅ MENU RÁPIDO RESTAURADO (Sem botão de baixar app) -->
         <div class="flex gap-4 overflow-x-auto pb-8 hide-scrollbar">
             <div onclick="window.setView('promocoes')" class="quick-menu-item">
                 <div class="quick-menu-icon"><i data-lucide="tag"></i></div>
@@ -516,7 +514,6 @@ function renderLoja() {
     `;
 }
 
-// ✅ RENDERIZADORES DAS SEÇÕES RESTAURADOS
 function renderPromocoes() {
     return `<div class="animate-[fadeIn_0.5s_ease-out] text-left">
         <button onclick="window.setView('loja')" class="mb-6 flex items-center gap-2 text-rose-600 font-black uppercase text-[10px] tracking-widest"><i data-lucide="arrow-left" class="w-4 h-4"></i> Voltar</button>
@@ -671,23 +668,58 @@ function renderCarrinho() {
 
 function renderPedidos() {
     return `
-        <div class="space-y-12 text-left animate-[fadeIn_0.5s_ease-out]">
-            <h2 class="text-4xl font-[950] italic uppercase tracking-tighter text-rose-600">Histórico</h2>
-            <div class="space-y-8">
-                ${window.state.pedidos.map(p => `
-                    <div class="bg-white p-10 rounded-[56px] premium-shadow border-t-[16px] border-rose-600 relative overflow-hidden">
-                        <div class="flex justify-between items-start mb-6">
-                            <div class="text-left text-balance">
-                                <h4 class="font-black uppercase text-slate-900 text-xl tracking-tighter leading-none">${p.pedidoID || '#ID'}</h4>
-                                <div class="mt-2 flex items-center gap-2"><p class="text-[12px] font-black text-slate-400 uppercase tracking-widest leading-none">${p.status || 'PENDENTE'}</p></div>
-                            </div>
-                            <div class="font-black text-3xl tracking-tighter italic text-slate-900 leading-none text-right">R$ ${window.fmt(p.valorTotal)}</div>
-                        </div>
-                        <div class="text-[12px] font-bold text-slate-400 bg-slate-50 p-6 rounded-[32px] text-left leading-relaxed text-balance">
-                            ${(p.itens||[]).map(i => `<span class="text-slate-900 font-black">${i.qty || i.quantidade || 0}x</span> ${i.nome}`).join(' • ')}
-                        </div>
-                    </div>
-                `).join('') || '<div class="text-center py-24 text-slate-200 font-black uppercase italic tracking-widest text-balance leading-relaxed">Sem pedidos efetuados.</div>'}
+        <div class="space-y-10 text-left animate-[fadeIn_0.5s_ease-out]">
+            <h2 class="text-4xl font-[950] tracking-tighter uppercase italic text-rose-600 mb-6">Histórico de Pedidos</h2>
+            <div class="grid gap-6">
+                ${window.state.pedidos.map(p => {
+                    const isEntrega = p.tipoEntrega === 'entrega';
+                    const entregaStr = isEntrega ? '🚚 ENTREGA' : '🏪 RETIRADA';
+                    const endereco = isEntrega 
+                        ? p.dadosCliente?.rua + ', ' + p.dadosCliente?.num + ' - ' + p.dadosCliente?.bairro + ' <br><span style="font-size:0.75rem;color:var(--text-muted);margin-top:4px;display:block;">Comp: ' + (p.dadosCliente?.comp || 'N/A') + '</span>'
+                        : 'Você retirará o pedido na loja.';
+                    
+                    const itensStr = (p.itens || []).map(i => {
+                        const quantidade = i.qty || i.quantidade || i.amount || 0;
+                        return '<div style="margin-bottom:4px;"><span style="background:var(--bg);color:var(--primary);padding:2px 6px;border-radius:6px;font-weight:900;font-size:0.75rem;margin-right:6px;border:1px solid var(--border);">' + quantidade + 'x</span><span style="font-weight:800;font-size:0.85rem;color:var(--dark);">' + (i.nome || i.produto) + '</span></div>';
+                    }).join('');
+                    const pagStr = (p.formaPagamento || 'Não Informado').replace('_', ' ').toUpperCase();
+
+                    let borderColor = 'var(--border)';
+                    if (p.status === 'CRIADO') borderColor = '#f59e0b';
+                    else if (p.status === 'EM SEPARAÇÃO') borderColor = 'var(--primary)';
+                    else if (p.status === 'SAIU PARA ENTREGA' || p.status === 'PRONTO PARA RETIRADA') borderColor = 'var(--success)';
+                    else if (p.status === 'FINALIZADO') borderColor = '#000000';
+                    else if (p.status === 'CANCELADO') borderColor = '#94a3b8';
+
+                    return '<div class="card-depth premium-shadow relative overflow-hidden" style="border-left-width: 12px; border-left-color: ' + (borderColor === 'var(--success)' ? '#00C853' : borderColor) + '; padding: 24px; display: block; width: 100%;">' +
+                        '<div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:16px; border-bottom:1px solid var(--border); padding-bottom:16px; margin-bottom:16px;">' +
+                            '<div>' +
+                                '<span style="background:var(--bg); color:var(--primary); border:1px solid var(--border); padding:4px 10px; border-radius:50px; font-size:0.75rem; font-weight:900; letter-spacing:1px;">Pedido ' + (p.pedidoID || '#---') + '</span>' +
+                                '<span style="font-size:0.75rem; color:var(--text-muted); font-weight:800; margin-left:10px;">' + (p.criadoEm ? new Date(p.criadoEm.seconds * 1000).toLocaleString('pt-PT') : 'Hoje') + '</span>' +
+                                '<h3 style="margin:12px 0 4px; font-size:1.3rem; font-weight:900; color:var(--dark); text-transform:uppercase;">Status: ' + (p.status || 'PENDENTE') + '</h3>' +
+                            '</div>' +
+                            '<div style="text-align:right;">' +
+                                '<span style="background:' + (isEntrega ? '#e0f2fe' : '#dcfce7') + '; color:' + (isEntrega ? '#1d4ed8' : '#047857') + '; padding:6px 14px; border-radius:10px; font-size:0.75rem; font-weight:900; display:inline-block; margin-bottom:12px;">' + entregaStr + '</span>' +
+                                '<h2 style="font-size:1.8rem; font-weight:900; color:var(--primary); margin:0;">R$ ' + window.fmt(p.valorTotal) + '</h2>' +
+                            '</div>' +
+                        '</div>' +
+                        
+                        '<div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:16px;">' +
+                            '<div>' +
+                                '<p style="font-size:0.75rem; font-weight:900; color:var(--text-muted); text-transform:uppercase; margin-bottom:8px; border-bottom:2px solid var(--bg); padding-bottom:4px;">Itens Solicitados</p>' +
+                                itensStr +
+                            '</div>' +
+                            '<div>' +
+                                '<p style="font-size:0.75rem; font-weight:900; color:var(--text-muted); text-transform:uppercase; margin-bottom:8px; border-bottom:2px solid var(--bg); padding-bottom:4px;">Metódo de Pagamento</p>' +
+                                '<span style="background:var(--bg); border:1px solid var(--border); padding:6px 12px; border-radius:10px; font-size:0.8rem; font-weight:800; color:var(--dark); display:inline-block;">' + pagStr + '</span>' +
+                            '</div>' +
+                            '<div>' +
+                                '<p style="font-size:0.75rem; font-weight:900; color:var(--text-muted); text-transform:uppercase; margin-bottom:8px; border-bottom:2px solid var(--bg); padding-bottom:4px;">Endereço / Retirada</p>' +
+                                '<p style="font-size:0.85rem; font-weight:700; color:var(--dark); line-height:1.5; margin:0;">' + endereco + '</p>' +
+                            '</div>' +
+                        '</div>' +
+                    '</div>';
+                }).join('') || '<div class="text-center py-24 text-slate-200 font-black uppercase italic tracking-widest text-balance leading-relaxed">Sem pedidos efetuados.</div>'}
             </div>
         </div>`;
 }
@@ -707,8 +739,8 @@ window.closeAll = () => { document.querySelectorAll('.mbk').forEach(el => { el.c
 window.setDelivery = t => {
     window.state.deliveryType = t;
     const cR = document.getElementById('check-retirada'); const cE = document.getElementById('check-entrega');
-    if(cR) cR.className = `flex-1 py-4 rounded-xl font-black text-[11px] uppercase ${t==='retirada'?'bg-white text-rose-600 shadow-sm':'text-slate-400'}`;
-    if(cE) cE.className = `flex-1 py-4 rounded-xl font-black text-[11px] uppercase ${t==='entrega'?'bg-white text-rose-600 shadow-sm':'text-slate-400'}`;
+    if(cR) cR.className = `flex-1 py-4 rounded-[20px] font-black text-[11px] uppercase ${t==='retirada'?'bg-white text-rose-600 shadow-sm':'text-slate-400'}`;
+    if(cE) cE.className = `flex-1 py-4 rounded-[20px] font-black text-[11px] uppercase ${t==='entrega'?'bg-white text-rose-600 shadow-sm':'text-slate-400'}`;
     const label = document.getElementById('checkout-addr-display');
     if(t==='retirada') label.innerHTML = "Rua Antônio Freire da Silva, 87<br>Jardim das Camélias, São Paulo - SP"; 
     else label.innerHTML = `${window.clienteLogado.rua||''}, ${window.clienteLogado.num||''} - ${window.clienteLogado.bairro||''}`;
@@ -791,7 +823,7 @@ onAuthStateChanged(auth, async u => {
         document.getElementById('auth-view').style.display='none';
         document.getElementById('app-view').style.display='block';
         window.setView('loja');
-        onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'estoque'), s => { window.state.produtos = s.docs.map(d=>({id:d.id, ...d.data()})); window.render(); });
+        onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'estoque'), s => { window.state.produtos = s.docs.map(d=>({id:d.id, ...d.data()})); window.state.isLoading = false; window.render(); });
         onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'vendas_logs'), s => { window.state.pedidos = s.docs.map(d=>({id:d.id, ...d.data()})).filter(p => p.clienteId === u.uid).sort((a, b) => (b.criadoEm?.toMillis?.() || 0) - (a.criadoEm?.toMillis?.() || 0)); window.render(); });
         onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'pix_config'), s => { if(s.exists()){ window.pix_config = s.data(); const wNum = s.data().whatsapp || s.data().tel_contato || '5511985706243'; window.state.whatsappNumber = wNum; const wBtn = document.getElementById('whatsapp-btn'); if(wBtn) { wBtn.href = `https://wa.me/${wNum.replace(/\D/g, '')}`; wBtn.classList.remove('hidden'); } } });
         onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'clientes', u.uid), s => { if(s.exists()){ const d = s.data(); window.clienteLogado = d; if(d.favoritos){ window.state.favoritos = d.favoritos; } window.render(); } });
