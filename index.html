@@ -104,11 +104,6 @@
     .bo-red   { background:var(--primary); color:#fff; }
     .bo-amber { background:#f59e0b; color:#fff; }
     .bo-green { background:var(--green); color:#fff; }
-    
-    .toast { position:fixed; bottom:30px; left:50%; transform:translateX(-50%) translateY(100px); background:var(--brown); color:#fff; padding:14px 28px; border-radius:50px; font-size:.9rem; font-weight:800; z-index:600; white-space:nowrap; transition:transform .4s cubic-bezier(0.34, 1.56, 0.64, 1); box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
-    .toast.show { transform:translateX(-50%) translateY(0); }
-    
-    .preview-bar { background:linear-gradient(135deg,var(--green),#059669); color:#fff; padding:12px 24px; display:flex; align-items:center; justify-content:space-between; font-size:.88rem; font-weight: 700; box-shadow:0 2px 10px rgba(16,185,129,.2);}
 
     /* Tabela de Relatórios */
     table.rel-table { width:100%; border-collapse:collapse; margin-top:20px; font-size:0.85rem; }
@@ -122,6 +117,12 @@
     #login-view { position:fixed; inset:0; background:var(--brown); z-index:2000; display:flex; flex-direction:column; align-items:center; justify-content:center; }
     #app-view { display:none; flex-direction:column; min-height:100vh; }
     
+    @media (max-width:1440px) {
+      .nav { width:140px; }
+      .nav-item span:not(.ni), .nav-title { display:none; }
+      .nav-item { justify-content:center; padding:12px; }
+    }
+
     @media (max-width:700px) {
       .layout { flex-direction:column; }
       .nav { width:100%; display:flex; flex-direction:row; overflow-x:auto; padding:0; border-right:none; border-bottom:1px solid var(--border); }
@@ -138,7 +139,7 @@
 <div id="login-view">
     <div class="card" style="width:100%; max-width:400px; text-align:center; padding:40px; border-radius:32px; border:4px solid var(--border);">
         <h2 style="color:var(--primary); margin-bottom: 5px; font-size: 1.8rem; font-weight: 900; font-style: italic; letter-spacing: -1px;">App Distribuidora de Ovos Aline</h2>
-        <p style="color:var(--green); font-size: 0.75rem; font-weight: 900; margin-bottom: 30px; text-transform: uppercase; letter-spacing: 2px;">Painel Administrativo v7.0.38</p>
+        <p style="color:var(--green); font-size: 0.75rem; font-weight: 900; margin-bottom: 30px; text-transform: uppercase; letter-spacing: 2px;">Painel Administrativo v7.0.40</p>
         
         <form id="login-form" onsubmit="event.preventDefault(); window.fazerLogin();">
             <div class="field" style="margin-bottom: 15px;">
@@ -171,6 +172,12 @@
         <div class="nav-item" onclick="window.goTo('pedidos')"><span class="ni">📦</span> Encomendas</div>
         <div class="nav-item" onclick="window.goTo('produtos')"><span class="ni">🥚</span> Catálogo</div>
         <div class="nav-item" onclick="window.goTo('relatorios')"><span class="ni">📈</span> Relatório de Vendas</div>
+        
+        <!-- NOVA ABA: EQUIPE / USUÁRIOS -->
+        <div class="nav-title mt-4 border-t border-slate-100 pt-4">Equipe</div>
+        <div class="nav-item" onclick="window.goTo('usuarios')"><span class="ni">👥</span> <span>Usuários</span></div>
+
+        <div class="nav-title mt-4 border-t border-slate-100 pt-4">Configurações</div>
         <div class="nav-item" onclick="window.goTo('loja')"><span class="ni">🏪</span> Dados da Loja</div>
         <div class="nav-item" onclick="window.goTo('pix')"><span class="ni">💚</span> Configurar PIX</div>
         <div class="nav-item" onclick="window.goTo('aparencia')"><span class="ni">🎨</span> Aparência</div>
@@ -255,8 +262,8 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getFirestore, collection, onSnapshot, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFirestore, collection, onSnapshot, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, sendPasswordResetEmail, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 // --- CONFIGURAÇÃO FIREBASE FIXA E PADRONIZADA ---
 const firebaseConfig = {
@@ -294,6 +301,8 @@ window.config = {
 
 window.produtos = [];
 window.logs = [];
+window.adminUsers = []; 
+window.auditLogs = []; // NOVA VARIÁVEL DE ESTADO PARA OS LOGS DE AUDITORIA
 window.editingId = null;
 window.firebaseUnsubs = [];
 window.isListening = false;
@@ -350,6 +359,21 @@ window.pixPayload = (key, amount, name, city, txid) => {
     return p + tlv('63', window.crc16(p + '6304'));
 };
 
+// --- MOTOR DE AUDITORIA (LOG DE ATIVIDADES) ---
+window.logAction = async (actionDesc) => {
+    if(!auth.currentUser) return;
+    const email = auth.currentUser.email || 'Usuário Desconhecido';
+    try {
+        await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'audit_logs'), {
+            user: email,
+            action: actionDesc,
+            timestamp: serverTimestamp()
+        });
+    } catch(e) {
+        console.error("Erro ao gravar log", e);
+    }
+};
+
 window.goTo = (sec) => {
     document.querySelectorAll('.nav-item').forEach(el => {
         el.classList.remove('active');
@@ -369,6 +393,7 @@ window.goTo = (sec) => {
     if (sec === 'dashboard') window.renderDashboard();
     if (sec === 'pedidos') window.renderPedidos();
     if (sec === 'produtos') window.renderProdList();
+    if (sec === 'usuarios') { window.renderUsuariosList(); window.renderAuditLogs(); }
 };
 
 window.buildActiveViewBase = () => {
@@ -414,6 +439,41 @@ window.buildActiveViewBase = () => {
                 </div>
 
                 <div id="relatorio-resultado"></div>
+            </div>`;
+            
+        case 'usuarios':
+            return `
+            <div class="space-y-10 fade-in">
+                <div class="mb-6">
+                    <h2 class="text-4xl font-[950] text-slate-900 tracking-tighter uppercase italic mb-1">Gestão de Usuários</h2>
+                    <p class="text-slate-500 font-bold text-sm">Crie contas para outros usuários acessarem este painel.</p>
+                </div>
+                
+                <div class="bg-white rounded-[40px] p-8 border border-slate-200 shadow-sm">
+                    <form onsubmit="event.preventDefault(); window.criarUsuarioAdmin();">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="field">
+                                <label class="text-[10px] font-black uppercase text-slate-400 ml-2">E-mail do Novo Usuário</label>
+                                <input id="new-admin-email" type="email" class="input-egg" required>
+                            </div>
+                            <div class="field">
+                                <label class="text-[10px] font-black uppercase text-slate-400 ml-2">Palavra-passe (Mín. 6)</label>
+                                <input id="new-admin-pass" type="password" class="input-egg" minlength="6" required>
+                            </div>
+                        </div>
+                        <button type="submit" id="btn-create-admin" class="btn btn-primary w-full mt-6">➕ Criar Usuário</button>
+                    </form>
+                </div>
+
+                <div class="mt-8">
+                    <h3 class="text-xl font-black uppercase text-slate-800 tracking-tighter mb-4">Usuários Registrados</h3>
+                    <div id="admin-users-list" class="grid gap-4"></div>
+                </div>
+
+                <div class="mt-12">
+                    <h3 class="text-xl font-black uppercase text-slate-800 tracking-tighter mb-4">Log de Atividades (Auditoria)</h3>
+                    <div id="audit-logs-list" class="grid gap-4 max-h-[400px] overflow-y-auto pr-2"></div>
+                </div>
             </div>`;
 
         case 'produtos': 
@@ -582,11 +642,102 @@ window.buildActiveViewBase = () => {
     return '';
 };
 
+// --- GESTÃO DE USUÁRIOS & AUDITORIA ---
+window.renderUsuariosList = () => {
+    const list = document.getElementById('admin-users-list');
+    if(!list) return;
+    if(!window.adminUsers.length) {
+        list.innerHTML = `<p class="text-slate-500 font-bold p-4 bg-white border border-slate-200 rounded-2xl">Nenhum usuário extra registrado.</p>`;
+        return;
+    }
+    list.innerHTML = window.adminUsers.map(u => `
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 flex justify-between items-center shadow-sm">
+            <div>
+                <p class="font-black text-slate-800">${u.email}</p>
+                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Adicionado em: ${u.criadoEm ? new Date(u.criadoEm.seconds*1000).toLocaleDateString('pt-PT') : 'N/A'}</p>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="window.resetarSenhaUsuario('${u.email}')" class="btn btn-ghost btn-sm !py-2 !px-4">Resetar Senha</button>
+                <button onclick="window.removerUsuarioAdmin('${u.id}')" class="btn btn-red btn-sm !py-2 !px-4">Revogar Acesso</button>
+            </div>
+        </div>
+    `).join('');
+};
+
+window.renderAuditLogs = () => {
+    const list = document.getElementById('audit-logs-list');
+    if(!list) return;
+    if(!window.auditLogs || !window.auditLogs.length) {
+        list.innerHTML = `<p class="text-slate-500 font-bold p-4 bg-white border border-slate-200 rounded-2xl">Nenhum registro de atividade encontrado.</p>`;
+        return;
+    }
+    list.innerHTML = window.auditLogs.map(l => {
+        const data = l.timestamp ? new Date(l.timestamp.seconds*1000).toLocaleString('pt-PT') : 'Agora';
+        return `
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 flex flex-col shadow-sm">
+            <p class="font-black text-slate-800 text-sm">${l.action}</p>
+            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Por: ${l.user} • ${data}</p>
+        </div>
+        `;
+    }).join('');
+};
+
+window.resetarSenhaUsuario = async (email) => {
+    try {
+        await sendPasswordResetEmail(auth, email);
+        window.toast('✉️ Link de reset enviado para o e-mail!');
+    } catch(e) {
+        window.toast('❌ Erro ao enviar reset.');
+    }
+};
+
+window.criarUsuarioAdmin = async () => {
+    const email = document.getElementById('new-admin-email').value.trim();
+    const pass = document.getElementById('new-admin-pass').value;
+    const btn = document.getElementById('btn-create-admin');
+    
+    if(!email || !pass) return;
+    btn.disabled = true; btn.innerText = "A criar...";
+    
+    try {
+        const secondaryApp = initializeApp(firebaseConfig, "SecondaryApp" + Date.now());
+        const secondaryAuth = getAuth(secondaryApp);
+        
+        const userCredential = await createUserWithEmailAndPassword(secondaryAuth, email, pass);
+        
+        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'admin_users', userCredential.user.uid), {
+            email: email,
+            criadoEm: serverTimestamp()
+        });
+        
+        await signOut(secondaryAuth);
+        
+        document.getElementById('new-admin-email').value = '';
+        document.getElementById('new-admin-pass').value = '';
+        window.toast('✅ Usuário criado com sucesso!');
+        window.logAction(`Criou um novo usuário de acesso: ${email}`);
+    } catch(e) {
+        console.error(e);
+        window.toast('❌ Erro. O E-mail pode já estar em uso.');
+    } finally {
+        btn.disabled = false; btn.innerText = "➕ Criar Usuário";
+    }
+};
+
+window.removerUsuarioAdmin = async (id) => {
+    if(confirm("Remover o acesso deste usuário do painel?")) {
+        try {
+            await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'admin_users', id));
+            window.toast('🗑 Acesso revogado!');
+            window.logAction(`Revogou acesso de um usuário do sistema`);
+        } catch(e) { window.toast('Erro ao remover.'); }
+    }
+};
+
 window.renderDashboard = () => {
     const active = window.logs.filter(l => !["FINALIZADO", "CANCELADO"].includes(l.status));
     const pendingTotal = active.reduce((acc,l)=>acc+(Number(l.valorTotal)||0), 0);
     
-    // ✅ CORREÇÃO MÍNIMA: Fallback qty/amount para itens solicitados nunca aparecerem zerados
     const totalItens = active.reduce((acc, l) => {
         const itensSoma = (l.itens && Array.isArray(l.itens)) 
             ? l.itens.reduce((sum, item) => sum + (Number(item.qtd || item.quantidade || item.qty || item.amount || 0)), 0) 
@@ -716,6 +867,7 @@ window.updateTaxa = async (val, field) => {
     try {
         await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'store_config'), { [field]: taxa }, {merge:true});
         window.toast("✅ Taxa guardada na nuvem!");
+        window.logAction(`Atualizou as taxas da máquina (${field}) para ${taxa}%`);
     } catch(e) { window.toast("Erro ao guardar taxa."); }
 };
 
@@ -746,7 +898,6 @@ window.renderPedidos = () => {
             : 'O cliente virá buscar os produtos fisicamente.';
         
         const itensStr = (l.itens || []).map(i => {
-            // ✅ CORREÇÃO MÍNIMA: Fallback qty/amount para itens nos pedidos
             const quantidade = i.qtd || i.quantidade || i.qty || i.amount || 0;
             return `<div style="margin-bottom:4px;"><span style="background:var(--cream);color:var(--primary);padding:2px 6px;border-radius:6px;font-weight:900;font-size:0.75rem;margin-right:6px;border:1px solid var(--border);">${quantidade}x</span><span style="font-weight:800;font-size:0.85rem;color:var(--brown);">${i.nome || i.produto}</span></div>`;
         }).join('');
@@ -806,6 +957,7 @@ window.handleStatusUpdate = async (id, status) => {
             finalizadoEm: status === 'FINALIZADO' ? serverTimestamp() : null
         });
         window.toast(`✅ Estado Atualizado`);
+        window.logAction(`Atualizou o status do pedido ${id} para ${status}`);
     } catch(e) { window.toast("Erro ao atualizar."); }
 };
 
@@ -851,13 +1003,16 @@ window.toggleProd = async (id) => {
     if(p) {
         await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'estoque', id), { ativo: !p.ativo, updatedAt: serverTimestamp() });
         window.toast(!p.ativo ? '✅ Produto ativado!' : '⏸ Produto oculto');
+        window.logAction(`${!p.ativo ? 'Ativou' : 'Desativou'} a visibilidade do produto: ${p.nome}`);
     }
 };
 
 window.deleteProd = async (id) => {
     if(confirm("Eliminar este produto definitivamente da nuvem?")) {
+        const p = window.produtos.find(x => x.id === id);
         await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'estoque', id));
         window.toast('🗑 Produto eliminado!');
+        window.logAction(`Excluiu definitivamente o produto: ${p ? p.nome : id}`);
     }
 };
 
@@ -926,6 +1081,7 @@ window.saveProd = async () => {
         await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'estoque', docId), payload, { merge: true });
         window.closeProdModal();
         window.toast('✅ Guardado na Nuvem!');
+        window.logAction(window.editingId ? `Editou o produto: ${nome} (Estoque: ${estoque})` : `Criou o produto: ${nome} (Estoque: ${estoque})`);
     } catch(e) { window.toast('Erro ao guardar.'); }
     finally { if(btn) { btn.disabled = false; btn.innerText = "💾 Guardar no Firebase"; } }
 };
@@ -935,6 +1091,7 @@ window.seedDefaultProducts = async () => {
         window.toast("A carregar catálogo predefinido...");
         await Promise.all(DEFAULT_PRODUTOS.map(p => setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'estoque', window.generateUUID()), {...p, updatedAt: serverTimestamp()})));
         window.toast("✅ Produtos carregados com sucesso!");
+        window.logAction("Carregou os produtos padrão do catálogo.");
     } catch(e) {
         window.toast("Erro ao carregar catálogo.");
     }
@@ -995,6 +1152,7 @@ window.handleSaveStoreConfig = async () => {
         };
         await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'store_config'), data, {merge:true});
         window.toast("✅ Loja sincronizada!");
+        window.logAction("Atualizou as configurações públicas da Loja.");
     } catch(e) { window.toast("Erro ao sincronizar."); }
     finally { if(btn) { btn.disabled = false; btn.innerText = "💾 Guardar Dados da Loja"; } }
 };
@@ -1015,6 +1173,7 @@ window.handleSaveAparencia = async () => {
         window.config.corPrimaria = cp;
         window.config.corSecundaria = cs;
         window.toast("✅ Aparência guardada e sincronizada!");
+        window.logAction("Atualizou as cores e aparência do sistema.");
     } catch(e) { 
         console.error(e);
         window.toast("Erro ao guardar aparência."); 
@@ -1064,6 +1223,7 @@ window.handleSavePixConfig = async () => {
         }, { merge: true });
         
         window.toast("✅ PIX Guardado com Sucesso!");
+        window.logAction("Configurou/Atualizou os dados de recebimento via PIX.");
         window.renderPixPreview();
     } catch (err) { 
         window.toast("Erro ao guardar PIX."); 
@@ -1183,7 +1343,23 @@ window.initListeners = () => {
         if (window.state.view === 'dashboard') window.renderDashboard();
     }, errHandler);
 
-    window.firebaseUnsubs.push(u1, u2, u3, u4);
+    // Listener para Usuários
+    const u5 = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'admin_users'), s => {
+        window.adminUsers = s.docs.map(d => ({ id: d.id, ...d.data() }));
+        if (window.state.view === 'usuarios') window.renderUsuariosList();
+    }, errHandler);
+
+    // Listener para Logs de Auditoria
+    const u6 = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'audit_logs'), s => {
+        window.auditLogs = s.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b)=>{
+            const tA = a.timestamp?.seconds || 0;
+            const tB = b.timestamp?.seconds || 0;
+            return tB - tA; // Ordem decrescente (mais recentes primeiro)
+        });
+        if (window.state.view === 'usuarios') window.renderAuditLogs();
+    }, errHandler);
+
+    window.firebaseUnsubs.push(u1, u2, u3, u4, u5, u6);
 };
 
 window.boot = async () => {
