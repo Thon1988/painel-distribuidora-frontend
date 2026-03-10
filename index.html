@@ -109,8 +109,16 @@
     .toast.show { transform:translateX(-50%) translateY(0); }
     
     .preview-bar { background:linear-gradient(135deg,var(--green),#059669); color:#fff; padding:12px 24px; display:flex; align-items:center; justify-content:space-between; font-size:.88rem; font-weight: 700; box-shadow:0 2px 10px rgba(16,185,129,.2);}
-    
-    /* Login Screen Setup */
+
+    /* Tabela de Relatórios */
+    table.rel-table { width:100%; border-collapse:collapse; margin-top:20px; font-size:0.85rem; }
+    table.rel-table th { background:#f1f5f9; padding:12px; text-align:left; font-weight:800; text-transform:uppercase; color:var(--muted); border-bottom:2px solid var(--border); }
+    table.rel-table td { padding:12px; border-bottom:1px solid var(--border); font-weight:600; color:var(--brown); }
+
+    /* Estilo para input egg no relatório */
+    .input-egg { border:2px solid var(--border); border-radius:12px; padding:12px 16px; font-size:.92rem; color:var(--brown); font-family:inherit; transition:all .2s; outline:none; background:var(--cream); font-weight: 700; }
+    .input-egg:focus { border-color:var(--primary); background:var(--white); }
+
     #login-view { position:fixed; inset:0; background:var(--brown); z-index:2000; display:flex; flex-direction:column; align-items:center; justify-content:center; }
     #app-view { display:none; flex-direction:column; min-height:100vh; }
     
@@ -125,22 +133,21 @@
     }
   </style>
 </head>
-<body>
+<body class="no-scrollbar">
 
 <div id="login-view">
     <div class="card" style="width:100%; max-width:400px; text-align:center; padding:40px; border-radius:32px; border:4px solid var(--border);">
         <h2 style="color:var(--primary); margin-bottom: 5px; font-size: 1.8rem; font-weight: 900; font-style: italic; letter-spacing: -1px;">App Distribuidora de Ovos Aline</h2>
-        <p style="color:var(--green); font-size: 0.75rem; font-weight: 900; margin-bottom: 30px; text-transform: uppercase; letter-spacing: 2px;">Painel Administrativo v7.0.1</p>
+        <p style="color:var(--green); font-size: 0.75rem; font-weight: 900; margin-bottom: 30px; text-transform: uppercase; letter-spacing: 2px;">Painel Administrativo v7.0.31</p>
         
         <form id="login-form" onsubmit="event.preventDefault(); window.fazerLogin();">
             <div class="field" style="margin-bottom: 15px;">
-                <input type="email" id="login-email" placeholder="E-mail de Administrador" class="form-input text-center font-bold text-slate-800" required>
+                <input type="email" id="login-email" placeholder="E-mail de Administrador" class="form-input text-center font-bold text-slate-800" required autocomplete="username">
             </div>
             <div class="field" style="margin-bottom: 24px;">
-                <input type="password" id="login-pass" placeholder="Palavra-passe" class="form-input text-center font-bold text-slate-800" required>
+                <input type="password" id="login-pass" placeholder="Palavra-passe" class="form-input text-center font-bold text-slate-800" required autocomplete="current-password">
             </div>
             <button id="btn-login" type="submit" class="btn btn-primary" style="width:100%; justify-content:center; padding: 16px; font-size: 1rem;">Entrar no Painel</button>
-            <p style="font-size: 0.75rem; color: var(--muted); margin-top: 15px; font-weight: 600;">⚠️ Utilize a conta criada na secção Authentication do Firebase.</p>
         </form>
     </div>
 </div>
@@ -163,6 +170,7 @@
         <div class="nav-item active" onclick="window.goTo('dashboard')"><span class="ni">📊</span> Administrativo</div>
         <div class="nav-item" onclick="window.goTo('pedidos')"><span class="ni">📦</span> Encomendas</div>
         <div class="nav-item" onclick="window.goTo('produtos')"><span class="ni">🥚</span> Catálogo</div>
+        <div class="nav-item" onclick="window.goTo('relatorios')"><span class="ni">📈</span> Relatório de Vendas</div>
         <div class="nav-item" onclick="window.goTo('loja')"><span class="ni">🏪</span> Dados da Loja</div>
         <div class="nav-item" onclick="window.goTo('pix')"><span class="ni">💚</span> Configurar PIX</div>
         <div class="nav-item" onclick="window.goTo('aparencia')"><span class="ni">🎨</span> Aparência</div>
@@ -204,7 +212,6 @@
         
         <div class="field">
             <label>Formato / Embalagem</label>
-            <!-- ✅ CORREÇÃO MÍNIMA: Substituído por select com todas as opções originais -->
             <select id="mp-embalagem">
               <option value="Unidade">Unidade</option>
               <option value="Meia Dúzia (6)">Meia Dúzia (6)</option>
@@ -358,6 +365,37 @@ window.buildActiveViewBase = () => {
                 </div>
             </div>`;
         
+        case 'relatorios':
+            return `
+            <div id="view-relatorios" class="fade-in space-y-8">
+                <h2 style="font-size:1.6rem;font-weight:900;margin-bottom:20px;">
+                📊 Relatório de Vendas
+                </h2>
+
+                <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;">
+                    <button onclick="window.gerarRelatorio('dia')" class="btn btn-primary">Hoje</button>
+                    <button onclick="window.gerarRelatorio('semana')" class="btn btn-primary">Semana</button>
+                    <button onclick="window.gerarRelatorio('quinzena')" class="btn btn-primary">Quinzena</button>
+                    <button onclick="window.gerarRelatorio('mes')" class="btn btn-primary">Mês</button>
+                </div>
+
+                <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;">
+                    <input type="date" id="rel-data-inicio" class="input-egg">
+                    <input type="date" id="rel-data-fim" class="input-egg">
+                    <button onclick="window.gerarRelatorio('custom')" class="btn btn-primary">
+                    Gerar Intervalo
+                    </button>
+                </div>
+
+                <div style="margin-bottom:20px;">
+                    <button onclick="window.exportarCSV()" class="btn btn-green">
+                    ⬇ Exportar CSV
+                    </button>
+                </div>
+
+                <div id="relatorio-resultado"></div>
+            </div>`;
+
         case 'produtos': 
             return `
             <div class="space-y-10 fade-in">
@@ -527,9 +565,8 @@ window.buildActiveViewBase = () => {
 window.renderDashboard = () => {
     const active = window.logs.filter(l => !["FINALIZADO", "CANCELADO"].includes(l.status));
     const pendingTotal = active.reduce((acc,l)=>acc+(Number(l.valorTotal)||0), 0);
-    const produtosAtivos = window.produtos.filter(p => p.ativo).length;
     
-    // ✅ CORREÇÃO MÍNIMA: Fallback qty/amount para itens solicitados nunca aparecerem zerados
+    // ✅ CORREÇÃO: Fallback qty/amount para itens solicitados nunca aparecerem zerados
     const totalItens = active.reduce((acc, l) => {
         const itensSoma = (l.itens && Array.isArray(l.itens)) 
             ? l.itens.reduce((sum, item) => sum + (Number(item.qtd || item.quantidade || item.qty || item.amount || 0)), 0) 
@@ -688,8 +725,8 @@ window.renderPedidos = () => {
             ? `${l.dadosCliente?.rua || ''}, ${l.dadosCliente?.num || ''} - ${l.dadosCliente?.bairro || ''} <br><span style="font-size:0.75rem;color:var(--muted);margin-top:4px;display:block;">Comp: ${l.dadosCliente?.comp || 'N/A'}</span>`
             : 'O cliente virá buscar os produtos fisicamente.';
         
-        const itensStr = (l.itens || []).map(i => {
-            // ✅ CORREÇÃO MÍNIMA: Fallback qty/amount para itens nos pedidos
+        const itensArr = Array.isArray(l.itens) ? l.itens : [];
+        const itensStr = itensArr.map(i => {
             const quantidade = i.qtd || i.quantidade || i.qty || i.amount || 0;
             return `<div style="margin-bottom:4px;"><span style="background:var(--cream);color:var(--primary);padding:2px 6px;border-radius:6px;font-weight:900;font-size:0.75rem;margin-right:6px;border:1px solid var(--border);">${quantidade}x</span><span style="font-weight:800;font-size:0.85rem;color:var(--brown);">${i.nome || i.produto}</span></div>`;
         }).join('');
@@ -940,7 +977,6 @@ window.handleSaveStoreConfig = async () => {
     finally { if(btn) { btn.disabled = false; btn.innerText = "💾 Guardar Dados da Loja"; } }
 };
 
-// ✅ CORREÇÃO: GRAVAÇÃO DA APARÊNCIA
 window.handleSaveAparencia = async () => {
     const cp = document.getElementById('cfg-corPrimaria').value;
     const cs = document.getElementById('cfg-corSecundaria').value;
@@ -948,7 +984,6 @@ window.handleSaveAparencia = async () => {
     if(btn) { btn.disabled = true; btn.innerText = "A guardar..."; }
     
     try {
-        // Grava no caminho exato que o PWA consome
         await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'store_config'), {
             corPrimaria: cp, 
             corSecundaria: cs,
@@ -1054,21 +1089,126 @@ window.selBadge = (el, badge, cls) => {
     document.getElementById('mp-badgeClass').value = cls;
 };
 
-// ✅ LOGIN REAL CORRIGIDO E ATIVADO
+// --- LOGIC FUNCTIONS (RELATÓRIO) ---
+window.relatorioAtual = [];
+
+window.gerarRelatorio = (tipo) => {
+    let inicio;
+    let fim = new Date();
+    const logsArr = Array.isArray(window.logs) ? window.logs : [];
+
+    if(tipo === "dia"){
+        inicio = new Date();
+        inicio.setHours(0,0,0,0);
+    }
+    if(tipo === "semana"){
+        inicio = new Date();
+        inicio.setDate(inicio.getDate() - 7);
+    }
+    if(tipo === "quinzena"){
+        inicio = new Date();
+        inicio.setDate(inicio.getDate() - 15);
+    }
+    if(tipo === "mes"){
+        inicio = new Date();
+        inicio.setMonth(inicio.getMonth() - 1);
+    }
+    if(tipo === "custom"){
+        const startVal = document.getElementById("rel-data-inicio").value;
+        const endVal = document.getElementById("rel-data-fim").value;
+        if(!startVal || !endVal) { window.toast("⚠️ Selecione as datas"); return; }
+        inicio = new Date(startVal);
+        fim = new Date(endVal);
+        fim.setHours(23,59,59,999);
+    }
+
+    const vendas = logsArr.filter(v => {
+        const data = new Date((v.criadoEm?.seconds || 0) * 1000);
+        return data >= inicio && data <= fim && v.status === "FINALIZADO";
+    });
+
+    window.relatorioAtual = vendas;
+    window.renderRelatorio(vendas);
+};
+
+window.renderRelatorio = (vendas) => {
+    const el = document.getElementById("relatorio-resultado");
+    if(!el) return;
+
+    if(!vendas.length){
+        el.innerHTML = "<p style='font-weight:700; color:var(--muted); text-align:center; padding:20px;'>Nenhuma venda finalizada encontrada.</p>";
+        return;
+    }
+
+    let total = 0;
+    const linhas = vendas.map(v=>{
+        total += v.valorTotal || 0;
+        const cliente = v.dadosCliente?.nome || "Anonimo";
+        const dataStr = v.criadoEm ? new Date(v.criadoEm.seconds*1000).toLocaleString('pt-PT') : "---";
+
+        return `
+        <tr>
+            <td>${v.pedidoID || '---'}</td>
+            <td>${cliente}</td>
+            <td>${dataStr}</td>
+            <td>R$ ${window.fmt(v.valorTotal)}</td>
+        </tr>
+        `;
+    }).join("");
+
+    el.innerHTML = `
+        <div style="margin-bottom:10px;font-weight:900; background:var(--white); padding:15px; border-radius:12px; border:1px solid var(--border); text-align:center;">
+            Total vendido no período: <span style="color:var(--green)">R$ ${window.fmt(total)}</span>
+        </div>
+
+        <div style="overflow-x:auto; background:white; border-radius:15px; border:1px solid var(--border)">
+            <table class="rel-table">
+                <thead>
+                    <tr>
+                        <th>Pedido</th>
+                        <th>Cliente</th>
+                        <th>Data</th>
+                        <th>Valor</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${linhas}
+                </tbody>
+            </table>
+        </div>
+    `;
+};
+
+window.exportarCSV = () => {
+    if(!window.relatorioAtual.length){
+        window.toast("Nenhum relatório gerado");
+        return;
+    }
+
+    let csv = "Pedido,Cliente,Data,Valor\n";
+    window.relatorioAtual.forEach(v=>{
+        const cliente = (v.dadosCliente?.nome || "Anonimo").replace(/,/g, '');
+        const data = v.criadoEm ? new Date(v.criadoEm.seconds*1000).toLocaleString('pt-PT').replace(',','') : "---";
+        csv += `${v.pedidoID || '---'},${cliente},${data},${(v.valorTotal || 0).toFixed(2)}\n`;
+    });
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "relatorio_vendas_ovos_aline.csv";
+    link.click();
+};
+
 window.fazerLogin = async () => {
     const btn = document.getElementById('btn-login');
     const em = document.getElementById('login-email').value.trim();
     const ps = document.getElementById('login-pass').value;
-    
-    if (btn) { btn.disabled = true; btn.innerText = "A autenticar na nuvem..."; }
-    
+    if (btn) { btn.disabled = true; btn.innerText = "A entrar..."; }
     try { 
         await signInWithEmailAndPassword(auth, em, ps);
-        if (btn) { btn.innerText = "Sucesso!"; }
     } 
     catch(e) { 
-        console.error("Erro de Autenticação Real:", e);
-        alert("Acesso negado: Verifique os dados.");
+        alert("Acesso negado.");
         if(btn) { btn.disabled = false; btn.innerText = "Entrar no Painel"; }
     }
 };
@@ -1077,10 +1217,6 @@ window.fazerLogout = async () => {
     window.clearAdminListeners();
     document.getElementById('login-view').style.display = 'flex';
     document.getElementById('app-view').style.display = 'none';
-    
-    const btn = document.getElementById('btn-login');
-    if (btn) { btn.disabled = false; btn.innerText = "Entrar no Painel"; }
-    
     try { await signOut(auth); } catch(e){}
 };
 
@@ -1104,17 +1240,10 @@ window.initListeners = () => {
     if (window.isListening) return;
     window.isListening = true;
 
-    const errHandler = (err) => {
-        console.warn("Aviso do Firebase:", err.message);
-        if (err.code === 'permission-denied') {
-            window.toast("Erro Firebase: Permissão Negada!");
-        }
-    };
-
     const u1 = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'estoque'), s => {
         window.produtos = s.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b)=>(a.nome||"").localeCompare(b.nome||""));
         if (window.state.view === 'produtos') window.renderProdList();
-    }, errHandler);
+    });
 
     const u2 = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'store_config'), s => {
         if(s.exists()){
@@ -1128,7 +1257,7 @@ window.initListeners = () => {
             if (window.state.view === 'loja') window.loadLojaForm();
             if (window.state.view === 'dashboard') window.renderDashboard();
         }
-    }, errHandler);
+    });
 
     const u3 = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'pix_config'), s => {
         if(s.exists()){
@@ -1139,27 +1268,20 @@ window.initListeners = () => {
             window.config.pixCidade = d.cidade || '';
             if (window.state.view === 'pix') window.loadPixForm();
         }
-    }, errHandler);
+    });
 
     const u4 = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'vendas_logs'), s => {
-        window.logs = s.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b)=>{
-            const tA = a.criadoEm?.seconds || 0;
-            const tB = b.criadoEm?.seconds || 0;
-            return tB - tA;
-        });
+        window.logs = s.docs.map(d => ({ id: d.id, ...d.data() }));
         if (window.state.view === 'pedidos') window.renderPedidos();
         if (window.state.view === 'dashboard') window.renderDashboard();
-    }, errHandler);
+        if (window.state.view === 'relatorios') window.renderRelatorio(window.relatorioAtual);
+    });
 
     window.firebaseUnsubs.push(u1, u2, u3, u4);
 };
 
 window.boot = async () => {
     await window.initAuth();
-    
-    const loginBtn = document.getElementById('btn-login');
-    if (loginBtn) { loginBtn.disabled = false; loginBtn.innerText = "Entrar no Painel"; }
-    
     onAuthStateChanged(auth, u => {
         if (u) {
             document.getElementById('login-view').style.display = 'none';
