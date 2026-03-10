@@ -136,6 +136,21 @@
 
 <div id="toast-el" class="fixed top-10 left-1/2 -translate-x-1/2 bg-black text-white px-6 py-3 rounded-2xl font-bold text-sm z-[6000] opacity-0 translate-y-[-100px] transition-all duration-500"></div>
 
+<!-- BANNER INSTALAÇÃO PWA -->
+<div id="install-banner" class="hidden fixed bottom-[90px] left-4 right-4 bg-slate-900/95 backdrop-blur-xl border border-slate-700 text-white p-4 rounded-3xl shadow-2xl z-[4500] flex items-center justify-between animate-[slideUp_0.4s_ease-out]">
+    <div class="flex items-center gap-3">
+        <div class="w-12 h-12 bg-rose-600 rounded-2xl flex items-center justify-center text-2xl shadow-lg">🥚</div>
+        <div class="text-left text-balance">
+            <p class="font-black text-sm leading-tight text-white">Instalar AppEgg</p>
+            <p class="text-[10px] font-bold text-slate-400 mt-0.5 leading-tight">Mais rápido e não perca os pontos!</p>
+        </div>
+    </div>
+    <div class="flex items-center gap-2">
+        <button id="btn-install" class="bg-white text-slate-900 font-black text-[10px] uppercase tracking-widest py-2.5 px-4 rounded-xl shadow-lg transition-colors">Instalar</button>
+        <button onclick="document.getElementById('install-banner').classList.add('hidden')" class="text-slate-400 hover:text-white p-2">✕</button>
+    </div>
+</div>
+
 <!-- AUTH VIEW -->
 <div id="auth-view" class="hidden min-h-screen flex flex-col items-center justify-center p-6 bg-white text-balance text-center">
     <div class="text-center mb-10">
@@ -201,6 +216,10 @@
                   <span class="text-[10px] font-bold text-slate-400 uppercase tracking-tight mt-1 italic">Direto da Granja</span>
                 </div>
             </div>
+            <button onclick="window.setView('notificacoes')" class="relative p-3 bg-slate-50 rounded-full border border-slate-100 cursor-pointer hover:bg-slate-100 transition-colors">
+                <i data-lucide="bell" class="w-5 h-5 text-slate-600"></i>
+                <span id="notif-badge" class="absolute -top-1 -right-1 bg-rose-600 text-white text-[9px] font-black w-5 h-5 flex items-center justify-center rounded-full hidden border-2 border-white">0</span>
+            </button>
         </div>
         <div class="relative group">
            <input type="text" id="search-input" oninput="window.handleSearch(this.value)" class="premium-input !py-4 !pl-14 !bg-slate-50 border-none shadow-sm text-sm !text-left" placeholder="Pesquisar ovos frescos...">
@@ -270,7 +289,6 @@
                 </div>
             </div>
 
-            <!-- APLICAÇÃO DE CUPONS NO CHECKOUT -->
             <div class="space-y-2 mt-4 bg-slate-50 p-4 rounded-[24px] border border-slate-100">
                 <p class="font-black text-[10px] uppercase text-slate-400 tracking-widest ml-2">Cupom de Desconto</p>
                 <div class="flex gap-2">
@@ -352,7 +370,8 @@ setPersistence(auth, browserLocalPersistence).catch(e => console.warn(e));
 window.state = {
     user: null, view: 'loja', produtos: [], pedidos: [], carrinho: {}, favoritos: [],
     deliveryType: 'retirada', orderHash: '', usingNewAddress: false,
-    searchTerm: '', category: 'Todos', whatsappNumber: '', appliedCoupon: null
+    searchTerm: '', category: 'Todos', whatsappNumber: '', appliedCoupon: null,
+    notificacoes: []
 };
 
 window.clienteLogado = {};
@@ -501,6 +520,7 @@ window.render = () => {
     else if(window.state.view === 'promocoes') cont.innerHTML = renderPromocoes();
     else if(window.state.view === 'fidelidade') cont.innerHTML = renderFidelidade();
     else if(window.state.view === 'cupons') cont.innerHTML = renderCupons();
+    else if(window.state.view === 'notificacoes') cont.innerHTML = renderNotificacoesCliente();
     lucide.createIcons();
 };
 
@@ -577,16 +597,44 @@ function renderPromocoes() {
 }
 
 function renderFidelidade() {
+    const c = window.clienteLogado;
+    let fidelidadeHtml = '<p class="text-slate-500">Programa de fidelidade offline.</p>';
+    
+    if(window.fidelidadeConfig && window.fidelidadeConfig.ativo) {
+        const pontos = c.pontosFidelidade || 0;
+        const meta = window.fidelidadeConfig.metaPontos || 100;
+        const premio = window.fidelidadeConfig.premio || 'Prêmio Surpresa';
+        const progress = Math.min((pontos / meta) * 100, 100);
+        const isReady = pontos >= meta;
+
+        fidelidadeHtml = `
+        <div class="bg-gradient-to-br from-slate-900 to-black p-10 rounded-[48px] text-white premium-shadow relative overflow-hidden text-balance">
+            <div class="absolute top-0 right-0 p-6 opacity-10 text-6xl">💎</div>
+            <div class="relative z-10">
+                <span class="text-[10px] font-black uppercase tracking-[0.3em] opacity-40">Saldo de Pontos</span>
+                <div class="text-6xl font-[950] italic tracking-tighter mt-2">${pontos} <span class="text-lg text-slate-500 not-italic">/ ${meta}</span></div>
+                
+                <div class="w-full bg-slate-800 rounded-full h-4 mt-6 mb-4 overflow-hidden border border-slate-700">
+                    <div class="bg-gradient-to-r from-rose-600 to-rose-400 h-4 rounded-full transition-all duration-1000" style="width: ${progress}%"></div>
+                </div>
+
+                <p class="text-sm font-bold text-slate-400 mt-4 text-balance">Faltam apenas ${Math.max(meta - pontos, 0)} pontos para resgatar ${premio}!</p>
+
+                <div class="mt-8">
+                ${isReady ? 
+                    `<button type="button" onclick="window.resgatarPremio()" class="w-full py-5 bg-rose-600 text-white rounded-full font-black uppercase tracking-widest text-[12px] shadow-xl shadow-rose-900/50 animate-pulse">🎁 Resgatar Prêmio Agora!</button>` : 
+                    `<div class="w-full py-5 bg-slate-800 text-slate-500 rounded-full font-black uppercase tracking-widest text-[12px] text-center border border-slate-700">Continue a comprar para ganhar</div>`
+                }
+                </div>
+            </div>
+        </div>
+        `;
+    }
+
     return `<div class="animate-[fadeIn_0.5s_ease-out] text-left">
         <button onclick="window.setView('loja')" class="mb-6 flex items-center gap-2 text-rose-600 font-black uppercase text-[10px] tracking-widest"><i data-lucide="arrow-left" class="w-4 h-4"></i> Voltar</button>
         <h2 class="text-3xl font-[950] tracking-tighter uppercase italic text-rose-600 mb-8">Fidelidade 💎</h2>
-        <div class="bg-slate-900 p-10 rounded-[48px] text-white premium-shadow relative overflow-hidden text-balance">
-            <div class="relative z-10">
-                <span class="text-[10px] font-black uppercase tracking-[0.3em] opacity-40">Saldo de Pontos</span>
-                <div class="text-6xl font-[950] italic tracking-tighter mt-2">1.250</div>
-                <p class="text-sm font-bold text-slate-400 mt-4 text-balance">Faltam apenas 250 pontos para resgatar uma dúzia de ovos vermelhos!</p>
-            </div>
-        </div>
+        ${fidelidadeHtml}
     </div>`;
 }
 
@@ -594,11 +642,34 @@ function renderCupons() {
     return `<div class="animate-[fadeIn_0.5s_ease-out] text-left">
         <button onclick="window.setView('loja')" class="mb-6 flex items-center gap-2 text-rose-600 font-black uppercase text-[10px] tracking-widest"><i data-lucide="arrow-left" class="w-4 h-4"></i> Voltar</button>
         <h2 class="text-3xl font-[950] tracking-tighter uppercase italic text-rose-600 mb-8">Meus Cupons 🎟️</h2>
-        <div class="bg-white p-6 rounded-[32px] border-2 border-dashed border-rose-200 flex justify-between items-center">
-            <div><h4 class="font-black text-rose-600 text-lg leading-none">PRIMEIRA</h4><p class="text-[10px] font-bold text-slate-400 uppercase mt-1">R$ 5,00 de desconto</p></div>
-            <button onclick="window.showMsg('🎟️ Cupom Copiado!')" class="bg-rose-50 text-rose-600 px-4 py-2 rounded-xl font-black text-[10px] uppercase">Copiar</button>
+        <div class="grid gap-4">
+            ${window.cupons && window.cupons.length > 0 ? window.cupons.map(c => `
+                <div class="bg-white p-6 rounded-[32px] border-2 border-dashed border-rose-200 flex justify-between items-center">
+                    <div><h4 class="font-black text-rose-600 text-lg leading-none">${c.codigo}</h4><p class="text-[10px] font-bold text-slate-400 uppercase mt-1">${c.desconto}% de desconto</p></div>
+                    <button onclick="window.doCopyCoupon('${c.codigo}')" class="bg-rose-50 text-rose-600 px-4 py-2 rounded-xl font-black text-[10px] uppercase">Copiar</button>
+                </div>
+            `).join('') : '<p class="text-slate-400 font-bold text-center mt-10 uppercase tracking-widest text-xs">Nenhum cupom disponível no momento.</p>'}
         </div>
     </div>`;
+}
+
+function renderNotificacoesCliente() {
+    const notifs = window.state.notificacoes || [];
+    return `
+        <div class="animate-[fadeIn_0.5s_ease-out] text-left space-y-6">
+            <button onclick="window.setView('loja')" class="mb-2 flex items-center gap-2 text-rose-600 font-black uppercase text-[10px] tracking-widest"><i data-lucide="arrow-left" class="w-4 h-4"></i> Voltar</button>
+            <h2 class="text-3xl font-[950] tracking-tighter uppercase italic text-rose-600 leading-none mb-8">Caixa de Entrada 🔔</h2>
+            <div class="grid gap-4">
+                ${notifs.length > 0 ? notifs.map(n => `
+                    <div class="bg-white p-6 rounded-3xl premium-shadow border border-slate-100 text-balance">
+                        <h4 class="font-black text-lg text-slate-800 leading-tight">${n.titulo}</h4>
+                        <p class="text-slate-500 font-semibold text-sm mt-2">${n.mensagem}</p>
+                        <p class="text-[10px] text-slate-400 font-black mt-4 uppercase tracking-widest">${n.disparadoEm ? new Date(n.disparadoEm.seconds*1000).toLocaleString('pt-BR') : 'Recente'}</p>
+                    </div>
+                `).join('') : '<div class="text-center py-20 text-slate-300 font-black uppercase tracking-widest">Nenhuma novidade</div>'}
+            </div>
+        </div>
+    `;
 }
 
 function renderFavoritos() {
@@ -797,18 +868,49 @@ function renderPedidos() {
                 const pagStr = (p.formaPagamento || 'Não Informado').replace('_', ' ').toUpperCase();
 
                 let borderColor = 'var(--border)';
-                if (p.status === 'CRIADO') borderColor = '#f59e0b';
-                else if (p.status === 'EM SEPARAÇÃO') borderColor = 'var(--primary)';
-                else if (p.status === 'SAIU PARA ENTREGA' || p.status === 'PRONTO PARA RETIRADA') borderColor = 'var(--success)';
-                else if (p.status === 'FINALIZADO') borderColor = '#000000';
-                else if (p.status === 'CANCELADO') borderColor = '#94a3b8';
+                let stepIndex = 0;
+                let progressWidth = 0;
+                let statusColor = 'text-slate-400';
+                let isCancelled = p.status === 'CANCELADO';
+                let step2Str = isEntrega ? 'SAIU P/ ENTREGA' : 'PRONTO P/ RETIRADA';
+
+                if (p.status === 'CRIADO' || p.status === 'AGUARDANDO PIX') { borderColor = '#f59e0b'; stepIndex = 0; progressWidth = 0; statusColor = 'text-amber-500'; }
+                else if (p.status === 'EM SEPARAÇÃO') { borderColor = 'var(--primary)'; stepIndex = 1; progressWidth = 33; statusColor = 'text-rose-500'; }
+                else if (p.status === 'SAIU PARA ENTREGA' || p.status === 'PRONTO PARA RETIRADA') { borderColor = 'var(--success)'; stepIndex = 2; progressWidth = 66; statusColor = 'text-emerald-500'; }
+                else if (p.status === 'FINALIZADO') { borderColor = '#000000'; stepIndex = 3; progressWidth = 100; statusColor = 'text-slate-900'; }
+                else if (p.status === 'CANCELADO') { borderColor = '#94a3b8'; statusColor = 'text-slate-400'; }
+
+                let trackerHtml = '';
+                if (isCancelled) {
+                    trackerHtml = '<div class="mt-8 mb-4 bg-slate-100 text-slate-500 font-black text-center py-3 rounded-2xl uppercase tracking-widest text-xs">❌ PEDIDO CANCELADO</div>';
+                } else {
+                    const steps = ['CRIADO', 'EM SEPARAÇÃO', step2Str, 'FINALIZADO'];
+                    let stepsHtml = '';
+                    for(let idx=0; idx<steps.length; idx++) {
+                        let isActiveOrPast = stepIndex >= idx;
+                        let isCurrent = stepIndex === idx;
+                        let dotColor = isActiveOrPast ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-white border-slate-200 text-slate-300';
+                        let scale = isCurrent ? 'scale-125 shadow-md' : 'scale-100';
+                        let textColor = isActiveOrPast ? 'text-emerald-600' : 'text-slate-400';
+                        stepsHtml += '<div class="flex flex-col items-center gap-2 z-10">' +
+                                        '<div class="w-5 h-5 rounded-full border-2 ' + dotColor + ' ' + scale + ' transition-all duration-300"></div>' +
+                                        '<span class="text-[8px] font-black uppercase ' + textColor + ' text-center w-16 leading-tight">' + steps[idx] + '</span>' +
+                                     '</div>';
+                    }
+
+                    trackerHtml = '<div class="mt-8 mb-4 relative">' +
+                                    '<div class="absolute left-4 right-4 top-[10px] h-1 bg-slate-100 -z-10 rounded-full"></div>' +
+                                    '<div class="absolute left-4 top-[10px] h-1 bg-emerald-500 -z-10 rounded-full transition-all duration-500" style="width: ' + progressWidth + '%"></div>' +
+                                    '<div class="flex justify-between">' + stepsHtml + '</div>' +
+                                  '</div>';
+                }
 
                 return '<div class="card-depth premium-shadow relative overflow-hidden" style="border-left-width: 12px; border-left-color: ' + (borderColor === 'var(--success)' ? '#00C853' : borderColor) + '; padding: 24px; display: block; width: 100%;">' +
                     '<div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:16px; border-bottom:1px solid var(--border); padding-bottom:16px; margin-bottom:16px;">' +
                         '<div>' +
                             '<span style="background:var(--bg); color:var(--primary); border:1px solid var(--border); padding:4px 10px; border-radius:50px; font-size:0.75rem; font-weight:900; letter-spacing:1px;">Pedido ' + (p.pedidoID || '#---') + '</span>' +
                             '<span style="font-size:0.75rem; color:var(--text-muted); font-weight:800; margin-left:10px;">' + (p.criadoEm ? new Date(p.criadoEm.seconds * 1000).toLocaleString('pt-PT') : 'Hoje') + '</span>' +
-                            '<h3 style="margin:12px 0 4px; font-size:1.3rem; font-weight:900; color:var(--dark); text-transform:uppercase;">Status: ' + (p.status || 'PENDENTE') + '</h3>' +
+                            '<h3 style="margin:12px 0 4px; font-size:1.3rem; font-weight:900; color:var(--dark); text-transform:uppercase;">Status: <span class="' + statusColor + '">' + (p.status || 'PENDENTE') + '</span></h3>' +
                         '</div>' +
                         '<div style="text-align:right;">' +
                             '<span style="background:' + (isEntrega ? '#e0f2fe' : '#dcfce7') + '; color:' + (isEntrega ? '#1d4ed8' : '#047857') + '; padding:6px 14px; border-radius:10px; font-size:0.75rem; font-weight:900; display:inline-block; margin-bottom:12px;">' + entregaStr + '</span>' +
@@ -816,7 +918,9 @@ function renderPedidos() {
                         '</div>' +
                     '</div>' +
                     
-                    '<div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:16px;">' +
+                    trackerHtml + 
+                    
+                    '<div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:16px; border-top:1px solid var(--border); padding-top:16px;">' +
                         '<div>' +
                             '<p style="font-size:0.75rem; font-weight:900; color:var(--text-muted); text-transform:uppercase; margin-bottom:8px; border-bottom:2px solid var(--bg); padding-bottom:4px;">Itens Solicitados</p>' +
                             itensStr +
@@ -830,13 +934,36 @@ function renderPedidos() {
                             '<p style="font-size:0.85rem; font-weight:700; color:var(--dark); line-height:1.5; margin:0;">' + endereco + '</p>' +
                         '</div>' +
                     '</div>' +
+                    
+                    '<div class="mt-6 pt-4 border-t border-slate-100 flex gap-3">' +
+                        '<button onclick="window.comprarNovamente(\'' + p.id + '\')" class="w-full py-4 bg-slate-900 text-white rounded-[20px] font-black text-[11px] uppercase tracking-widest shadow-xl flex items-center justify-center gap-2 hover:bg-black transition-colors">' +
+                            '<i data-lucide="rotate-ccw" class="w-4 h-4"></i> Comprar Novamente' +
+                        '</button>' +
+                    '</div>' +
                 '</div>';
             }).join('') || '<div class="text-center py-24 text-slate-200 font-black uppercase italic tracking-widest text-balance leading-relaxed">Sem pedidos efetuados.</div>') +
             '</div>' +
         '</div>';
 }
 
-// LÓGICA INTERATIVA
+window.comprarNovamente = (pedidoId) => {
+    const pedido = window.state.pedidos.find(p => p.id === pedidoId);
+    if (!pedido || !pedido.itens) return;
+    
+    pedido.itens.forEach(i => {
+        const qty = i.qty || i.quantidade || i.amount || 1;
+        const productExists = window.state.produtos.find(p => p.id === i.id && p.ativo !== false);
+        if (productExists) {
+            window.state.carrinho[i.id] = (window.state.carrinho[i.id] || 0) + qty;
+        }
+    });
+    
+    window.syncCarrinho();
+    window.setView('carrinho');
+    window.showMsg("🛒 Itens readicionados ao carrinho!");
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+};
+
 window.syncCarrinho = () => { 
     const tot = Object.values(window.state.carrinho).reduce((a,b)=>a+b, 0);
     const b = document.getElementById('cart-badge'); 
@@ -879,6 +1006,16 @@ window.openCheckout = () => {
     window.updateCheckoutTotal();
     window.setDelivery('retirada'); 
     const modal = document.getElementById('checkout-modal'); modal.style.display='flex'; setTimeout(()=>modal.classList.add('open'), 10);
+};
+
+window.doCopyCoupon = (cod) => {
+    const el = document.createElement('textarea'); 
+    el.value = cod; 
+    document.body.appendChild(el); 
+    el.select(); 
+    document.execCommand('copy'); 
+    document.body.removeChild(el); 
+    window.showMsg("🎟️ Cupom Copiado!");
 };
 
 window.applyCoupon = () => {
@@ -1005,11 +1142,25 @@ onAuthStateChanged(auth, async u => {
         const u3 = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'pix_config'), s => { if(s.exists()){ window.pix_config = s.data(); const wNum = s.data().whatsapp || s.data().tel_contato || '5511985706243'; window.state.whatsappNumber = wNum; const wBtn = document.getElementById('whatsapp-btn'); if(wBtn) { wBtn.href = `https://wa.me/${wNum.replace(/\D/g, '')}`; wBtn.classList.remove('hidden'); } } }, errHandler);
         const u4 = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'clientes', u.uid), s => { if(s.exists()){ const d = s.data(); window.clienteLogado = d; if(d.favoritos){ window.state.favoritos = d.favoritos; } window.render(); } }, errHandler);
         
-        // LISTENERS PARA CUPONS E FIDELIDADE NO LADO DO CLIENTE
         const u5 = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'cupons'), s => { window.cupons = s.docs.map(d => ({ id: d.id, ...d.data() })); }, errHandler);
         const u6 = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'fidelidade_config'), s => { if(s.exists()){ window.fidelidadeConfig = s.data(); if(window.state.view === 'conta') window.render(); } }, errHandler);
+        
+        const u7 = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'notificacoes'), s => { 
+            window.state.notificacoes = s.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => (b.disparadoEm?.toMillis?.() || 0) - (a.disparadoEm?.toMillis?.() || 0));
+            
+            const badge = document.getElementById('notif-badge');
+            if(badge) {
+                if(window.state.notificacoes.length > 0) {
+                    badge.textContent = window.state.notificacoes.length;
+                    badge.classList.remove('hidden');
+                } else {
+                    badge.classList.add('hidden');
+                }
+            }
+            if(window.state.view === 'notificacoes') window.render();
+        }, errHandler);
 
-        window.firebaseUnsubs.push(u1, u2, u3, u4, u5, u6);
+        window.firebaseUnsubs.push(u1, u2, u3, u4, u5, u6, u7);
 
     } else { 
         window.clearAdminListeners();
@@ -1020,7 +1171,6 @@ onAuthStateChanged(auth, async u => {
     if(loader) setTimeout(() => { loader.style.opacity = '0'; setTimeout(()=>loader.style.display='none', 700); }, 1500);
 });
 
-// FUNÇÕES DE QUANTIDADE E ADIÇÃO
 window.chQty = (id, delta) => {
     const el = document.getElementById(`qty-${id}`);
     const elDet = document.getElementById(`qty-det-${id}`);
@@ -1067,6 +1217,37 @@ window.toggleFavorito = async (id) => {
     try { await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'clientes', auth.currentUser.uid), { favoritos: window.state.favoritos }, { merge: true }); }
     catch(e) {}
 };
+
+// ✅ LÓGICA DE INSTALAÇÃO PWA NATIVA
+window.deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    window.deferredPrompt = e;
+    const installBanner = document.getElementById('install-banner');
+    if (installBanner && !window.matchMedia('(display-mode: standalone)').matches) {
+        installBanner.classList.remove('hidden');
+    }
+});
+
+document.getElementById('btn-install')?.addEventListener('click', async () => {
+    const installBanner = document.getElementById('install-banner');
+    if (installBanner) installBanner.classList.add('hidden');
+    if (window.deferredPrompt) {
+        window.deferredPrompt.prompt();
+        const { outcome } = await window.deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+            try { await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'audit_logs'), { user: window.clienteLogado?.email || 'Cliente', action: "Instalou a PWA AppEgg nativamente.", timestamp: serverTimestamp() }); } catch(e){}
+        }
+        window.deferredPrompt = null;
+    }
+});
+
+window.addEventListener('appinstalled', () => {
+    const installBanner = document.getElementById('install-banner');
+    if (installBanner) installBanner.classList.add('hidden');
+    window.deferredPrompt = null;
+    window.showMsg("✅ AppEgg instalada com sucesso!");
+});
 
 lucide.createIcons();
 </script>
